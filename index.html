@@ -36,22 +36,35 @@
     <div class="div" id="right">
       <h1>Ticket en cours</h1>
       <div class="during">
-        <div></div>
+        <div class="checkbox"></div>
+        <p id="name">Charly Chartreyx</p>
+        <div class="time">
+          <p id="created">12:32</p>
+          <p id="remaining">(13 mins)</p>
+        </div>
+
+      </div>
+      <div class="during">
+        <div class="checkbox"></div>
+        <p id="name">Ethan Caillat</p>
+        <div class="time">
+          <p id="created">12:32</p>
+          <p id="remaining">(13 mins)</p>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    document.getElementById("default").classList.add('selected');
-    document.querySelectorAll('.colorbox .color').forEach(a => {
-      a.addEventListener('click', e => {
-        document.querySelectorAll('.colorbox .color').forEach(el => el.classList.remove('selected'));
-        a.classList.add('selected');
+    <script>
+      document.getElementById("default").classList.add('selected');
+      document.querySelectorAll('.colorbox .color').forEach(a => {
+        a.addEventListener('click', e => {
+          document.querySelectorAll('.colorbox .color').forEach(el => el.classList.remove('selected'));
+          a.classList.add('selected');
+        });
       });
-    });
 
 
-  </script>
+    </script>
 </body>
 
 </html>

@@ -144,3 +144,35 @@ h1 {
             font-size: 1.2rem;
         }
     }
+
+    .during {
+        display: flex;
+        align-items: center;
+        gap: clamp(10px, 1.5vw, 20px);
+        background-color: red;
+        border-radius: 80px;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        margin-top: clamp(10px, 1.5vw, 20px);
+    }
+
+    .during .checkbox {
+        width: clamp(20px, 2vw, 30px);
+        height: clamp(20px, 2vw, 30px);
+        border: 2px solid black;
+        border-radius: 5px;
+        margin-left: clamp(10px, 1.5vw, 20px);
+        cursor: pointer;
+    }
+
+    .during .time {
+        gap: 10px;
+        display: flex;
+        flex-direction: row;
+        text-align: right;
+        margin-right: 10px;
+        margin-left: auto;
+    }
+
+    .during .time #remaining {
+        color: darkgrey;
+    }
