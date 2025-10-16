@@ -1,0 +1,146 @@
+body {
+        margin: 0;
+        font-family: "Franklin Gothic", sans-serif;
+    }
+
+h1 {
+        font-weight: normal;
+        font-size: clamp(1.2rem, 1.5vw, 2rem);
+    }
+
+    .main {
+        display: flex;
+        justify-content: space-between;
+        align-items: stretch;
+        height: 100vh;
+        padding: clamp(10px, 2vw, 40px);
+        box-sizing: border-box;
+        gap: clamp(10px, 1.5vw, 30px);
+    }
+
+    .left-container {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        gap: clamp(10px, 1.5vw, 30px);
+    }
+
+    .div {
+        background: #f9f9f9;
+        border-radius: 1.5rem;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        padding: clamp(15px, 2vw, 30px);
+        text-align: center;
+        box-sizing: border-box;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    #left {
+        flex: 0.6;
+    }
+
+    #subdiv {
+        flex: 1;
+    }
+
+    #right {
+        flex: 1;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: clamp(8px, 1vw, 14px);
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 50px;
+        box-shadow: 0 4px 4px rgba(0, 0, 0, 0.10);
+        font-size: clamp(14px, 1vw, 18px);
+        box-sizing: border-box;
+    }
+
+    .input {
+        width: 80%;
+        margin: 0 auto;
+    }
+
+    a#create {
+        display: block;
+        color: black;
+        text-decoration: none;
+        width: clamp(120px, 20%, 200px);
+        padding: clamp(5px, 0.8vw, 10px);
+        border: 3px solid black;
+        border-radius: 50px;
+        font-size: clamp(16px, 1vw, 20px);
+        margin-top: 10px;
+        margin-left: auto;
+        margin-right: auto;
+        transition: background-color 0.2s ease;
+    }
+
+    a#create:hover {
+        background-color: lightgray;
+    }
+
+    .colorbox {
+        margin-top: clamp(40px, 4vw, 70px);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: clamp(10px, 1vw, 20px);
+    }
+
+    .color {
+        width: clamp(25px, 2.5vw, 45px);
+        height: clamp(25px, 2.5vw, 45px);
+        border-radius: 80px;
+        border: 3px solid transparent;
+        outline: 1px solid rgba(0, 0, 0, 0.2);
+        transition: filter 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+    }
+
+    .color:hover {
+        filter: brightness(0.9);
+        cursor: pointer;
+        transform: scale(1.05);
+    }
+
+    .color.selected {
+        border-color: rgba(0, 0, 0, 0.3);
+    }
+
+    @media screen and (min-width: 1600px) {
+        .main {
+            padding: 3vw;
+        }
+
+        .div {
+            padding: 2.5vw;
+        }
+
+        input[type="text"] {
+            font-size: 1rem;
+        }
+
+        a#create {
+            font-size: 1.2rem;
+        }
+    }
+
+    @media screen and (max-width: 1280px) {
+        .main {
+            gap: 15px;
+        }
+
+        .div {
+            padding: 15px;
+        }
+
+        .colorbox {
+            margin-top: 40px;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+        }
+    }
