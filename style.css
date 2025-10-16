@@ -82,8 +82,12 @@ h1 {
         background-color: lightgray;
     }
 
+    .coloor {
+        margin-top: clamp(20px, 4vw, 70px);
+        text-align: left;
+    }
+    
     .colorbox {
-        margin-top: clamp(40px, 4vw, 70px);
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
@@ -140,10 +144,6 @@ h1 {
             padding: 15px;
         }
 
-        .colorbox {
-            margin-top: 40px;
-        }
-
         h1 {
             font-size: 1.2rem;
         }
@@ -181,4 +181,32 @@ h1 {
 
     .during .time #remaining {
         color: darkgrey;
+    }
+
+    .during #delete {
+        background-color: red;
+        color: white;
+        font-size: 0px;
+        border-radius: 50px;
+        width: 0px;
+        height: 0px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+    .during:hover #delete {
+        font-size: 25px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        margin-right: clamp(10px, 1.5vw, 20px);
+        cursor: pointer;
+        font-weight: bold;
     }

@@ -55,7 +55,7 @@ async function afficherTickets() {
         <p class="created">${new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
         <p class="remaining">(${ticket.etat})</p>
       </div>
-      <button class="supprimer" data-id="${ticket.id}">Supprimer</button>
+      <a id="delete" data-id="${ticket.id}">–</a>
     `;
     right.appendChild(div);
   });
@@ -79,13 +79,13 @@ async function afficherTickets() {
         <p class="created">${new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
         <p class="etat">${ticket.etat}</p>
       </div>
-      <button class="supprimer" data-id="${ticket.id}">Supprimer</button>
+      <a id="delete" data-id="${ticket.id}">–</a>
     `;
     subdiv.appendChild(div);
   });
 
   // Ajout listeners suppression
-  document.querySelectorAll('.supprimer').forEach(btn => {
+  document.querySelectorAll('.delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       await supprimerTicket(btn.dataset.id);
       afficherTickets();
