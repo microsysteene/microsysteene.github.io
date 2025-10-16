@@ -168,7 +168,7 @@ h1 {
         width: clamp(20px, 2vw, 30px);
         height: clamp(20px, 2vw, 30px);
         border: 2px solid black;
-        border-radius: 5px;
+        border-radius: 30px;
         margin-left: clamp(10px, 1.5vw, 20px);
         cursor: pointer;
     }
@@ -193,23 +193,29 @@ h1 {
         border-radius: 50px;
         width: 0px;
         height: 0px;
+        border: 0.2px solid rgba(0, 0, 0, 0.2);
+        filter: drop-shadow(0px 3px 2px #0000004b);
+        box-shadow:
+            inset 0 2px 3px rgba(255, 255, 255, 0.6),
+            inset 0 -2px 3px rgba(0, 0, 0, 0.2);
         display: flex;
         justify-content: center;
         align-items: center;
         text-align: center;
         cursor: pointer;
         font-weight: bold;
-        transition: all 0.2s ease;
+        transition: all 0.2s ease-in-out;
     }
     .during:hover #delete {
         font-size: 25px;
-        width: 40px;
-        height: 40px;
+        width: 24px;
+        height: 24px;
         display: flex;
         justify-content: center;
         align-items: center;
         text-align: center;
         margin-right: clamp(10px, 1.5vw, 20px);
         cursor: pointer;
+        transform: scale(1.1);
         font-weight: bold;
     }
