@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000/api/tickets";
+const API_URL = "https://ticketapi.juhdd.me/api/tickets";
 
 // Identifiant unique par navigateur
 let userId = localStorage.getItem('userId');
