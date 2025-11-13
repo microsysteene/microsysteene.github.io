@@ -65,9 +65,38 @@ app.delete('/api/tickets/:id', (req, res) => {
   res.json({ message: 'Ticket supprimé', ticket });
 });
 
+
+function supprimerTicketsExpires() {
+  const maintenant = Date.now();
+
+
+  const troisHeuresDix = 3 * 60 * 60 * 1000 + 10 * 60 * 1000; // 3h10 en millisecondes
+  tickets = tickets.filter(ticket => {
+    if (ticket.etat === 'en cours' && (maintenant - new Date(ticket.dateCreation).getTime() > troisHeuresDix)) {
+      return false; // Supprimer ce ticket
+    }
+    return true;
+  });
+
+
+  const uneHeure = 60 * 60 * 1000; // 1h en millisecondes
+  tickets = tickets.filter(ticket => {
+    if (ticket.etat === 'terminé' && (maintenant - new Date(ticket.dateCreation).getTime() > uneHeure)) {
+      return false; // Supprimer ce ticket
+    }
+    return true;
+  });
+
+
+  fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
+}
+
+
+setInterval(supprimerTicketsExpires, 60 * 1000); // Toutes les 60 secondes
+
 app.get('/', (req, res) => {
   res.json({ message: 'API Tickets fonctionnelle' });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Serveur sur http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Serveur sur le port ${PORT}`));
