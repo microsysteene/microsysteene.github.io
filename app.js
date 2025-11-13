@@ -130,6 +130,7 @@ async function afficherTickets() {
         <p id="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
         <p id="remaining">${formatTempsEcoule(ticket.dateCreation)}</p>
       </div>
+      <a class="delete" data-id="${ticket.id}">–</a>
     `;
     right.appendChild(div);
   });
