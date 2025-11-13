@@ -1,38 +1,77 @@
-const BASE_URL = "https://jsonblob.com/api/jsonBlob/1428271133970587648";
+const API_URL = "http://localhost:3000/api/tickets";
 
 // Récupérer tous les tickets
 async function getTickets() {
-  const res = await fetch(BASE_URL, { headers: { "Accept": "application/json" } });
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Erreur lors de la récupération des tickets:', error);
+    return [];
+  }
 }
 
 // Ajouter un ticket
 async function ajouterTicket(ticket) {
-  const tickets = await getTickets();
-  ticket.id = Date.now().toString(); // id unique
-  ticket.dateCreation = new Date().toISOString();
-  tickets.push(ticket);
-  await updateTickets(tickets);
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(ticket)
+    });
+    
+    if (!res.ok) {
+      throw new Error('Erreur lors de la création du ticket');
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout du ticket:', error);
+    alert('Erreur lors de l\'ajout du ticket');
+  }
 }
 
 // Supprimer un ticket par id
 async function supprimerTicket(id) {
-  const tickets = await getTickets();
-  const nouveauxTickets = tickets.filter(t => t.id !== id);
-  await updateTickets(nouveauxTickets);
+  try {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: "DELETE"
+    });
+    
+    if (!res.ok) {
+      throw new Error('Erreur lors de la suppression');
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Erreur lors de la suppression du ticket:', error);
+    alert('Erreur lors de la suppression');
+  }
 }
 
-// Mettre à jour le blob
-async function updateTickets(tickets) {
-  await fetch(BASE_URL, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    },
-    body: JSON.stringify(tickets)
-  });
+// Mettre à jour un ticket
+async function modifierTicket(id, modifications) {
+  try {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(modifications)
+    });
+    
+    if (!res.ok) {
+      throw new Error('Erreur lors de la modification');
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Erreur lors de la modification du ticket:', error);
+    alert('Erreur lors de la modification');
+  }
 }
 
 // Affiche les tickets dans l'interface
@@ -41,9 +80,10 @@ async function afficherTickets() {
   const enCours = tickets.filter(t => t.etat === "en cours");
   const historique = tickets.filter(t => t.etat !== "en cours");
 
-  //Ticket en cours
+  // Tickets en cours
   const right = document.getElementById("right");
   right.querySelectorAll('.during').forEach(e => e.remove());
+  
   enCours.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "during";
@@ -55,20 +95,15 @@ async function afficherTickets() {
         <p class="created">${new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
         <p class="remaining">(${ticket.etat})</p>
       </div>
-      <a id="delete" data-id="${ticket.id}">–</a>
+      <a class="delete" data-id="${ticket.id}">–</a>
     `;
     right.appendChild(div);
   });
 
-// Exemple d'utilisation
-// ajouterTicket({ nom: "Test", description: "desc", couleur: "#FF0000", etat: "en cours" });
-// supprimerTicket("1697460000000"); // id à remplacer
-
-// getTickets().then(console.log);
-
-  //Historique
+  // Historique
   const subdiv = document.getElementById("subdiv");
   subdiv.querySelectorAll('.history').forEach(e => e.remove());
+  
   historique.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "history";
@@ -79,7 +114,7 @@ async function afficherTickets() {
         <p class="created">${new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
         <p class="etat">${ticket.etat}</p>
       </div>
-      <a id="delete" data-id="${ticket.id}">–</a>
+      <a class="delete" data-id="${ticket.id}">–</a>
     `;
     subdiv.appendChild(div);
   });
@@ -87,7 +122,17 @@ async function afficherTickets() {
   // Ajout listeners suppression
   document.querySelectorAll('.delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
+      e.preventDefault();
       await supprimerTicket(btn.dataset.id);
+      afficherTickets();
+    });
+  });
+
+  // Ajout listeners checkbox pour changer l'état
+  document.querySelectorAll('.checkbox').forEach(checkbox => {
+    checkbox.addEventListener('click', async (e) => {
+      const id = checkbox.dataset.id;
+      await modifierTicket(id, { etat: "terminé" });
       afficherTickets();
     });
   });
@@ -97,14 +142,18 @@ async function afficherTickets() {
 async function creerTicketDepuisFormulaire() {
   const nom = document.getElementById('name').value.trim();
   if (!nom) return alert('Le nom est obligatoire');
+  
   const description = document.getElementById('infos').value;
-  const couleur = document.querySelector('.color.selected').style.backgroundColor;
+  const selectedColor = document.querySelector('.color.selected');
+  const couleur = selectedColor ? selectedColor.style.backgroundColor : '#cdcdcd';
+  
   const ticket = {
     nom,
     description,
     couleur,
     etat: "en cours"
   };
+  
   await ajouterTicket(ticket);
   document.getElementById('name').value = "";
   document.getElementById('infos').value = "";
@@ -114,8 +163,12 @@ async function creerTicketDepuisFormulaire() {
 // Initialisation
 window.addEventListener('DOMContentLoaded', () => {
   afficherTickets();
-  document.getElementById('create').addEventListener('click', (e) => {
-    e.preventDefault();
-    creerTicketDepuisFormulaire();
-  });
+  
+  const createBtn = document.getElementById('create');
+  if (createBtn) {
+    createBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      creerTicketDepuisFormulaire();
+    });
+  }
 });
