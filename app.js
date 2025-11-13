@@ -211,3 +211,4 @@ window.addEventListener('DOMContentLoaded', () => {
   
   setInterval(afficherTickets, 10000);
 });
+

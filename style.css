@@ -1,4 +1,30 @@
 /* ==================== */
+/* STYLES DU BACKGROUND    */
+/* ==================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.finisher-header { 
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 110%;
+    height: 110%;
+    
+    z-index: -1;
+}
+
+/* ==================== */
 /* STYLES DE BASE       */
 /* ==================== */
 
