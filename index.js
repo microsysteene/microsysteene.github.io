@@ -4,101 +4,70 @@ const fs = require('fs');
 const path = require('path');
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Base de données en mémoire (remplacer par une vraie DB en production)
-let tickets = [];
+const dataFile = path.join(__dirname, 'tickets.json');
+let tickets = fs.existsSync(dataFile) ? JSON.parse(fs.readFileSync(dataFile)) : [];
 
-// GET - Récupérer tous les tickets
+// GET - Tous les tickets
 app.get('/api/tickets', (req, res) => {
   res.json(tickets);
 });
 
-// GET - Récupérer un ticket par ID
-app.get('/api/tickets/:id', (req, res) => {
-  const ticket = tickets.find(t => t.id === req.params.id);
-  if (!ticket) {
-    return res.status(404).json({ error: 'Ticket non trouvé' });
-  }
-  res.json(ticket);
-});
-
-// POST - Créer un nouveau ticket
+// POST - Créer un ticket
 app.post('/api/tickets', (req, res) => {
-  const { nom, description, couleur, etat } = req.body;
-  
-  if (!nom) {
-    return res.status(400).json({ error: 'Le nom est obligatoire' });
-  }
+  const { nom, description, couleur, etat, userId } = req.body;
+  if (!nom || !userId) return res.status(400).json({ error: 'Nom et userId requis' });
 
-const dataFile = path.join(__dirname, 'tickets.json');
-
-const nouveauTicket = {
+  const nouveauTicket = {
     id: Date.now().toString(),
     nom,
     description: description || '',
     couleur: couleur || '#cdcdcd',
     etat: etat || 'en cours',
-    dateCreation: new Date().toISOString()
-};
+    dateCreation: new Date().toISOString(),
+    userId
+  };
 
-tickets.push(nouveauTicket);
-fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
-
+  tickets.push(nouveauTicket);
+  fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
   res.status(201).json(nouveauTicket);
 });
 
-// PUT - Mettre à jour un ticket
+// PUT - Modifier un ticket
 app.put('/api/tickets/:id', (req, res) => {
   const index = tickets.findIndex(t => t.id === req.params.id);
-  
-  if (index === -1) {
-    return res.status(404).json({ error: 'Ticket non trouvé' });
-  }
+  if (index === -1) return res.status(404).json({ error: 'Ticket non trouvé' });
 
   const { nom, description, couleur, etat } = req.body;
-  
   tickets[index] = {
     ...tickets[index],
     nom: nom || tickets[index].nom,
-    description: description !== undefined ? description : tickets[index].description,
+    description: description ?? tickets[index].description,
     couleur: couleur || tickets[index].couleur,
     etat: etat || tickets[index].etat
   };
 
+  fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
   res.json(tickets[index]);
 });
 
-// DELETE - Supprimer un ticket
+// DELETE - Supprimer un ticket (si userId correspond)
 app.delete('/api/tickets/:id', (req, res) => {
-  const index = tickets.findIndex(t => t.id === req.params.id);
-  
-  if (index === -1) {
-    return res.status(404).json({ error: 'Ticket non trouvé' });
-  }
+  const { userId } = req.body;
+  const ticket = tickets.find(t => t.id === req.params.id);
+  if (!ticket) return res.status(404).json({ error: 'Ticket non trouvé' });
+  if (ticket.userId !== userId) return res.status(403).json({ error: 'Non autorisé' });
 
-  const ticketSupprime = tickets.splice(index, 1)[0];
-  res.json({ message: 'Ticket supprimé', ticket: ticketSupprime });
+  tickets = tickets.filter(t => t.id !== req.params.id);
+  fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
+  res.json({ message: 'Ticket supprimé', ticket });
 });
 
-// Route de test
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'API Tickets fonctionnelle',
-    endpoints: {
-      'GET /api/tickets': 'Récupérer tous les tickets',
-      'GET /api/tickets/:id': 'Récupérer un ticket',
-      'POST /api/tickets': 'Créer un ticket',
-      'PUT /api/tickets/:id': 'Mettre à jour un ticket',
-      'DELETE /api/tickets/:id': 'Supprimer un ticket'
-    }
-  });
+  res.json({ message: 'API Tickets fonctionnelle' });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`✅ Serveur démarré sur le port ${PORT}`);
-    console.log(`🌐 API disponible sur http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Serveur sur http://localhost:${PORT}`));
