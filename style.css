@@ -2,12 +2,6 @@
 /* STYLES DU BACKGROUND    */
 /* ==================== */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 body {
     width: 100vw;
     height: 100vh;
@@ -166,6 +160,7 @@ a#create:hover {
 /* TÂCHES ET HISTORIQUE */
 /* ==================== */
 
+
 .during,
 .history {
     display: flex;
@@ -190,6 +185,7 @@ a#create:hover {
     cursor: pointer;
 }
 
+
 .during .time,
 .history .time {
     display: flex;
@@ -209,7 +205,7 @@ a#create:hover {
 
 .during .time #remaining,
 .history .time .etat {
-    color: rgba(0, 0, 0, 0.5);
+    color: darkgrey;
 }
 
 .history .name {
