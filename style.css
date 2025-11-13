@@ -73,10 +73,14 @@ h1 {
 
 #subdiv {
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 #right {
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 /* ==================== */
