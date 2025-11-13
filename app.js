@@ -148,109 +148,114 @@ async function afficherTickets() {
 
 // conversion base64 (unicode safe)
 function toBase64(str) {
-  try { return btoa(str); } 
-  catch(e){ return btoa(unescape(encodeURIComponent(str))); }
+  try { return btoa(str); }
+  catch (e) { return btoa(unescape(encodeURIComponent(str))); }
 }
 
 // --- Mode admin ---
-function activerModeAdmin() {
-  const titre = document.getElementById('lefttitle');
-  if (titre && !titre.textContent.includes('(admin mode)')) titre.textContent += ' (admin mode)';
-  localStorage.setItem('admin', 'true');
-  document.getElementById('infos').type = 'text';
-  document.getElementById('create').textContent = "Créer";
-  document.getElementById('name').value = "";
-  document.getElementById('infos').value = "";
-}
-
-function desactiverModeAdmin() {
-  localStorage.removeItem('admin');
-  const titre = document.getElementById('lefttitle');
-  if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
-}
-
-function verifierAdminInput() {
-  const nomInput = document.getElementById('name');
-  const infosInput = document.getElementById('infos');
-  const createBtn = document.getElementById('create');
-  if (nomInput.value.trim().toLowerCase() === "admin") {
-    infosInput.type = 'password';
-    createBtn.textContent = "Valider";
+function activerModeAdmin(mdp) {
+  if (mdp === jstextimport) {
+    console.log("Activation du mode admin");
+    const titre = document.getElementById('lefttitle');
+    if (titre && !titre.textContent.includes('(admin mode)')) titre.textContent += ' (admin mode)';
+    localStorage.setItem('admin', 'true');
+    document.getElementById('infos').type = 'text';
+    document.getElementById('create').textContent = "Créer";
+    document.getElementById('name').value = "";
+    document.getElementById('infos').value = "";
   } else {
-    infosInput.type = 'text';
-    createBtn.textContent = "Créer";
+    console.log("Mot de passe incorrect");
   }
 }
 
-// --- Chargement filtres ---
-async function chargerFiltres() {
-  try {
-    // cachebuster pour forcer la MAJ à chaque refresh
-    const res = await fetch("filter.json?cachebuster=" + Date.now());
-    if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
-    const data = await res.json();
-    filtresCache = data.banned_terms || [];
-  } catch (error) {
-    console.error("Erreur de chargement du filtre:", error);
-    filtresCache = [];
-  }
-}
-
-// --- Création ticket ---
-async function creerTicketDepuisFormulaire() {
-  const nom = document.getElementById('name').value.trim();
-  const description = document.getElementById('infos').value.trim();
-  if (!nom) return alert("Le nom est obligatoire");
-
-  // Vérification filtres
-  const contenu = (nom + " " + description).toLowerCase();
-  const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
-  if (interdit) {
-    alert(`Le terme "${interdit}" est interdit. Ticket non créé.`);
-    return;
+  function desactiverModeAdmin() {
+    localStorage.removeItem('admin');
+    const titre = document.getElementById('lefttitle');
+    if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
   }
 
-  // Mode admin
-  if (nom.toLowerCase() === "admin") {
-    const psw = description;
-    if (toBase64(psw) === jstextimport) {
-      activerModeAdmin();
-      alert("Mode admin activé !");
-    } else if (localStorage.getItem('admin') === 'true' && psw.toLowerCase() === "") {
-      desactiverModeAdmin();
+  function verifierAdminInput() {
+    const nomInput = document.getElementById('name');
+    const infosInput = document.getElementById('infos');
+    const createBtn = document.getElementById('create');
+    if (nomInput.value.trim().toLowerCase() === "admin") {
+      infosInput.type = 'password';
+      createBtn.textContent = "Valider";
     } else {
-      alert("Mot de passe incorrect");
+      infosInput.type = 'text';
+      createBtn.textContent = "Créer";
     }
-    return;
   }
 
-  // Création normale
-  const selectedColor = document.querySelector('.color.selected');
-  const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
-  const ticket = { nom, description, couleur, etat: "en cours", userId };
-  
-  await ajouterTicket(ticket);
-  document.getElementById('name').value = "";
-  document.getElementById('infos').value = "";
-  await afficherTickets();
-}
+  // --- Chargement filtres ---
+  async function chargerFiltres() {
+    try {
+      // cachebuster pour forcer la MAJ à chaque refresh
+      const res = await fetch("filter.json?cachebuster=" + Date.now());
+      if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
+      const data = await res.json();
+      filtresCache = data.banned_terms || [];
+    } catch (error) {
+      console.error("Erreur de chargement du filtre:", error);
+      filtresCache = [];
+    }
+  }
 
-// --- Initialisation ---
-window.addEventListener('DOMContentLoaded', async () => {
-  await chargerFiltres();
-  afficherTickets();
+  // --- Création ticket ---
+  async function creerTicketDepuisFormulaire() {
+    const nom = document.getElementById('name').value.trim();
+    const description = document.getElementById('infos').value.trim();
+    if (!nom) return alert("Le nom est obligatoire");
 
-  const nomInput = document.getElementById('name');
-  const createBtn = document.getElementById('create');
+    // Vérification filtres
+    const contenu = (nom + " " + description).toLowerCase();
+    const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
+    if (interdit) {
+      alert(`Le terme "${interdit}" est interdit. Ticket non créé.`);
+      return;
+    }
 
-  if (localStorage.getItem('admin') === 'true') activerModeAdmin();
+    // Mode admin
+    if (nom.toLowerCase() === "admin") {
+      const psw = description;
+      if (toBase64(psw) === jstextimport) {
+        activerModeAdmin(jstextimport);
+        alert("Mode admin activé !");
+      } else if (localStorage.getItem('admin') === 'true' && psw.toLowerCase() === "") {
+        desactiverModeAdmin();
+      } else {
+        alert("Mot de passe incorrect");
+      }
+      return;
+    }
 
-  nomInput.addEventListener('input', verifierAdminInput);
+    // Création normale
+    const selectedColor = document.querySelector('.color.selected');
+    const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
+    const ticket = { nom, description, couleur, etat: "en cours", userId };
 
-  createBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    creerTicketDepuisFormulaire();
+    await ajouterTicket(ticket);
+    document.getElementById('name').value = "";
+    document.getElementById('infos').value = "";
+    await afficherTickets();
+  }
+
+  // --- Initialisation ---
+  window.addEventListener('DOMContentLoaded', async () => {
+    await chargerFiltres();
+    afficherTickets();
+
+    const nomInput = document.getElementById('name');
+    const createBtn = document.getElementById('create');
+
+    if (localStorage.getItem('admin') === 'true') activerModeAdmin();
+
+    nomInput.addEventListener('input', verifierAdminInput);
+
+    createBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      creerTicketDepuisFormulaire();
+    });
+
+    setInterval(afficherTickets, 10000);
   });
-
-  setInterval(afficherTickets, 10000);
-});
