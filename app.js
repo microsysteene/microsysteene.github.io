@@ -1,5 +1,12 @@
 const API_URL = "http://localhost:3000/api/tickets";
 
+// Identifiant unique par navigateur
+let userId = localStorage.getItem('userId');
+if (!userId) {
+  userId = crypto.randomUUID();
+  localStorage.setItem('userId', userId);
+}
+
 // Récupérer tous les tickets
 async function getTickets() {
   try {
@@ -23,14 +30,12 @@ async function ajouterTicket(ticket) {
       body: JSON.stringify(ticket)
     });
     
-    if (!res.ok) {
-      throw new Error('Erreur lors de la création du ticket');
-    }
+    if (!res.ok) throw new Error('Erreur lors de la création du ticket');
     
     return await res.json();
   } catch (error) {
-    console.error('Erreur lors de l\'ajout du ticket:', error);
-    alert('Erreur lors de l\'ajout du ticket');
+    console.error("Erreur lors de l'ajout du ticket:", error);
+    alert("Erreur lors de l'ajout du ticket");
   }
 }
 
@@ -38,17 +43,19 @@ async function ajouterTicket(ticket) {
 async function supprimerTicket(id) {
   try {
     const res = await fetch(`${API_URL}/${id}`, {
-      method: "DELETE"
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ userId })
     });
     
-    if (!res.ok) {
-      throw new Error('Erreur lors de la suppression');
-    }
+    if (!res.ok) throw new Error('Erreur lors de la suppression');
     
     return await res.json();
   } catch (error) {
-    console.error('Erreur lors de la suppression du ticket:', error);
-    alert('Erreur lors de la suppression');
+    console.error("Erreur lors de la suppression du ticket:", error);
+    alert("Erreur lors de la suppression");
   }
 }
 
@@ -63,14 +70,12 @@ async function modifierTicket(id, modifications) {
       body: JSON.stringify(modifications)
     });
     
-    if (!res.ok) {
-      throw new Error('Erreur lors de la modification');
-    }
+    if (!res.ok) throw new Error('Erreur lors de la modification');
     
     return await res.json();
   } catch (error) {
-    console.error('Erreur lors de la modification du ticket:', error);
-    alert('Erreur lors de la modification');
+    console.error("Erreur lors de la modification du ticket:", error);
+    alert("Erreur lors de la modification");
   }
 }
 
@@ -85,13 +90,9 @@ function formatTempsEcoule(dateCreation) {
   const diffHeures = Math.floor(diffMs / 3600000);
   const diffJours = Math.floor(diffMs / 86400000);
   
-  if (diffJours > 0) {
-    return `(${diffJours}j)`;
-  } else if (diffHeures > 0) {
-    return `(${diffHeures}h)`;
-  } else {
-    return `(${diffMins}mins)`;
-  }
+  if (diffJours > 0) return `(${diffJours}j)`;
+  if (diffHeures > 0) return `(${diffHeures}h)`;
+  return `(${diffMins}mins)`;
 }
 
 // Affiche les tickets dans l'interface
@@ -108,14 +109,13 @@ async function afficherTickets() {
     const div = document.createElement('div');
     div.className = "during";
     div.id = ticket.id;
-    // Vérifie si c'est un gradient ou une couleur
+
     if (ticket.couleur && ticket.couleur.includes('gradient')) {
       div.style.backgroundImage = ticket.couleur;
     } else {
       div.style.backgroundColor = ticket.couleur || "#cdcdcd";
     }
     
-    // Construit le contenu de l'info section
     let infoContent = `<p id="name">${ticket.nom}</p>`;
     if (ticket.description && ticket.description.trim()) {
       infoContent += `<p id="desc">${ticket.description}</p>`;
@@ -123,26 +123,23 @@ async function afficherTickets() {
     
     div.innerHTML = `
       <div class="checkbox" data-id="${ticket.id}"></div>
-      <div class="info">
-        ${infoContent}
-      </div>
+      <div class="info">${infoContent}</div>
       <div class="time">
         <p id="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
         <p id="remaining">${formatTempsEcoule(ticket.dateCreation)}</p>
       </div>
-      <a class="delete" data-id="${ticket.id}">–</a>
+      ${ticket.userId === userId ? `<a class="delete" data-id="${ticket.id}">–</a>` : ""}
     `;
     right.appendChild(div);
   });
 
-  // Historique
+  // Historique 
   const subdiv = document.getElementById("subdiv");
   subdiv.querySelectorAll('.history').forEach(e => e.remove());
   
   historique.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "history";
-    // Vérifie si c'est un gradient ou une couleur
     if (ticket.couleur && ticket.couleur.includes('gradient')) {
       div.style.backgroundImage = ticket.couleur;
     } else {
@@ -154,12 +151,11 @@ async function afficherTickets() {
         <p class="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
         <p class="etat">${ticket.etat}</p>
       </div>
-      <a class="delete" data-id="${ticket.id}">–</a>
     `;
     subdiv.appendChild(div);
   });
 
-  // Ajout listeners suppression
+  // Listeners suppression
   document.querySelectorAll('.delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -168,9 +164,9 @@ async function afficherTickets() {
     });
   });
 
-  // Ajout listeners checkbox pour changer l'état
+  // Listeners checkbox pour terminer un ticket
   document.querySelectorAll('.checkbox').forEach(checkbox => {
-    checkbox.addEventListener('click', async (e) => {
+    checkbox.addEventListener('click', async () => {
       const id = checkbox.dataset.id;
       await modifierTicket(id, { etat: "terminé" });
       await afficherTickets();
@@ -191,7 +187,8 @@ async function creerTicketDepuisFormulaire() {
     nom,
     description,
     couleur,
-    etat: "en cours"
+    etat: "en cours",
+    userId
   };
   
   await ajouterTicket(ticket);
@@ -212,6 +209,5 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Mise à jour automatique des tickets toutes les 10 secondes
   setInterval(afficherTickets, 10000);
 });
