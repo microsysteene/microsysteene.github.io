@@ -236,6 +236,11 @@ h1 {
         font-weight: bold;
     }
 
+    .during .info {
+        display: flex;
+        flex-direction: column;
+    }
+
     .history .name {
         margin-left: clamp(10px, 1.5vw, 20px);
     }

@@ -107,20 +107,29 @@ async function afficherTickets() {
   enCours.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "during";
+    div.id = ticket.id;
     // Vérifie si c'est un gradient ou une couleur
     if (ticket.couleur && ticket.couleur.includes('gradient')) {
       div.style.backgroundImage = ticket.couleur;
     } else {
       div.style.backgroundColor = ticket.couleur || "#cdcdcd";
     }
+    
+    // Construit le contenu de l'info section
+    let infoContent = `<p id="name">${ticket.nom}</p>`;
+    if (ticket.description && ticket.description.trim()) {
+      infoContent += `<p id="desc">${ticket.description}</p>`;
+    }
+    
     div.innerHTML = `
       <div class="checkbox" data-id="${ticket.id}"></div>
-      <p class="name">${ticket.nom}</p>
-      <div class="time">
-        <p class="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
-        <p class="remaining">${formatTempsEcoule(ticket.dateCreation)}</p>
+      <div class="info">
+        ${infoContent}
       </div>
-      <a class="delete" data-id="${ticket.id}">–</a>
+      <div class="time">
+        <p id="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
+        <p id="remaining">${formatTempsEcoule(ticket.dateCreation)}</p>
+      </div>
     `;
     right.appendChild(div);
   });
