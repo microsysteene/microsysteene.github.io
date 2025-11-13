@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 const app = express();
 
 // Middleware
@@ -31,16 +33,20 @@ app.post('/api/tickets', (req, res) => {
     return res.status(400).json({ error: 'Le nom est obligatoire' });
   }
 
-  const nouveauTicket = {
+const dataFile = path.join(__dirname, 'tickets.json');
+
+const nouveauTicket = {
     id: Date.now().toString(),
     nom,
     description: description || '',
     couleur: couleur || '#cdcdcd',
     etat: etat || 'en cours',
     dateCreation: new Date().toISOString()
-  };
+};
 
-  tickets.push(nouveauTicket);
+tickets.push(nouveauTicket);
+fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
+
   res.status(201).json(nouveauTicket);
 });
 
@@ -93,6 +99,6 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Serveur démarré sur le port ${PORT}`);
-  console.log(`🌐 API disponible sur http://localhost:${PORT}`);
+    console.log(`✅ Serveur démarré sur le port ${PORT}`);
+    console.log(`🌐 API disponible sur http://localhost:${PORT}`);
 });

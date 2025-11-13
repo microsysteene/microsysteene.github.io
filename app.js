@@ -74,6 +74,26 @@ async function modifierTicket(id, modifications) {
   }
 }
 
+// Calcule le temps écoulé depuis la création
+function formatTempsEcoule(dateCreation) {
+  if (!dateCreation) return '';
+  
+  const now = new Date();
+  const creation = new Date(dateCreation);
+  const diffMs = now - creation;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHeures = Math.floor(diffMs / 3600000);
+  const diffJours = Math.floor(diffMs / 86400000);
+  
+  if (diffJours > 0) {
+    return `(${diffJours}j)`;
+  } else if (diffHeures > 0) {
+    return `(${diffHeures}h)`;
+  } else {
+    return `(${diffMins}mins)`;
+  }
+}
+
 // Affiche les tickets dans l'interface
 async function afficherTickets() {
   const tickets = await getTickets();
@@ -87,13 +107,18 @@ async function afficherTickets() {
   enCours.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "during";
-    div.style.backgroundColor = ticket.couleur || "#cdcdcd";
+    // Vérifie si c'est un gradient ou une couleur
+    if (ticket.couleur && ticket.couleur.includes('gradient')) {
+      div.style.backgroundImage = ticket.couleur;
+    } else {
+      div.style.backgroundColor = ticket.couleur || "#cdcdcd";
+    }
     div.innerHTML = `
       <div class="checkbox" data-id="${ticket.id}"></div>
       <p class="name">${ticket.nom}</p>
       <div class="time">
-        <p class="created">${new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-        <p class="remaining">(${ticket.etat})</p>
+        <p class="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
+        <p class="remaining">${formatTempsEcoule(ticket.dateCreation)}</p>
       </div>
       <a class="delete" data-id="${ticket.id}">–</a>
     `;
@@ -107,11 +132,16 @@ async function afficherTickets() {
   historique.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "history";
-    div.style.backgroundColor = ticket.couleur || "#cdcdcd";
+    // Vérifie si c'est un gradient ou une couleur
+    if (ticket.couleur && ticket.couleur.includes('gradient')) {
+      div.style.backgroundImage = ticket.couleur;
+    } else {
+      div.style.backgroundColor = ticket.couleur || "#cdcdcd";
+    }
     div.innerHTML = `
       <p class="name">${ticket.nom}</p>
       <div class="time">
-        <p class="created">${new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+        <p class="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
         <p class="etat">${ticket.etat}</p>
       </div>
       <a class="delete" data-id="${ticket.id}">–</a>
@@ -124,7 +154,7 @@ async function afficherTickets() {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
       await supprimerTicket(btn.dataset.id);
-      afficherTickets();
+      await afficherTickets();
     });
   });
 
@@ -133,7 +163,7 @@ async function afficherTickets() {
     checkbox.addEventListener('click', async (e) => {
       const id = checkbox.dataset.id;
       await modifierTicket(id, { etat: "terminé" });
-      afficherTickets();
+      await afficherTickets();
     });
   });
 }
@@ -145,7 +175,7 @@ async function creerTicketDepuisFormulaire() {
   
   const description = document.getElementById('infos').value;
   const selectedColor = document.querySelector('.color.selected');
-  const couleur = selectedColor ? selectedColor.style.backgroundColor : '#cdcdcd';
+  const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
   
   const ticket = {
     nom,
@@ -157,7 +187,7 @@ async function creerTicketDepuisFormulaire() {
   await ajouterTicket(ticket);
   document.getElementById('name').value = "";
   document.getElementById('infos').value = "";
-  afficherTickets();
+  await afficherTickets();
 }
 
 // Initialisation
@@ -171,4 +201,7 @@ window.addEventListener('DOMContentLoaded', () => {
       creerTicketDepuisFormulaire();
     });
   }
+  
+  // Mise à jour automatique des tickets toutes les 10 secondes
+  setInterval(afficherTickets, 10000);
 });

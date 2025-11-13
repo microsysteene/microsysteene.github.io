@@ -151,7 +151,8 @@ h1 {
         }
     }
 
-    .during {
+    .during,
+    .history {
         display: flex;
         align-items: center;
         gap: clamp(10px, 1.5vw, 20px);
@@ -174,20 +175,30 @@ h1 {
         cursor: pointer;
     }
 
-    .during .time {
+    .during .time,
+    .history .time {
         gap: 10px;
         display: flex;
         flex-direction: row;
         text-align: right;
-        margin-right: 10px;
         margin-left: auto;
     }
 
-    .during .time #remaining {
+    .during .time {
+        margin-right: 10px;
+    }
+
+    .history .time {
+        margin-right: clamp(10px, 1.5vw, 20px);
+    }
+
+    .during .time #remaining,
+    .history .time .etat {
         color: darkgrey;
     }
 
-    .during #delete {
+    .during .delete,
+    .history .delete {
         opacity: 0%;
         background-color: red;
         color: white;
@@ -208,7 +219,9 @@ h1 {
         font-weight: bold;
         transition: all 0.2s ease-in-out;
     }
-    .during:hover #delete {
+
+    .during:hover .delete,
+    .history:hover .delete {
         opacity: 100%;
         font-size: 25px;
         width: 24px;
@@ -221,4 +234,8 @@ h1 {
         cursor: pointer;
         transform: scale(1.1);
         font-weight: bold;
+    }
+
+    .history .name {
+        margin-left: clamp(10px, 1.5vw, 20px);
     }
