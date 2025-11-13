@@ -1,4 +1,5 @@
 const API_URL = "https://ticketapi.juhdd.me/api/tickets";
+var jstextimport = "OHMwTTc4Y3Y=";
 
 // Identifiant unique par navigateur
 let userId = localStorage.getItem('userId');
@@ -7,7 +8,7 @@ if (!userId) {
   localStorage.setItem('userId', userId);
 }
 
-// Récupérer tous les tickets
+// ===== Fonctions tickets =====
 async function getTickets() {
   try {
     const res = await fetch(API_URL);
@@ -19,19 +20,14 @@ async function getTickets() {
   }
 }
 
-// Ajouter un ticket
 async function ajouterTicket(ticket) {
   try {
     const res = await fetch(API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(ticket)
     });
-    
     if (!res.ok) throw new Error('Erreur lors de la création du ticket');
-    
     return await res.json();
   } catch (error) {
     console.error("Erreur lors de l'ajout du ticket:", error);
@@ -39,19 +35,14 @@ async function ajouterTicket(ticket) {
   }
 }
 
-// Supprimer un ticket par id
 async function supprimerTicket(id) {
   try {
     const res = await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId })
     });
-    
     if (!res.ok) throw new Error('Erreur lors de la suppression');
-    
     return await res.json();
   } catch (error) {
     console.error("Erreur lors de la suppression du ticket:", error);
@@ -59,19 +50,14 @@ async function supprimerTicket(id) {
   }
 }
 
-// Mettre à jour un ticket
 async function modifierTicket(id, modifications) {
   try {
     const res = await fetch(`${API_URL}/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(modifications)
     });
-    
     if (!res.ok) throw new Error('Erreur lors de la modification');
-    
     return await res.json();
   } catch (error) {
     console.error("Erreur lors de la modification du ticket:", error);
@@ -79,23 +65,19 @@ async function modifierTicket(id, modifications) {
   }
 }
 
-// Calcule le temps écoulé depuis la création
 function formatTempsEcoule(dateCreation) {
   if (!dateCreation) return '';
-  
   const now = new Date();
   const creation = new Date(dateCreation);
   const diffMs = now - creation;
   const diffMins = Math.floor(diffMs / 60000);
   const diffHeures = Math.floor(diffMs / 3600000);
   const diffJours = Math.floor(diffMs / 86400000);
-  
   if (diffJours > 0) return `(${diffJours}j)`;
   if (diffHeures > 0) return `(${diffHeures}h)`;
   return `(${diffMins}mins)`;
 }
 
-// Affiche les tickets dans l'interface
 async function afficherTickets() {
   const tickets = await getTickets();
   const enCours = tickets.filter(t => t.etat === "en cours");
@@ -104,51 +86,39 @@ async function afficherTickets() {
   // Tickets en cours
   const right = document.getElementById("right");
   right.querySelectorAll('.during').forEach(e => e.remove());
-  
   enCours.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "during";
     div.id = ticket.id;
-
-    if (ticket.couleur && ticket.couleur.includes('gradient')) {
-      div.style.backgroundImage = ticket.couleur;
-    } else {
-      div.style.backgroundColor = ticket.couleur || "#cdcdcd";
-    }
-    
+    if (ticket.couleur && ticket.couleur.includes('gradient')) div.style.backgroundImage = ticket.couleur;
+    else div.style.backgroundColor = ticket.couleur || "#cdcdcd";
     let infoContent = `<p id="name">${ticket.nom}</p>`;
-    if (ticket.description && ticket.description.trim()) {
-      infoContent += `<p id="desc">${ticket.description}</p>`;
-    }
-    
+    if (ticket.description && ticket.description.trim()) infoContent += `<p id="desc">${ticket.description}</p>`;
     div.innerHTML = `
       <div class="checkbox" data-id="${ticket.id}"></div>
       <div class="info">${infoContent}</div>
       <div class="time">
-        <p id="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
+        <p id="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
         <p id="remaining">${formatTempsEcoule(ticket.dateCreation)}</p>
       </div>
-      ${ticket.userId === userId ? `<a class="delete" data-id="${ticket.id}">–</a>` : ""}
+      ${(localStorage.getItem('admin') === 'true' || ticket.userId === userId) ? `<a class="delete" data-id="${ticket.id}">–</a>` : ""}
+
     `;
     right.appendChild(div);
   });
 
-  // Historique 
+  // Historique
   const subdiv = document.getElementById("subdiv");
   subdiv.querySelectorAll('.history').forEach(e => e.remove());
-  
   historique.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "history";
-    if (ticket.couleur && ticket.couleur.includes('gradient')) {
-      div.style.backgroundImage = ticket.couleur;
-    } else {
-      div.style.backgroundColor = ticket.couleur || "#cdcdcd";
-    }
+    if (ticket.couleur && ticket.couleur.includes('gradient')) div.style.backgroundImage = ticket.couleur;
+    else div.style.backgroundColor = ticket.couleur || "#cdcdcd";
     div.innerHTML = `
       <p class="name">${ticket.nom}</p>
       <div class="time">
-        <p class="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</p>
+        <p class="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
         <p class="etat">${ticket.etat}</p>
       </div>
     `;
@@ -174,41 +144,87 @@ async function afficherTickets() {
   });
 }
 
-// Création d'un ticket
+// conversion base64 (unicode safe)
+function toBase64(str) {
+  try { return btoa(str); } 
+  catch(e){ return btoa(unescape(encodeURIComponent(str))); }
+}
+
+// --- Mode admin ---
+function activerModeAdmin() {
+  const titre = document.getElementById('lefttitle');
+  if (titre && !titre.textContent.includes('(admin mode)')) titre.textContent += ' (admin mode)';
+  localStorage.setItem('admin', 'true');
+  document.getElementById('infos').type = 'text';
+  document.getElementById('create').textContent = "Créer";
+  document.getElementById('name').value = "";
+  document.getElementById('infos').value = "";
+}
+
+function desactiverModeAdmin() {
+  localStorage.removeItem('admin');
+  const titre = document.getElementById('lefttitle');
+  if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
+}
+
+function verifierAdminInput() {
+  const nomInput = document.getElementById('name');
+  const infosInput = document.getElementById('infos');
+  const createBtn = document.getElementById('create');
+  if (nomInput.value.trim().toLowerCase() === "admin") {
+    infosInput.type = 'password';
+    createBtn.textContent = "Valider";
+  } else {
+    infosInput.type = 'text';
+    createBtn.textContent = "Créer";
+  }
+}
+
+// --- Création ticket ---
 async function creerTicketDepuisFormulaire() {
   const nom = document.getElementById('name').value.trim();
-  if (!nom) return alert('Le nom est obligatoire');
-  
+  if (!nom) return alert("Le nom est obligatoire");
+
+  if (nom.toLowerCase() === "admin") {
+    const psw = document.getElementById('infos').value.trim();
+    if (toBase64(psw) === jstextimport) {
+      activerModeAdmin();
+      alert("Mode admin activé !");
+    } else if (localStorage.getItem('admin') === 'true' && psw.toLowerCase() == "") {
+      desactiverModeAdmin();
+    } else {
+      alert("Mot de passe incorrect");
+    }
+    return; // stop ici
+  }
+
+  // sinon création normale
   const description = document.getElementById('infos').value;
   const selectedColor = document.querySelector('.color.selected');
   const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
-  
-  const ticket = {
-    nom,
-    description,
-    couleur,
-    etat: "en cours",
-    userId
-  };
-  
+
+  const ticket = { nom, description, couleur, etat: "en cours", userId };
   await ajouterTicket(ticket);
   document.getElementById('name').value = "";
   document.getElementById('infos').value = "";
   await afficherTickets();
 }
 
-// Initialisation
+// --- Initialisation ---
 window.addEventListener('DOMContentLoaded', () => {
   afficherTickets();
-  
+
+  const nomInput = document.getElementById('name');
   const createBtn = document.getElementById('create');
-  if (createBtn) {
-    createBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      creerTicketDepuisFormulaire();
-    });
-  }
-  
+
+  if (localStorage.getItem('admin') === 'true') activerModeAdmin();
+
+  nomInput.addEventListener('input', verifierAdminInput);
+
+  createBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    creerTicketDepuisFormulaire();
+  });
+
   setInterval(afficherTickets, 10000);
 });
-
