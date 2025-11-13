@@ -252,6 +252,27 @@ a#create:hover {
 }
 
 /* ==================== */
+/*SCROLLBAR */
+/* ==================== */
+
+#subdiv::-webkit-scrollbar, #right::-webkit-scrollbar {
+    width: 8px;
+}
+
+#subdiv::-webkit-scrollbar-track, #right::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#subdiv::-webkit-scrollbar-thumb, #right::-webkit-scrollbar-thumb {
+    background: rgba(129, 129, 129, 0.5);
+    border-radius: 4px;
+}
+
+#subdiv::-webkit-scrollbar-button, #right::-webkit-scrollbar-button {
+    display: none;
+}
+
+/* ==================== */
 /* MEDIA QUERIES        */
 /* ==================== */
 
