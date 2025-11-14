@@ -141,8 +141,14 @@ async function afficherTickets() {
   document.querySelectorAll('.checkbox').forEach(checkbox => {
     checkbox.addEventListener('click', async () => {
       const id = checkbox.dataset.id;
-      await modifierTicket(id, { etat: "terminé" });
-      await afficherTickets();
+      // verifier si l'utilisateur a le droit de modifier ce ticket
+      if (localStorage.getItem('admin') !== 'true' && !tickets.find(t => t.id === id && t.userId === userId)) {
+        alert("Vous n'avez pas la permission de modifier ce ticket.");
+        return;
+      } else {
+        await modifierTicket(id, { etat: "terminé" });
+        await afficherTickets();
+      }
     });
   });
 }
@@ -173,6 +179,8 @@ function activerModeAdmin(mdp) {
     localStorage.removeItem('admin');
     const titre = document.getElementById('lefttitle');
     if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
+    //suppimer le role admin du local storage
+    localStorage.removeItem('admin');
   }
 
   function verifierAdminInput() {
