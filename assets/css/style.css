@@ -97,12 +97,40 @@ input[type="text"], input[type="password"] {
     padding: clamp(8px, 1vw, 14px);
     margin: 10px 0;
     font-size: clamp(14px, 1vw, 18px);
-    border: 1px solid #ffffff98;
+    border: 2px solid black;
     border-radius: 50px;
     box-sizing: border-box;
     box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
-    border: 2px solid black;
+    transition: outline 0.2s ease, transform 0.3s ease;
 }
+
+input[type="text"]:hover:not(:focus), input[type="password"]:hover:not(:focus) {
+    transform: scale(1.05);
+}
+
+input[type="text"]:focus, input[type="password"]:focus {
+    outline: 4px solid black;
+    outline-offset: -2px;
+    animation: bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    /* Annule le hover pendant le focus */
+    transform: scale(1);
+}
+
+@keyframes bounce {
+    0% {
+        transform: scale(1.05);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ==================== */
+/* BOUTTON <Create>          */
+/* ==================== */
 
 a#create {
     display: block;
@@ -128,7 +156,8 @@ a#create:hover {
 /* ==================== */
 
 .coloor {
-    margin-top: clamp(20px, 4vw, 70px);
+    margin-top: 2vw;
+    margin-bottom: 3vw;
     text-align: left;
 }
 
@@ -143,19 +172,35 @@ a#create:hover {
     width: clamp(25px, 2.5vw, 45px);
     height: clamp(25px, 2.5vw, 45px);
     border-radius: 80px;
-    outline: 2px solidrgb(0, 0, 0, 1);
     cursor: pointer;
-    transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: outline 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
     border: 2px solid black;
 }
 
-.color:hover {
+.color:hover:not(.selected) {
     transform: scale(1.20);
 }
 
 .color.selected {
-    box-shadow: inset 0 0 0 2px black;
+    box-shadow: inset 0 0 0 2px black, 0 3px 0px rgba(0, 0, 0, 0.2);
+    animation: bounce-color 0.4s ease-out;
+    transform: scale(1);
+}
+
+@keyframes bounce-color {
+    0% {
+        transform: scale(1.20);
+    }
+    50% {
+        transform: scale(1.45);
+    }
+    75% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* ==================== */
