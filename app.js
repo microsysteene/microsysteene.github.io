@@ -121,6 +121,7 @@ async function afficherTickets() {
         <p class="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
         <p class="etat">${ticket.etat}</p>
       </div>
+      ${(localStorage.getItem('admin') === 'true' || ticket.userId === userId) ? `<a class="delete" data-id="${ticket.id}">–</a>` : ""}
     `;
     subdiv.appendChild(div);
   });
