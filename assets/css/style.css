@@ -147,6 +147,7 @@ a#create:hover {
     cursor: pointer;
     transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
+    border: 2px solid black;
 }
 
 .color:hover {
@@ -168,18 +169,19 @@ a#create:hover {
     align-items: center;
     gap: clamp(10px, 1.5vw, 20px);
     margin-top: clamp(10px, 1.5vw, 20px);
-    border-radius: 25px;
+    padding: clamp(10px, 2vw, 10px) 0;
+    border-radius: 35px;
     outline: 2px solid rgb(0, 0, 0);
     filter: drop-shadow(0px 3px 0px rgba(0, 0, 0, 0.29));
 }
 
 .during .checkbox {
-    width: clamp(30px, 2vw, 30px);
-    height: clamp(30px, 2vw, 30px);
+    width: clamp(30px, 3vw, 10px);
+    height: clamp(30px, 3vw, 10px);
     margin-left: clamp(5px, 1.5vw, 20px);
     background-color: rgba(255, 255, 255, 0.31);
     border: 2px solid black;
-    border-radius: 30px;
+    border-radius: 35px;
     cursor: pointer;
 }
 
