@@ -43,7 +43,7 @@ async function supprimerTicket(id) {
     const res = await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId })
+      body: JSON.stringify({ userId, isAdmin: localStorage.getItem('admin') === 'true' })
     });
     if (!res.ok) throw new Error('Erreur lors de la suppression');
     return await res.json();
