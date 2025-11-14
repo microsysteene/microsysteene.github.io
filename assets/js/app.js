@@ -200,7 +200,7 @@ function activerModeAdmin(mdp) {
   async function chargerFiltres() {
     try {
       // cachebuster pour forcer la MAJ à chaque refresh
-      const res = await fetch("filter.json?cachebuster=" + Date.now());
+      const res = await fetch("./assets/filter.json?cachebuster=" + Date.now());
       if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
       const data = await res.json();
       filtresCache = data.banned_terms || [];
