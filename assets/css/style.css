@@ -252,6 +252,24 @@ a#create:hover {
 }
 
 /* ==================== */
+/* BOUTON CRÉER TICKET  */
+/* ==================== */
+
+#createbutton {
+    display: none;
+    cursor: pointer;
+    padding: 20px;
+    border-radius: 50px;
+    text-align: center;
+    margin-bottom: -10px;
+    text-decoration: none;
+    color: black;
+    font-weight: normal;
+    font-size: clamp(1.2rem, 1.5vw, 2rem);
+}
+
+
+/* ==================== */
 /*SCROLLBAR */
 /* ==================== */
 
