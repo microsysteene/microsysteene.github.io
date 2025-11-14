@@ -53,17 +53,20 @@ app.put('/api/tickets/:id', (req, res) => {
   res.json(tickets[index]);
 });
 
-// DELETE - Supprimer un ticket (si userId correspond)
+// DELETE - Supprimer un ticket (si userId correspond ou que l'utilisateur est admin (isAdmin===true))
 app.delete('/api/tickets/:id', (req, res) => {
-  const { userId } = req.body;
+  const { userId, isAdmin } = req.body;
   const ticket = tickets.find(t => t.id === req.params.id);
+
   if (!ticket) return res.status(404).json({ error: 'Ticket non trouvé' });
-  if (ticket.userId !== userId) return res.status(403).json({ error: 'Non autorisé' });
+  if (ticket.userId !== userId && !isAdmin)
+    return res.status(403).json({ error: 'Non autorisé' });
 
   tickets = tickets.filter(t => t.id !== req.params.id);
   fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
   res.json({ message: 'Ticket supprimé', ticket });
 });
+
 
 
 function supprimerTicketsExpires() {
