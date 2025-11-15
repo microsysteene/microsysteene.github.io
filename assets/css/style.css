@@ -1,5 +1,23 @@
 /* ==================== */
-/* STYLES DU BACKGROUND    */
+/* FONTS                */
+/* ==================== */
+
+@font-face {
+  font-family: 'Inconsolata';
+  src: url('fonts/Inconsolata-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inconsolata';
+  src: url('fonts/Inconsolata-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* ==================== */
+/* STYLES DU BACKGROUND */
 /* ==================== */
 
 body {
@@ -24,11 +42,11 @@ body {
 
 body {
     margin: 0;
-    font-family: "Franklin Gothic", sans-serif;
+    font-family: "Inconsolata", monospace;
 }
 
 h1 {
-    font-weight: normal;
+    font-weight: 600; /* Changé de normal à 600 pour SemiBold */
     font-size: clamp(1.2rem, 1.5vw, 2rem);
 }
 
@@ -59,11 +77,11 @@ h1 {
 
 .div {
     padding: clamp(15px, 40px, 10px) 20px;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.7);
     border: 2px solid #000000;
     border-radius: 1.5rem;
     box-sizing: border-box;
-    text-align: left;
+    text-align: center;
 }
 
 #left {
