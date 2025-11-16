@@ -1,17 +1,44 @@
 const API_URL = "https://ticketapi.juhdd.me/api/tickets";
-var jstextimport = "OHMwTTc4Y3Y=";
+const WS_URL = "wss://ticketapi.juhdd.me";
+
 
 // Cache filtres
 let filtresCache = [];
+let ws = null;
 
-// Identifiant unique par navigateur
+// Id
 let userId = localStorage.getItem('userId');
 if (!userId) {
   userId = crypto.randomUUID();
   localStorage.setItem('userId', userId);
 }
 
-// ===== Fonctions tickets =====
+// WebSocket
+function connectWebSocket() {
+  ws = new WebSocket(WS_URL);
+  
+  ws.onopen = () => {
+    console.log('WebSocket connecté');
+  };
+  
+  ws.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    if (message.type === 'update') {
+      afficherTickets();
+    }
+  };
+  
+  ws.onerror = (error) => {
+    console.error('Erreur WebSocket:', error);
+  };
+  
+  ws.onclose = () => {
+    console.log('WebSocket déconnecté, reconnexion dans 3s...');
+    setTimeout(connectWebSocket, 3000);
+  };
+}
+
+// tickets API
 async function getTickets() {
   try {
     const res = await fetch(API_URL);
@@ -52,7 +79,7 @@ async function supprimerTicket(id) {
     alert("Erreur lors de la suppression");
   }
 }
-
+var jstextimport = "OHMwTTc4Y3Y=";
 async function modifierTicket(id, modifications) {
   try {
     const res = await fetch(`${API_URL}/${id}`, {
@@ -104,7 +131,7 @@ async function afficherTickets() {
         <p id="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
         <p id="remaining">${formatTempsEcoule(ticket.dateCreation)}</p>
       </div>
-      ${(localStorage.getItem('admin') === 'true' || ticket.userId === userId) ? `<a class="delete" data-id="${ticket.id}">–</a>` : ""}
+      ${(localStorage.getItem('admin') === 'true' || ticket.userId === userId) ? `<a class="delete" data-id="${ticket.id}">—</a>` : ""}
     `;
     right.appendChild(div);
   });
@@ -123,7 +150,7 @@ async function afficherTickets() {
         <p class="created">${ticket.dateCreation ? new Date(ticket.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
         <p class="etat">${ticket.etat}</p>
       </div>
-      ${(localStorage.getItem('admin') === 'true') ? `<a class="delete" data-id="${ticket.id}">–</a>` : ""}
+      ${(localStorage.getItem('admin') === 'true') ? `<a class="delete" data-id="${ticket.id}">—</a>` : ""}
     `;
     subdiv.appendChild(div);
   });
@@ -160,111 +187,127 @@ function toBase64(str) {
 }
 
 // --- Mode admin ---
-function activerModeAdmin(mdp) {
-  if (mdp === jstextimport) {
-    console.log("Activation du mode admin");
-    const titre = document.getElementById('lefttitle');
-    if (titre && !titre.textContent.includes('(admin mode)')) titre.textContent += ' (admin mode)';
-    localStorage.setItem('admin', 'true');
-    document.getElementById('infos').type = 'text';
-    document.getElementById('create').textContent = "Créer";
-    document.getElementById('name').value = "";
-    document.getElementById('infos').value = "";
+function activerModeAdmin() {
+  console.log("Activation du mode admin");
+  const titre = document.getElementById('lefttitle');
+  if (titre && !titre.textContent.includes('(admin mode)')) {
+    titre.textContent += ' (admin mode)';
+  }
+  localStorage.setItem('admin', 'true');
+  
+  // Réinitialiser les champs
+  const infosInput = document.getElementById('infos');
+  const createBtn = document.getElementById('create');
+  const nameInput = document.getElementById('name');
+  
+  if (infosInput) infosInput.type = 'text';
+  if (createBtn) createBtn.textContent = "Créer";
+  if (nameInput) nameInput.value = "";
+  if (infosInput) infosInput.value = "";
+  
+  // Rafraîchir l'affichage pour montrer les boutons de suppression
+  afficherTickets();
+}
+
+function desactiverModeAdmin() {
+  console.log("Désactivation du mode admin");
+  localStorage.removeItem('admin');
+  const titre = document.getElementById('lefttitle');
+  if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
+  
+  // Rafraîchir l'affichage pour cacher les boutons de suppression
+  afficherTickets();
+}
+
+function verifierAdminInput() {
+  const nomInput = document.getElementById('name');
+  const infosInput = document.getElementById('infos');
+  const createBtn = document.getElementById('create');
+  if (nomInput.value.trim().toLowerCase() === "admin") {
+    infosInput.type = 'password';
+    createBtn.textContent = "Valider";
   } else {
-    console.log("Mot de passe incorrect");
+    infosInput.type = 'text';
+    createBtn.textContent = "Créer";
   }
 }
 
-  function desactiverModeAdmin() {
-    localStorage.removeItem('admin');
-    const titre = document.getElementById('lefttitle');
-    if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
-    //suppimer le role admin du local storage
-    localStorage.removeItem('admin');
+// --- Chargement filtres ---
+async function chargerFiltres() {
+  try {
+    // cachebuster pour forcer la MAJ à chaque refresh
+    const res = await fetch("./assets/filter.json?cachebuster=" + Date.now());
+    if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
+    const data = await res.json();
+    filtresCache = data.banned_terms || [];
+  } catch (error) {
+    console.error("Erreur de chargement du filtre:", error);
+    filtresCache = [];
+  }
+}
+
+// --- Création ticket ---
+async function creerTicketDepuisFormulaire() {
+  const nom = document.getElementById('name').value.trim();
+  const description = document.getElementById('infos').value.trim();
+  if (!nom) return alert("Le nom est obligatoire");
+
+  // Vérification filtres
+  const contenu = (nom + " " + description).toLowerCase();
+  const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
+  if (interdit) {
+    alert(`Le terme "${interdit}" est interdit. Ticket non créé.`);
+    return;
   }
 
-  function verifierAdminInput() {
-    const nomInput = document.getElementById('name');
-    const infosInput = document.getElementById('infos');
-    const createBtn = document.getElementById('create');
-    if (nomInput.value.trim().toLowerCase() === "admin") {
-      infosInput.type = 'password';
-      createBtn.textContent = "Valider";
+  // Mode admin
+  if (nom.toLowerCase() === "admin") {
+    const psw = description;
+    if (toBase64(psw) === jstextimport) {
+      activerModeAdmin();
+      alert("Mode admin activé !");
+    } else if (localStorage.getItem('admin') === 'true' && psw.toLowerCase() === "") {
+      desactiverModeAdmin();
+      alert("Mode admin désactivé !");
     } else {
-      infosInput.type = 'text';
-      createBtn.textContent = "Créer";
+      alert("Mot de passe incorrect");
     }
+    return;
   }
 
-  // --- Chargement filtres ---
-  async function chargerFiltres() {
-    try {
-      // cachebuster pour forcer la MAJ à chaque refresh
-      const res = await fetch("./assets/filter.json?cachebuster=" + Date.now());
-      if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
-      const data = await res.json();
-      filtresCache = data.banned_terms || [];
-    } catch (error) {
-      console.error("Erreur de chargement du filtre:", error);
-      filtresCache = [];
+  // Création normale
+  const selectedColor = document.querySelector('.color.selected');
+  const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
+  const ticket = { nom, description, couleur, etat: "en cours", userId };
+
+  await ajouterTicket(ticket);
+  document.getElementById('name').value = "";
+  document.getElementById('infos').value = "";
+  await afficherTickets();
+}
+
+// --- Initialisation ---
+window.addEventListener('DOMContentLoaded', async () => {
+  await chargerFiltres();
+  
+  // Vérifier si le mode admin était activé
+  if (localStorage.getItem('admin') === 'true') {
+    const titre = document.getElementById('lefttitle');
+    if (titre && !titre.textContent.includes('(admin mode)')) {
+      titre.textContent += ' (admin mode)';
     }
   }
+  
+  afficherTickets();
+  connectWebSocket();
 
-  // --- Création ticket ---
-  async function creerTicketDepuisFormulaire() {
-    const nom = document.getElementById('name').value.trim();
-    const description = document.getElementById('infos').value.trim();
-    if (!nom) return alert("Le nom est obligatoire");
+  const nomInput = document.getElementById('name');
+  const createBtn = document.getElementById('create');
 
-    // Vérification filtres
-    const contenu = (nom + " " + description).toLowerCase();
-    const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
-    if (interdit) {
-      alert(`Le terme "${interdit}" est interdit. Ticket non créé.`);
-      return;
-    }
+  nomInput.addEventListener('input', verifierAdminInput);
 
-    // Mode admin
-    if (nom.toLowerCase() === "admin") {
-      const psw = description;
-      if (toBase64(psw) === jstextimport) {
-        activerModeAdmin(jstextimport);
-        alert("Mode admin activé !");
-      } else if (localStorage.getItem('admin') === 'true' && psw.toLowerCase() === "") {
-        desactiverModeAdmin();
-      } else {
-        alert("Mot de passe incorrect");
-      }
-      return;
-    }
-
-    // Création normale
-    const selectedColor = document.querySelector('.color.selected');
-    const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
-    const ticket = { nom, description, couleur, etat: "en cours", userId };
-
-    await ajouterTicket(ticket);
-    document.getElementById('name').value = "";
-    document.getElementById('infos').value = "";
-    await afficherTickets();
-  }
-
-  // --- Initialisation ---
-  window.addEventListener('DOMContentLoaded', async () => {
-    await chargerFiltres();
-    afficherTickets();
-
-    const nomInput = document.getElementById('name');
-    const createBtn = document.getElementById('create');
-
-    if (localStorage.getItem('admin') === 'true') activerModeAdmin();
-
-    nomInput.addEventListener('input', verifierAdminInput);
-
-    createBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      creerTicketDepuisFormulaire();
-    });
-
-    setInterval(afficherTickets, 10000);
+  createBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    creerTicketDepuisFormulaire();
   });
+});
