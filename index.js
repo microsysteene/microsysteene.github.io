@@ -1,9 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-const WebSocket = require('ws');
 const http = require('http');
+const WebSocket = require('ws');
+const db = require('./database');
 
 const app = express();
 const server = http.createServer(app);
@@ -12,141 +11,131 @@ const wss = new WebSocket.Server({ server });
 app.use(cors());
 app.use(express.json());
 
-const dataFile = path.join(__dirname, 'tickets.json');
-let tickets = fs.existsSync(dataFile) ? JSON.parse(fs.readFileSync(dataFile)) : [];
-
-// ===== WebSocket =====
+// websocket
 const clients = new Set();
 
 wss.on('connection', (ws) => {
-  console.log('Nouveau client WebSocket connecté');
+  ws.isAlive = true;
   clients.add(ws);
 
-  ws.on('close', () => {
-    console.log('Client WebSocket déconnecté');
-    clients.delete(ws);
-  });
-
-  ws.on('error', (error) => {
-    console.error('Erreur WebSocket:', error);
-    clients.delete(ws);
-  });
+  ws.on('pong', () => ws.isAlive = true);
+  ws.on('close', () => clients.delete(ws));
+  ws.on('error', () => clients.delete(ws));
 });
 
-// Fonction pour notifier tous les clients
+// ping loop
+setInterval(() => {
+  clients.forEach(ws => {
+    if (!ws.isAlive) {
+      ws.terminate();
+      clients.delete(ws);
+      return;
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
 function notifierClients() {
   const message = JSON.stringify({ type: 'update', timestamp: Date.now() });
   clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === WebSocket.OPEN)
       client.send(message);
-    }
   });
 }
 
-// ===== Routes API =====
+// api
 
-// GET - Tous les tickets
+// GET
 app.get('/api/tickets', (req, res) => {
-  res.json(tickets);
+  db.all("SELECT * FROM tickets ORDER BY dateCreation DESC", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
 
-// POST - Créer un ticket
+// POST
 app.post('/api/tickets', (req, res) => {
   const { nom, description, couleur, etat, userId } = req.body;
   if (!nom || !userId) return res.status(400).json({ error: 'Nom et userId requis' });
 
-  const nouveauTicket = {
-    id: Date.now().toString(),
-    nom,
-    description: description || '',
-    couleur: couleur || '#cdcdcd',
-    etat: etat || 'en cours',
-    dateCreation: new Date().toISOString(),
-    userId
-  };
+  const id = Date.now().toString();
+  const dateCreation = new Date().toISOString();
 
-  tickets.push(nouveauTicket);
-  fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
-  
-  // Notifier tous les clients
-  notifierClients();
-  
-  res.status(201).json(nouveauTicket);
+  db.run(`
+    INSERT INTO tickets (id, nom, description, couleur, etat, dateCreation, userId)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `,
+  [id, nom, description || '', couleur || '#cdcdcd', etat || 'en cours', dateCreation, userId],
+  (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    notifierClients();
+    res.status(201).json({ id, nom, description, couleur, etat, dateCreation, userId });
+  });
 });
 
-// PUT - Modifier un ticket
+// PUT
 app.put('/api/tickets/:id', (req, res) => {
-  const index = tickets.findIndex(t => t.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Ticket non trouvé' });
-
   const { nom, description, couleur, etat } = req.body;
-  tickets[index] = {
-    ...tickets[index],
-    nom: nom || tickets[index].nom,
-    description: description ?? tickets[index].description,
-    couleur: couleur || tickets[index].couleur,
-    etat: etat || tickets[index].etat
-  };
+  const id = req.params.id;
 
-  fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
-  
-  // Notifier tous les clients
-  notifierClients();
-  
-  res.json(tickets[index]);
+  db.run(`
+    UPDATE tickets SET
+      nom = COALESCE(?, nom),
+      description = COALESCE(?, description),
+      couleur = COALESCE(?, couleur),
+      etat = COALESCE(?, etat)
+    WHERE id = ?
+  `,
+  [nom, description, couleur, etat, id],
+  (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    notifierClients();
+    res.json({ id, nom, description, couleur, etat });
+  });
 });
 
-// DELETE - Supprimer un ticket
+// DELETE
 app.delete('/api/tickets/:id', (req, res) => {
-  const { userId, isAdmin } = req.body;
-  const ticket = tickets.find(t => t.id === req.params.id);
+  const userId = req.query.userId;
+  const isAdmin = req.query.admin === 'true';
+  const id = req.params.id;
 
-  if (!ticket) return res.status(404).json({ error: 'Ticket non trouvé' });
-  if (ticket.userId !== userId && !isAdmin)
-    return res.status(403).json({ error: 'Non autorisé' });
+  db.get("SELECT * FROM tickets WHERE id = ?", [id], (err, ticket) => {
+    if (!ticket) return res.status(404).json({ error: "Ticket non trouvé" });
+    if (ticket.userId !== userId && !isAdmin)
+      return res.status(403).json({ error: "Non autorisé" });
 
-  tickets = tickets.filter(t => t.id !== req.params.id);
-  fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
-  
-  // Notifier tous les clients
-  notifierClients();
-  
-  res.json({ message: 'Ticket supprimé', ticket });
+    db.run("DELETE FROM tickets WHERE id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      notifierClients();
+      res.json({ message: "Ticket supprimé", ticket });
+    });
+  });
 });
 
-// ===== Suppression automatique =====
+// Expiration auto
 function supprimerTicketsExpires() {
   const maintenant = Date.now();
-  const ticketsAvant = tickets.length;
+  const troisHeuresDix = 3 * 60 * 60 * 1000 + 10 * 60 * 1000;
+  const uneHeure = 60 * 60 * 1000;
 
-  const troisHeuresDix = 3 * 60 * 60 * 1000 + 10 * 60 * 1000; // 3h10
-  const uneHeure = 60 * 60 * 1000; // 1h
-
-  tickets = tickets.filter(ticket => {
-    const age = maintenant - new Date(ticket.dateCreation).getTime();
-    
-    if (ticket.etat === 'en cours' && age > troisHeuresDix) {
-      return false;
-    }
-    if (ticket.etat === 'terminé' && age > uneHeure) {
-      return false;
-    }
-    return true;
-  });
-
-  if (tickets.length !== ticketsAvant) {
-    fs.writeFileSync(dataFile, JSON.stringify(tickets, null, 2));
-    // Notifier tous les clients qu'il y a eu des suppressions
+  db.all("SELECT * FROM tickets", [], (err, rows) => {
+    if (err) return;
+    rows.forEach(ticket => {
+      const age = maintenant - new Date(ticket.dateCreation).getTime();
+      if ((ticket.etat === "en cours" && age > troisHeuresDix) ||
+          (ticket.etat === "terminé" && age > uneHeure)) {
+        db.run("DELETE FROM tickets WHERE id = ?", ticket.id);
+      }
+    });
     notifierClients();
-    console.log(`${ticketsAvant - tickets.length} ticket(s) expiré(s) supprimé(s)`);
-  }
+  });
 }
 
-setInterval(supprimerTicketsExpires, 60 * 1000); // Toutes les 60 secondes
+setInterval(supprimerTicketsExpires, 60000);
 
-app.get('/', (req, res) => {
-  res.json({ message: 'API Tickets fonctionnelle' });
-});
+app.get('/', (req, res) => res.json({ message: 'API Tickets OK' }));
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Serveur sur le port ${PORT}`));
+server.listen(PORT, () => console.log(`API OK sur port ${PORT}`));
