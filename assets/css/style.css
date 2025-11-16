@@ -46,7 +46,7 @@ body {
 }
 
 h1 {
-    font-weight: 600; /* Changé de normal à 600 pour SemiBold */
+    font-weight: 600;
     font-size: clamp(1.2rem, 1.5vw, 2rem);
 }
 
@@ -92,12 +92,18 @@ h1 {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 1.5vw, 20px);
 }
 
 #right {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 1.5vw, 20px);
 }
 
 /* ==================== */
@@ -130,7 +136,6 @@ input[type="text"]:focus, input[type="password"]:focus {
     outline: 4px solid black;
     outline-offset: -2px;
     animation: bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    /* Annule le hover pendant le focus */
     transform: scale(1);
 }
 
@@ -147,7 +152,7 @@ input[type="text"]:focus, input[type="password"]:focus {
 }
 
 /* ==================== */
-/* BOUTTON <Create>          */
+/* BOUTTON <Create>     */
 /* ==================== */
 
 a#create {
@@ -226,17 +231,16 @@ a#create:hover {
 /* TÂCHES ET HISTORIQUE */
 /* ==================== */
 
-
 .during,
 .history {
     display: flex;
     align-items: center;
     gap: clamp(10px, 1.5vw, 20px);
-    margin-top: clamp(10px, 1.5vw, 20px);
     padding: clamp(10px, 2vw, 15px) 0;
     border-radius: 40px;
     outline: 2px solid rgb(0, 0, 0);
     filter: drop-shadow(0px 3px 0px rgba(0, 0, 0, 0.29));
+    transition: all 0.3s ease-out;
 }
 
 .during .checkbox {
@@ -249,7 +253,6 @@ a#create:hover {
     border-radius: 100%;
     cursor: pointer;
 }
-
 
 .during .time,
 .history .time {
@@ -276,6 +279,65 @@ a#create:hover {
 .history .name {
     margin-left: clamp(10px, 1.5vw, 20px);
 }
+
+/* ==================== */
+/* ANIMATION AJOUT      */
+/* ==================== */
+
+@keyframes bounce-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.02);
+    }
+    70% {
+        opacity: 1;
+        transform: scale(0.98);
+    }
+    85% {
+        transform: scale(1.01);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.during.new-task {
+    animation: bounce-color 0.4s ease-out;
+}
+
+/* ==================== */
+/* ANIMATION SUPPRESSION */
+/* ==================== */
+
+@keyframes fade-out-fluid {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+        max-height: 200px;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+}
+
+.during.deleting,
+.history.deleting {
+    animation: fade-out-fluid 0.6s cubic-bezier(0.77, 0, 0.175, 1) forwards; 
+    overflow: hidden;
+    will-change: opacity, transform, max-height, padding, margin;
+}
+
 
 /* ==================== */
 /* BOUTON SUPPRIMER     */
@@ -324,9 +386,8 @@ a#create:hover {
     font-size: clamp(1.2rem, 1.5vw, 2rem);
 }
 
-
 /* ==================== */
-/*SCROLLBAR */
+/* SCROLLBAR            */
 /* ==================== */
 
 #subdiv::-webkit-scrollbar, #right::-webkit-scrollbar {
