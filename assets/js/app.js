@@ -42,6 +42,7 @@ function connectWebSocket() {
 async function getTickets() {
   try {
     const res = await fetch(API_URL);
+    if (!res.ok) throw new Error(`Erreur HTTP: ${res.status}`);
     const data = await res.json();
     return Array.isArray(data) ? data : [];
   } catch (error) {
@@ -67,13 +68,18 @@ async function ajouterTicket(ticket) {
 
 async function supprimerTicket(id) {
   try {
+    const bodyContent = { 
+        userId: userId, 
+        isAdmin: localStorage.getItem('admin') === 'true' 
+    };
+    
     const res = await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, isAdmin: localStorage.getItem('admin') === 'true' })
+      body: JSON.stringify(bodyContent)
     });
     if (!res.ok) throw new Error('Erreur lors de la suppression');
-    return await res.json();
+    return res.status === 204 ? true : await res.json();
   } catch (error) {
     console.error("Erreur lors de la suppression du ticket:", error);
     alert("Erreur lors de la suppression");
@@ -105,25 +111,50 @@ function formatTempsEcoule(dateCreation) {
   const diffJours = Math.floor(diffMs / 86400000);
   if (diffJours > 0) return `(${diffJours}j)`;
   if (diffHeures > 0) return `(${diffHeures}h)`;
-  return `(${diffMins}mins)`;
+  return diffMins > 0 ? `(${diffMins}mins)` : '(juste créé)'; 
 }
+
+function waitForAnimationEnd(element) {
+    return new Promise(resolve => {
+        element.addEventListener('animationend', function handler() {
+            element.removeEventListener('animationend', handler);
+            resolve();
+        }, { once: true });
+    });
+}
+
 
 async function afficherTickets() {
   const tickets = await getTickets();
+  if (!tickets) return; // Si getTickets échoue
+  
   const enCours = tickets.filter(t => t.etat === "en cours");
   const historique = tickets.filter(t => t.etat !== "en cours");
+  const isAdmin = localStorage.getItem('admin') === 'true';
 
-  // Tickets en cours
   const right = document.getElementById("right");
-  right.querySelectorAll('.during').forEach(e => e.remove());
+
+  const elementsActuels = Array.from(right.querySelectorAll('.during'));
+  const ticketsExistantsIDs = new Set(elementsActuels.map(div => div.id));
+  
+  right.innerHTML = ''; 
+
   enCours.forEach(ticket => {
     const div = document.createElement('div');
-    div.className = "during";
+    
+    const estNouveau = !ticketsExistantsIDs.has(ticket.id); 
+    div.className = estNouveau ? "during new-task" : "during";
+    
     div.id = ticket.id;
     if (ticket.couleur && ticket.couleur.includes('gradient')) div.style.backgroundImage = ticket.couleur;
     else div.style.backgroundColor = ticket.couleur || "#cdcdcd";
+    
     let infoContent = `<p id="name">${ticket.nom}</p>`;
     if (ticket.description && ticket.description.trim()) infoContent += `<p id="desc">${ticket.description}</p>`;
+    
+    const canDelete = isAdmin || ticket.userId === userId;
+    const deleteButton = canDelete ? `<a class="delete" data-id="${ticket.id}">–</a>` : "";
+
     div.innerHTML = `
       <div class="checkbox" data-id="${ticket.id}"></div>
       <div class="info">${infoContent}</div>
@@ -134,16 +165,27 @@ async function afficherTickets() {
       ${(localStorage.getItem('admin') === 'true' || ticket.userId === userId) ? `<a class="delete" data-id="${ticket.id}">—</a>` : ""}
     `;
     right.appendChild(div);
+    
+    if (estNouveau) {
+      setTimeout(() => {
+        div.classList.remove('new-task');
+      }, 600);
+    }
   });
 
-  // Historique
+  // --- Gestion de l'historique ---
   const subdiv = document.getElementById("subdiv");
-  subdiv.querySelectorAll('.history').forEach(e => e.remove());
+  subdiv.innerHTML = '';
+
   historique.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "history";
+    div.id = ticket.id;
     if (ticket.couleur && ticket.couleur.includes('gradient')) div.style.backgroundImage = ticket.couleur;
     else div.style.backgroundColor = ticket.couleur || "#cdcdcd";
+    
+    const deleteButton = isAdmin ? `<a class="delete" data-id="${ticket.id}">–</a>` : "";
+
     div.innerHTML = `
       <p class="name">${ticket.nom}</p>
       <div class="time">
@@ -155,27 +197,48 @@ async function afficherTickets() {
     subdiv.appendChild(div);
   });
 
-  // Listeners suppression
+  // --- Listeners de suppression ---
   document.querySelectorAll('.delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
-      await supprimerTicket(btn.dataset.id);
+      const ticketId = btn.dataset.id;
+      const ticketElement = document.getElementById(ticketId);
+      
+      if (ticketElement) {
+        ticketElement.classList.add('deleting');
+        
+        await waitForAnimationEnd(ticketElement);
+      }
+      
+      await supprimerTicket(ticketId);
       await afficherTickets();
     });
   });
 
-  // Listeners checkbox pour terminer un ticket
+  // --- Listeners checkbox pour terminer un ticket ---
   document.querySelectorAll('.checkbox').forEach(checkbox => {
     checkbox.addEventListener('click', async () => {
       const id = checkbox.dataset.id;
-      // verifier si l'utilisateur a le droit de modifier ce ticket
-      if (localStorage.getItem('admin') !== 'true' && !tickets.find(t => t.id === id && t.userId === userId)) {
+      const ticket = tickets.find(t => t.id === id);
+
+      // Vérification des permissions
+      if (!isAdmin && (!ticket || ticket.userId !== userId)) {
         alert("Vous n'avez pas la permission de modifier ce ticket.");
         return;
-      } else {
-        await modifierTicket(id, { etat: "terminé" });
-        await afficherTickets();
+      } 
+      
+      const ticketElement = document.getElementById(id);
+      
+      // Animation avant de terminer
+      if (ticketElement) {
+        ticketElement.classList.add('deleting');
+        
+        // **CORRECTION MAJEURE** : Attendre la fin de l'animation CSS
+        await waitForAnimationEnd(ticketElement); // Plus sûr que le setTimeout(400)
       }
+      
+      await modifierTicket(id, { etat: "terminé" });
+      await afficherTickets();
     });
   });
 }
@@ -231,7 +294,32 @@ function verifierAdminInput() {
     createBtn.textContent = "Créer";
   }
 }
+function verifierAdminInput() {
+  const nomInput = document.getElementById('name');
+  const infosInput = document.getElementById('infos');
+  const createBtn = document.getElementById('create');
+  if (nomInput.value.trim().toLowerCase() === "admin") {
+    infosInput.type = 'password';
+    createBtn.textContent = "Valider";
+  } else {
+    infosInput.type = 'text';
+    createBtn.textContent = "Créer";
+  }
+}
 
+// --- Chargement filtres ---
+async function chargerFiltres() {
+  try {
+    // cachebuster pour forcer la MAJ à chaque refresh
+    const res = await fetch("./assets/filter.json?cachebuster=" + Date.now());
+    if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
+    const data = await res.json();
+    filtresCache = data.banned_terms || [];
+  } catch (error) {
+    console.error("Erreur de chargement du filtre:", error);
+    filtresCache = [];
+  }
+}
 // --- Chargement filtres ---
 async function chargerFiltres() {
   try {
@@ -251,7 +339,19 @@ async function creerTicketDepuisFormulaire() {
   const nom = document.getElementById('name').value.trim();
   const description = document.getElementById('infos').value.trim();
   if (!nom) return alert("Le nom est obligatoire");
+// --- Création ticket ---
+async function creerTicketDepuisFormulaire() {
+  const nom = document.getElementById('name').value.trim();
+  const description = document.getElementById('infos').value.trim();
+  if (!nom) return alert("Le nom est obligatoire");
 
+  // Vérification filtres
+  const contenu = (nom + " " + description).toLowerCase();
+  const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
+  if (interdit) {
+    alert(`Le terme "${interdit}" est interdit. Ticket non créé.`);
+    return;
+  }
   // Vérification filtres
   const contenu = (nom + " " + description).toLowerCase();
   const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
@@ -279,7 +379,16 @@ async function creerTicketDepuisFormulaire() {
   const selectedColor = document.querySelector('.color.selected');
   const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
   const ticket = { nom, description, couleur, etat: "en cours", userId };
+  // Création normale
+  const selectedColor = document.querySelector('.color.selected');
+  const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
+  const ticket = { nom, description, couleur, etat: "en cours", userId };
 
+  await ajouterTicket(ticket);
+  document.getElementById('name').value = "";
+  document.getElementById('infos').value = "";
+  await afficherTickets();
+}
   await ajouterTicket(ticket);
   document.getElementById('name').value = "";
   document.getElementById('infos').value = "";
@@ -304,6 +413,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const nomInput = document.getElementById('name');
   const createBtn = document.getElementById('create');
 
+  nomInput.addEventListener('input', verifierAdminInput);
   nomInput.addEventListener('input', verifierAdminInput);
 
   createBtn.addEventListener('click', (e) => {

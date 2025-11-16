@@ -1,5 +1,23 @@
 /* ==================== */
-/* STYLES DU BACKGROUND    */
+/* FONTS                */
+/* ==================== */
+
+@font-face {
+  font-family: 'Inconsolata';
+  src: url('fonts/Inconsolata-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inconsolata';
+  src: url('fonts/Inconsolata-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* ==================== */
+/* STYLES DU BACKGROUND */
 /* ==================== */
 
 body {
@@ -24,11 +42,11 @@ body {
 
 body {
     margin: 0;
-    font-family: "Franklin Gothic", sans-serif;
+    font-family: "Inconsolata", monospace;
 }
 
 h1 {
-    font-weight: normal;
+    font-weight: 600;
     font-size: clamp(1.2rem, 1.5vw, 2rem);
 }
 
@@ -58,7 +76,7 @@ h1 {
 /* ==================== */
 
 .div {
-    padding: clamp(15px, 2vw, 30px);
+    padding: clamp(15px, 40px, 10px) 20px;
     background: rgba(255, 255, 255, 0.7);
     border: 2px solid #000000;
     border-radius: 1.5rem;
@@ -74,12 +92,18 @@ h1 {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 1.5vw, 20px);
 }
 
 #right {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 1.5vw, 20px);
 }
 
 /* ==================== */
@@ -97,12 +121,39 @@ input[type="text"], input[type="password"] {
     padding: clamp(8px, 1vw, 14px);
     margin: 10px 0;
     font-size: clamp(14px, 1vw, 18px);
-    border: 1px solid #ffffff98;
+    border: 2px solid black;
     border-radius: 50px;
     box-sizing: border-box;
     box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
-    border: 2px solid black;
+    transition: outline 0.2s ease, transform 0.3s ease;
 }
+
+input[type="text"]:hover:not(:focus), input[type="password"]:hover:not(:focus) {
+    transform: scale(1.05);
+}
+
+input[type="text"]:focus, input[type="password"]:focus {
+    outline: 4px solid black;
+    outline-offset: -2px;
+    animation: bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transform: scale(1);
+}
+
+@keyframes bounce {
+    0% {
+        transform: scale(1.05);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ==================== */
+/* BOUTTON <Create>     */
+/* ==================== */
 
 a#create {
     display: block;
@@ -113,6 +164,7 @@ a#create {
     font-size: clamp(16px, 1vw, 20px);
     color: #000000;
     text-decoration: none;
+    text-align: center;
     border: 2px solid black;
     border-radius: 50px;
     transition: all 0.2s ease;
@@ -128,7 +180,8 @@ a#create:hover {
 /* ==================== */
 
 .coloor {
-    margin-top: clamp(20px, 4vw, 70px);
+    margin-top: 2vw;
+    margin-bottom: 3vw;
     text-align: left;
 }
 
@@ -143,46 +196,63 @@ a#create:hover {
     width: clamp(25px, 2.5vw, 45px);
     height: clamp(25px, 2.5vw, 45px);
     border-radius: 80px;
-    outline: 2px solidrgb(0, 0, 0, 1);
     cursor: pointer;
-    transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: outline 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
+    border: 2px solid black;
 }
 
-.color:hover {
+.color:hover:not(.selected) {
     transform: scale(1.20);
 }
 
 .color.selected {
-    box-shadow: inset 0 0 0 2px black;
+    box-shadow: inset 0 0 0 2px black, 0 3px 0px rgba(0, 0, 0, 0.2);
+    animation: bounce-color 0.4s ease-out;
+    transform: scale(1);
+}
+
+@keyframes bounce-color {
+    0% {
+        transform: scale(1.20);
+    }
+    50% {
+        transform: scale(1.37);
+    }
+    75% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* ==================== */
 /* TÂCHES ET HISTORIQUE */
 /* ==================== */
 
-
 .during,
 .history {
     display: flex;
     align-items: center;
     gap: clamp(10px, 1.5vw, 20px);
-    margin-top: clamp(10px, 1.5vw, 20px);
-    border-radius: 25px;
+    padding: clamp(10px, 2vw, 15px) 0;
+    border-radius: 40px;
     outline: 2px solid rgb(0, 0, 0);
     filter: drop-shadow(0px 3px 0px rgba(0, 0, 0, 0.29));
+    transition: all 0.3s ease-out;
 }
 
 .during .checkbox {
-    width: clamp(30px, 2vw, 30px);
-    height: clamp(30px, 2vw, 30px);
+    width: 40px;
+    height: 40px;
     margin-left: clamp(5px, 1.5vw, 20px);
-    background-color: rgba(255, 255, 255, 0.31);
+    background-color: rgb(255, 255, 255);
     border: 2px solid black;
-    border-radius: 30px;
+    filter: drop-shadow(0px 2px 0px rgb(0, 0, 0));
+    border-radius: 100%;
     cursor: pointer;
 }
-
 
 .during .time,
 .history .time {
@@ -203,12 +273,71 @@ a#create:hover {
 
 .during .time #remaining,
 .history .time .etat {
-    color: darkgrey;
+    color: rgba(0, 0, 0, 0.459);
 }
 
 .history .name {
     margin-left: clamp(10px, 1.5vw, 20px);
 }
+
+/* ==================== */
+/* ANIMATION AJOUT      */
+/* ==================== */
+
+@keyframes bounce-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.02);
+    }
+    70% {
+        opacity: 1;
+        transform: scale(0.98);
+    }
+    85% {
+        transform: scale(1.01);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.during.new-task {
+    animation: bounce-color 0.4s ease-out;
+}
+
+/* ==================== */
+/* ANIMATION SUPPRESSION */
+/* ==================== */
+
+@keyframes fade-out-fluid {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+        max-height: 200px;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+}
+
+.during.deleting,
+.history.deleting {
+    animation: fade-out-fluid 0.6s cubic-bezier(0.77, 0, 0.175, 1) forwards; 
+    overflow: hidden;
+    will-change: opacity, transform, max-height, padding, margin;
+}
+
 
 /* ==================== */
 /* BOUTON SUPPRIMER     */
@@ -222,30 +351,22 @@ a#create:hover {
     width: 0;
     height: 0;
     padding: 0;
-    font-size: 0;
-    font-weight: bold;
-    color: white;
-    text-align: center;
-    background-color: red;
-    border: 0.2px solid rgba(0, 0, 0, 0.2);
+    background-color: rgb(255, 255, 255);
+    border: 2px solid rgba(0, 0, 0, 1);
     border-radius: 50px;
     opacity: 0;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    filter: drop-shadow(0px 3px 2px rgba(0, 0, 0, 0.29));
-    box-shadow:
-        inset 0 2px 3px rgba(255, 255, 255, 0.6),
-        inset 0 -2px 3px rgba(0, 0, 0, 0.2);
+    filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 1));
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.65);
 }
 
 .during:hover .delete,
 .history:hover .delete {
-    width: 24px;
-    height: 24px;
+    width: 40px;
+    height: 40px;
     margin-right: clamp(10px, 1.5vw, 20px);
     font-size: 25px;
     opacity: 1;
-    transform: scale(1.1);
 }
 
 /* ==================== */
@@ -265,9 +386,8 @@ a#create:hover {
     font-size: clamp(1.2rem, 1.5vw, 2rem);
 }
 
-
 /* ==================== */
-/*SCROLLBAR */
+/* SCROLLBAR            */
 /* ==================== */
 
 #subdiv::-webkit-scrollbar, #right::-webkit-scrollbar {
