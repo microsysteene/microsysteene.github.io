@@ -1,5 +1,6 @@
 const API_URL = "https://ticketapi.juhdd.me/api/tickets";
 const WS_URL = "wss://ticketapi.juhdd.me";
+const maxDuringTicket = 1;
 
 // Cache filtres
 let filtresCache = [];
@@ -244,6 +245,13 @@ async function creerTicketDepuisFormulaire() {
   const description = document.getElementById('infos').value.trim();
   if (!nom) return alert("Le nom est obligatoire");
 
+  // vérifier si l'utilisateur n'a pas dépassé le max
+  const tickets = await getTickets();
+  const enCoursUtilisateur = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
+  if (enCoursUtilisateur.length >= maxDuringTicket) {
+    return alert(`Vous ne pouvez pas avoir plus de ${maxDuringTicket} tickets en cours.`);
+  }
+
   const contenu = (nom + " " + description).toLowerCase();
   const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
   if (interdit) return alert(`"${interdit}" est interdit.`);
@@ -271,6 +279,7 @@ async function creerTicketDepuisFormulaire() {
   document.getElementById('name').value = "";
   document.getElementById('infos').value = "";
 }
+
 
 // init
 window.addEventListener('DOMContentLoaded', async () => {
