@@ -67,10 +67,9 @@ async function ajouterTicket(ticket) {
 
 async function supprimerTicket(id) {
   try {
-    const res = await fetch(`${API_URL}/${id}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, isAdmin: localStorage.getItem('admin') === 'true' })
+    const isAdmin = localStorage.getItem('admin') === 'true';
+    const res = await fetch(`${API_URL}/${id}?userId=${userId}&admin=${isAdmin}`, {
+      method: "DELETE"
     });
     if (!res.ok) throw new Error('Erreur lors de la suppression');
     return await res.json();
@@ -79,6 +78,7 @@ async function supprimerTicket(id) {
     alert("Erreur lors de la suppression");
   }
 }
+
 
 async function modifierTicket(id, modifications) {
   try {
@@ -180,7 +180,7 @@ async function afficherTickets() {
   });
 }
 
-// conversion base64 (unicode safe)
+// conversion base64 
 function toBase64(str) {
   try { return btoa(str); }
   catch (e) { return btoa(unescape(encodeURIComponent(str))); }
@@ -195,7 +195,7 @@ function activerModeAdmin() {
   }
   localStorage.setItem('admin', 'true');
   
-  // Réinitialiser les champs
+  // reset les champs
   const infosInput = document.getElementById('infos');
   const createBtn = document.getElementById('create');
   const nameInput = document.getElementById('name');
@@ -205,7 +205,7 @@ function activerModeAdmin() {
   if (nameInput) nameInput.value = "";
   if (infosInput) infosInput.value = "";
   
-  // Rafraîchir l'affichage pour montrer les boutons de suppression
+  // reload l'affichage pour montrer les boutons de suppression
   afficherTickets();
 }
 
@@ -215,7 +215,7 @@ function desactiverModeAdmin() {
   const titre = document.getElementById('lefttitle');
   if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
   
-  // Rafraîchir l'affichage pour cacher les boutons de suppression
+  // reload l'affichage pour cacher les boutons de suppression
   afficherTickets();
 }
 
