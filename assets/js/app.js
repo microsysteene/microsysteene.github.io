@@ -1,44 +1,56 @@
 const API_URL = "https://ticketapi.juhdd.me/api/tickets";
 const WS_URL = "wss://ticketapi.juhdd.me";
 
-
 // Cache filtres
 let filtresCache = [];
 let ws = null;
 
-// Identifiant unique par navigateur
+// identifiant utilisateur
 let userId = localStorage.getItem('userId');
 if (!userId) {
   userId = crypto.randomUUID();
   localStorage.setItem('userId', userId);
 }
 
-// ===== WebSocket Connection =====
+// websocket
 function connectWebSocket() {
   ws = new WebSocket(WS_URL);
   
   ws.onopen = () => {
     console.log('WebSocket connecté');
   };
-  
+
   ws.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    if (message.type === 'update') {
-      afficherTickets();
+    const data = event.data;
+
+    // ping png
+    if (data === 'ping') {
+      ws.send('pong');
+      return;
+    }
+
+    // update des tickets
+    try {
+      const message = JSON.parse(data);
+      if (message.type === 'update') {
+        afficherTickets();
+      }
+    } catch (err) {
+      console.warn("Message non JSON reçu:", data);
     }
   };
-  
+
   ws.onerror = (error) => {
     console.error('Erreur WebSocket:', error);
   };
-  
+
   ws.onclose = () => {
     console.log('WebSocket déconnecté, reconnexion dans 3s...');
     setTimeout(connectWebSocket, 3000);
   };
 }
 
-// tickets 
+// api
 async function getTickets() {
   try {
     const res = await fetch(API_URL);
@@ -79,7 +91,6 @@ async function supprimerTicket(id) {
   }
 }
 
-
 async function modifierTicket(id, modifications) {
   try {
     const res = await fetch(`${API_URL}/${id}`, {
@@ -95,6 +106,8 @@ async function modifierTicket(id, modifications) {
   }
 }
 var jstextimport = "OHMwTTc4Y3Y=";
+
+// ui
 function formatTempsEcoule(dateCreation) {
   if (!dateCreation) return '';
   const now = new Date();
@@ -136,7 +149,7 @@ async function afficherTickets() {
     right.appendChild(div);
   });
 
-  // Historique
+  // historique
   const subdiv = document.getElementById("subdiv");
   subdiv.querySelectorAll('.history').forEach(e => e.remove());
   historique.forEach(ticket => {
@@ -155,57 +168,52 @@ async function afficherTickets() {
     subdiv.appendChild(div);
   });
 
-  // Listeners suppression
+  // delete
   document.querySelectorAll('.delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
       await supprimerTicket(btn.dataset.id);
-      await afficherTickets();
     });
   });
 
-  // Listeners checkbox pour terminer un ticket
+  // checkbox terminer
   document.querySelectorAll('.checkbox').forEach(checkbox => {
     checkbox.addEventListener('click', async () => {
       const id = checkbox.dataset.id;
-      // verifier si l'utilisateur a le droit de modifier ce ticket
       if (localStorage.getItem('admin') !== 'true' && !tickets.find(t => t.id === id && t.userId === userId)) {
         alert("Vous n'avez pas la permission de modifier ce ticket.");
         return;
-      } else {
-        await modifierTicket(id, { etat: "terminé" });
-        await afficherTickets();
       }
+      await modifierTicket(id, { etat: "terminé" });
     });
   });
 }
 
-// conversion base64 
+// filtre
 function toBase64(str) {
   try { return btoa(str); }
   catch (e) { return btoa(unescape(encodeURIComponent(str))); }
 }
 
-// --- Mode admin ---
+async function chargerFiltres() {
+  try {
+    const res = await fetch("./assets/filter.json?cb=" + Date.now());
+    if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
+    const data = await res.json();
+    filtresCache = data.banned_terms || [];
+  } catch (error) {
+    console.error("Erreur de chargement du filtre:", error);
+    filtresCache = [];
+  }
+}
+
+// mode admin
 function activerModeAdmin() {
   console.log("Activation du mode admin");
-  const titre = document.getElementById('lefttitle');
-  if (titre && !titre.textContent.includes('(admin mode)')) {
-    titre.textContent += ' (admin mode)';
-  }
   localStorage.setItem('admin', 'true');
-  
-  // reset les champs
-  const infosInput = document.getElementById('infos');
-  const createBtn = document.getElementById('create');
-  const nameInput = document.getElementById('name');
-  
-  if (infosInput) infosInput.type = 'text';
-  if (createBtn) createBtn.textContent = "Créer";
-  if (nameInput) nameInput.value = "";
-  if (infosInput) infosInput.value = "";
-  
-  // reload l'affichage pour montrer les boutons de suppression
+  const titre = document.getElementById('lefttitle');
+  if (titre && !titre.textContent.includes('(admin mode)'))
+    titre.textContent += ' (admin mode)';
   afficherTickets();
 }
 
@@ -214,8 +222,6 @@ function desactiverModeAdmin() {
   localStorage.removeItem('admin');
   const titre = document.getElementById('lefttitle');
   if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
-  
-  // reload l'affichage pour cacher les boutons de suppression
   afficherTickets();
 }
 
@@ -232,41 +238,22 @@ function verifierAdminInput() {
   }
 }
 
-// --- Chargement filtres ---
-async function chargerFiltres() {
-  try {
-    // cachebuster pour forcer la MAJ à chaque refresh
-    const res = await fetch("./assets/filter.json?cachebuster=" + Date.now());
-    if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
-    const data = await res.json();
-    filtresCache = data.banned_terms || [];
-  } catch (error) {
-    console.error("Erreur de chargement du filtre:", error);
-    filtresCache = [];
-  }
-}
-
-// --- Création ticket ---
+// creation ticket
 async function creerTicketDepuisFormulaire() {
   const nom = document.getElementById('name').value.trim();
   const description = document.getElementById('infos').value.trim();
   if (!nom) return alert("Le nom est obligatoire");
 
-  // Vérification filtres
   const contenu = (nom + " " + description).toLowerCase();
   const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
-  if (interdit) {
-    alert(`Le terme "${interdit}" est interdit. Ticket non créé.`);
-    return;
-  }
+  if (interdit) return alert(`"${interdit}" est interdit.`);
 
-  // Mode admin
   if (nom.toLowerCase() === "admin") {
     const psw = description;
     if (toBase64(psw) === jstextimport) {
       activerModeAdmin();
       alert("Mode admin activé !");
-    } else if (localStorage.getItem('admin') === 'true' && psw.toLowerCase() === "") {
+    } else if (localStorage.getItem('admin') === 'true' && psw === "") {
       desactiverModeAdmin();
       alert("Mode admin désactivé !");
     } else {
@@ -275,38 +262,31 @@ async function creerTicketDepuisFormulaire() {
     return;
   }
 
-  // Création normale
   const selectedColor = document.querySelector('.color.selected');
   const couleur = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
+
   const ticket = { nom, description, couleur, etat: "en cours", userId };
 
   await ajouterTicket(ticket);
   document.getElementById('name').value = "";
   document.getElementById('infos').value = "";
-  await afficherTickets();
 }
 
-// --- Initialisation ---
+// init
 window.addEventListener('DOMContentLoaded', async () => {
   await chargerFiltres();
-  
-  // Vérifier si le mode admin était activé
+
   if (localStorage.getItem('admin') === 'true') {
     const titre = document.getElementById('lefttitle');
-    if (titre && !titre.textContent.includes('(admin mode)')) {
+    if (titre && !titre.textContent.includes('(admin mode)'))
       titre.textContent += ' (admin mode)';
-    }
   }
-  
+
   afficherTickets();
   connectWebSocket();
 
-  const nomInput = document.getElementById('name');
-  const createBtn = document.getElementById('create');
-
-  nomInput.addEventListener('input', verifierAdminInput);
-
-  createBtn.addEventListener('click', (e) => {
+  document.getElementById('name').addEventListener('input', verifierAdminInput);
+  document.getElementById('create').addEventListener('click', (e) => {
     e.preventDefault();
     creerTicketDepuisFormulaire();
   });
