@@ -248,7 +248,7 @@ async function creerTicketDepuisFormulaire() {
   // vérifier si l'utilisateur n'a pas dépassé le max
   const tickets = await getTickets();
   const enCoursUtilisateur = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
-  if (enCoursUtilisateur.length >= maxDuringTicket) {
+  if (enCoursUtilisateur.length >= maxDuringTicket && localStorage.getItem('admin') !== 'true') {
     return alert(`Vous ne pouvez pas avoir plus de ${maxDuringTicket} tickets en cours.`);
   }
 
