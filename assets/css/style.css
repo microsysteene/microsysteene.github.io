@@ -267,6 +267,18 @@ a#create:hover {
     margin-right: 10px;
 }
 
+.during #name {
+    font-size: 18px;
+}
+
+.during #desc {
+    color: #6e6e6e;
+}
+
+.during p {
+    margin: 5px;
+}
+
 .history .time {
     margin-right: clamp(10px, 1.5vw, 20px);
 }
