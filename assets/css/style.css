@@ -77,11 +77,11 @@ h1 {
 
 .div {
     padding: clamp(15px, 40px, 10px) 20px;
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 252, 246, 1);
     border: 2px solid #000000;
-    border-radius: 2rem;
     box-sizing: border-box;
     text-align: center;
+    border-radius: 3rem;
 }
 
 #left {
@@ -95,6 +95,7 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: clamp(10px, 1.5vw, 20px);
+    filter: drop-shadow(0px 4px 0px rgb(0, 0, 0, 0.2));
 }
 
 #right {
@@ -104,6 +105,7 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: clamp(10px, 1.5vw, 20px);
+    filter: drop-shadow(0px 4px 0px rgb(0, 0, 0, 0.2));
 }
 
 /* ==================== */
@@ -163,8 +165,8 @@ input[type="password"]:focus {
     left: 0;
     width: 100vw;
     height: 100vh;
-    backdrop-filter: blur(2rem);
     background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -174,7 +176,7 @@ input[type="password"]:focus {
 .ticket-form {
     background: #ffffffd2;
     padding: 30px;
-    border-radius: 2rem;
+    border-radius: 2.5rem;
     width: 40rem;
     height: 27rem;
     max-width: 90%;
@@ -270,18 +272,18 @@ a#create:hover {
 .history {
     display: flex;
     align-items: center;
-    gap: clamp(10px, 1.5vw, 20px);
-    padding: clamp(10px, 2vw, 15px) 0;
-    border-radius: 40px;
+    text-align: left;
+    gap: clamp(10px, 1.5vw, 15px);
+    padding: clamp(5px, 2vw, 10px);
+    border-radius: 50px;
     outline: 2px solid rgb(0, 0, 0);
     filter: drop-shadow(0px 3px 0px rgba(0, 0, 0, 0.29));
     transition: all 0.3s ease-out;
 }
 
 .during .checkbox {
-    width: 40px;
-    height: 40px;
-    margin-left: clamp(5px, 1.5vw, 20px);
+    width: 60px;
+    height: 60px;
     background-color: rgb(255, 255, 255);
     border: 2px solid black;
     filter: drop-shadow(0px 2px 0px rgb(0, 0, 0));
@@ -355,8 +357,23 @@ a#create:hover {
     transition: none !important;
 }
 
+@keyframes bounce-in-entire {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
 .ticket-form {
-    animation: bounce-in 0.35s ease forwards;
+    animation: bounce-in-entire 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     transform-origin: center;
 }
 
@@ -464,9 +481,8 @@ a#create:hover {
 
 .during:hover .delete,
 .history:hover .delete {
-    width: 40px;
-    height: 40px;
-    margin-right: clamp(10px, 1.5vw, 20px);
+    width: 60px;
+    height: 60px;
     font-size: 25px;
     opacity: 1;
 }
