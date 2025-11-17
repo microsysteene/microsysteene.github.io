@@ -245,12 +245,12 @@ a#create:hover {
 
 .during .checkbox {
     width: 40px;
-    height: auto;
+    height: 40px;
     margin-left: clamp(5px, 1.5vw, 20px);
     background-color: rgb(255, 255, 255);
     border: 2px solid black;
     filter: drop-shadow(0px 2px 0px rgb(0, 0, 0));
-    border-radius: 100%;
+    border-radius: 50%;
     cursor: pointer;
 }
 
@@ -319,7 +319,8 @@ a#create:hover {
 }
 
 .during.add {
-    animation: bounce-color 0.4s ease-out;
+    animation: bounce-in 0.5s ease-out !important;
+    transition: none !important;
 }
 
 /* ==================== */
@@ -345,9 +346,8 @@ a#create:hover {
 
 .during.deleting,
 .history.deleting {
-    animation: fade-out-fluid 0.6s cubic-bezier(0.77, 0, 0.175, 1) forwards; 
-    overflow: hidden;
-    will-change: opacity, transform, max-height, padding, margin;
+    animation: bounce-in 0.5s ease-out !important;
+    transition: none !important;
 }
 
 
@@ -355,27 +355,29 @@ a#create:hover {
 /* BOUTON SUPPRIMER     */
 /* ==================== */
 
+/* Toujours rond + taille fixe + centré */
 .during .delete,
 .history .delete {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 0;
-    height: 0;
+    width: 40px;
+    height: 40px;
     padding: 0;
     background-color: rgb(255, 255, 255);
     border: 2px solid rgba(0, 0, 0, 1);
-    border-radius: 50px;
+    border-radius: 50%;
     opacity: 0;
     cursor: pointer;
     filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 1));
     transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.65);
+    font-size: 25px;
 }
 
 .during:hover .delete,
 .history:hover .delete {
     width: 40px;
-    height: auto;
+    height: 40px;
     margin-right: clamp(10px, 1.5vw, 20px);
     font-size: 25px;
     opacity: 1;
