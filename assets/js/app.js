@@ -235,7 +235,7 @@ function verifierAdminInput() {
     createBtn.textContent = "Valider";
   } else {
     infosInput.type = 'text';
-    createBtn.textContent = "Créer";
+    createBtn.textContent = "+ Créer";
   }
 }
 
