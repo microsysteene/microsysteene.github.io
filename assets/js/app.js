@@ -3,7 +3,6 @@ const WS_URL = "wss://ticketapi.juhdd.me";
 const API_ANNONCE_URL = "https://ticketapi.juhdd.me/api/announcement";
 const maxDuringTicket = 1;
 let lastAddedTicketId = null;
-
 let previousIds = new Set();
 let filtresCache = [];
 let ws = null;
@@ -23,10 +22,7 @@ function connectWebSocket() {
 
   ws.onmessage = (event) => {
     const data = event.data;
-    if (data === 'ping') {
-      ws.send('pong');
-      return;
-    }
+    if (data === 'ping') { ws.send('pong'); return; }
     try {
       const message = JSON.parse(data);
 
@@ -38,9 +34,10 @@ function connectWebSocket() {
         currentAnnonce = message.message;
         const messageDiv = document.getElementById('message');
         messageDiv.textContent = currentAnnonce;
+        messageDiv.style.display = currentAnnonce ? 'block' : 'none';
         const adminAnnonce = document.getElementById('adminAnnonce');
-        const infosInput = document.getElementById('infos');
-        if (adminAnnonce?.checked) infosInput.value = currentAnnonce;
+        const nom = document.getElementById('name');
+        if (adminAnnonce?.checked) nom.value = currentAnnonce;
       }
 
     } catch { }
@@ -111,7 +108,6 @@ function formatTempsEcoule(dateCreation) {
 // Afficher les tickets
 async function afficherTickets(externe = false) {
   const tickets = await getTickets();
-
   let newTicketId = null;
   const currentIds = new Set(tickets.map(t => t.id));
 
@@ -260,9 +256,7 @@ function verifierAdminInput() {
   }
 }
 
-// ---------------------- gestion message admin ----------------------
-
-// Récupérer le message d'annonce depuis l'API
+// message admin
 async function fetchAnnonce() {
   try {
     const res = await fetch(API_ANNONCE_URL);
@@ -270,12 +264,12 @@ async function fetchAnnonce() {
     currentAnnonce = data.message || "";
     const messageDiv = document.getElementById('message');
     messageDiv.textContent = currentAnnonce;
+    messageDiv.style.display = currentAnnonce ? 'block' : 'none';
   } catch (e) {
     console.error("Erreur récupération annonce:", e);
   }
 }
 
-// Mettre à jour le message sur l'API et envoyer via websocket
 async function updateAnnonce(newMessage) {
   try {
     await fetch(API_ANNONCE_URL, {
@@ -285,7 +279,6 @@ async function updateAnnonce(newMessage) {
     });
     currentAnnonce = newMessage;
 
-    // envoyer sur websocket pour tous les clients
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'updateAnnonce', message: newMessage }));
     }
@@ -294,35 +287,39 @@ async function updateAnnonce(newMessage) {
   }
 }
 
-// Initialisation du message admin formulaire
 function setupAdminAnnonce() {
   const adminAnnonce = document.getElementById('adminAnnonce');
   const infosInput = document.getElementById('infos');
+  const nom = document.getElementById('name');
   const messageDiv = document.getElementById('message');
 
   if (!adminAnnonce) return;
 
-  // checkbox
+  // afficher au chargement
+  adminAnnonce.checked = !!currentAnnonce;
+  if (adminAnnonce.checked) {
+    nom.value = currentAnnonce;
+    infosInput.style.display = 'none';
+    messageDiv.style.display = 'block';
+  } else {
+    nom.value = '';
+    messageDiv.style.display = 'none';
+    infosInput.style.display = 'block';
+  }
+
+  // checkbox change
   adminAnnonce.addEventListener('change', () => {
     if (adminAnnonce.checked) {
+      nom.value = currentAnnonce;
       infosInput.style.display = 'none';
       messageDiv.style.display = 'block';
-      messageDiv.textContent = currentAnnonce;
-      infosInput.value = currentAnnonce;
     } else {
+      nom.value = '';
       infosInput.style.display = 'block';
       messageDiv.style.display = 'none';
-      infosInput.value = '';
     }
   });
 
-  // update live du message et API
-  infosInput.addEventListener('input', () => {
-    if (adminAnnonce.checked) {
-      messageDiv.textContent = infosInput.value;
-      updateAnnonce(infosInput.value);
-    }
-  });
 }
 
 // creation ticket
@@ -355,11 +352,13 @@ async function creerTicketDepuisFormulaire() {
 
   if (adminAnnonce && adminAnnonce.checked) {
     if (nom) {
-      messageDiv.textContent = nom;
+      messageDiv.textContent = nom;  // update box
       messageDiv.style.display = 'block';
+      updateAnnonce(nom);            // update serveur
     }
-    document.getElementById('name').value = '';
-    document.getElementById('infos').value = '';
+    document.getElementById('name').value = "";
+  infosInput.value = "";
+  document.getElementById("formOverlay").style.display = "none";
     return;
   }
 
