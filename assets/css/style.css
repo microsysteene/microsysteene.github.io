@@ -79,7 +79,7 @@ h1 {
     padding: clamp(15px, 40px, 10px) 20px;
     background: rgba(255, 255, 255, 0.7);
     border: 2px solid #000000;
-    border-radius: 1.5rem;
+    border-radius: 2rem;
     box-sizing: border-box;
     text-align: center;
 }
@@ -163,7 +163,7 @@ input[type="password"]:focus {
     left: 0;
     width: 100vw;
     height: 100vh;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(2rem);
     background: rgba(0, 0, 0, 0.4);
     display: flex;
     justify-content: center;
@@ -174,10 +174,12 @@ input[type="password"]:focus {
 .ticket-form {
     background: #ffffffd2;
     padding: 30px;
-    border-radius: 15px;
-    width: 350px;
+    border-radius: 2rem;
+    width: 40rem;
+    height: 27rem;
     max-width: 90%;
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.25);
+    border: 2px solid black;
+    text-align: center;
 }
 
 
@@ -334,21 +336,14 @@ a#create:hover {
         opacity: 0;
         transform: scale(0.5);
     }
-
-    50% {
-        opacity: 0.5;
-        transform: scale(1.02);
-    }
-
     70% {
         opacity: 1;
-        transform: scale(0.98);
+        transform: scale(1.05);
     }
-
     85% {
-        transform: scale(1.01);
+        opacity: 1;
+        transform: scale(0.95);
     }
-
     100% {
         opacity: 1;
         transform: scale(1);
