@@ -245,13 +245,6 @@ async function creerTicketDepuisFormulaire() {
   const description = document.getElementById('infos').value.trim();
   if (!nom) return alert("Le nom est obligatoire");
 
-  // vérifier si l'utilisateur n'a pas dépassé le max
-  const tickets = await getTickets();
-  const enCoursUtilisateur = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
-  if (enCoursUtilisateur.length >= maxDuringTicket && localStorage.getItem('admin') !== 'true') {
-    return alert(`Vous ne pouvez pas avoir plus de ${maxDuringTicket} tickets en cours.`);
-  }
-
   const contenu = (nom + " " + description).toLowerCase();
   const interdit = filtresCache.find(term => contenu.includes(term.toLowerCase()));
   if (interdit) return alert(`"${interdit}" est interdit.`);
@@ -268,6 +261,13 @@ async function creerTicketDepuisFormulaire() {
       alert("Mot de passe incorrect");
     }
     return;
+  }
+
+  // vérifier si l'utilisateur n'a pas dépassé le max
+  const tickets = await getTickets();
+  const enCoursUtilisateur = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
+  if (enCoursUtilisateur.length >= maxDuringTicket && localStorage.getItem('admin') !== 'true') {
+    return alert(`Vous ne pouvez pas avoir plus de ${maxDuringTicket} tickets en cours.`);
   }
 
   const selectedColor = document.querySelector('.color.selected');
