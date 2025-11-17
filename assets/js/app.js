@@ -26,15 +26,15 @@ function connectWebSocket() {
     try {
       const message = JSON.parse(data);
 
-      // Mise à jour des tickets
       if (message.type === 'update') afficherTickets(true);
 
-      // Mise à jour en temps réel du message admin
       if (message.type === 'updateAnnonce') {
-        currentAnnonce = message.message;
+        currentAnnonce = message.message.texte || "";
+        const couleur = message.message.couleur || "#cdcdcd";
         const messageDiv = document.getElementById('message');
         messageDiv.textContent = currentAnnonce;
         messageDiv.style.display = currentAnnonce ? 'block' : 'none';
+        messageDiv.style.color = couleur;
         const adminAnnonce = document.getElementById('adminAnnonce');
         const nom = document.getElementById('name');
         if (adminAnnonce?.checked) nom.value = currentAnnonce;
@@ -134,7 +134,7 @@ async function afficherTickets(externe = false) {
       setTimeout(() => div.classList.remove('add'), 600);
     }
 
-    if (ticket.couleur && ticket.couleur.includes('gradient')) div.style.backgroundImage = ticket.couleur;
+    if (ticket.couleur?.includes('gradient')) div.style.backgroundImage = ticket.couleur;
     else div.style.backgroundColor = ticket.couleur || "#cdcdcd";
 
     let infoContent = `<p id="name">${ticket.nom}</p>`;
@@ -261,26 +261,29 @@ async function fetchAnnonce() {
   try {
     const res = await fetch(API_ANNONCE_URL);
     const data = await res.json();
-    currentAnnonce = data.message || "";
+    currentAnnonce = data.texte || "";
+    const couleur = data.couleur || "#cdcdcd";
     const messageDiv = document.getElementById('message');
     messageDiv.textContent = currentAnnonce;
     messageDiv.style.display = currentAnnonce ? 'block' : 'none';
+    messageDiv.style.color = couleur;
   } catch (e) {
     console.error("Erreur récupération annonce:", e);
   }
 }
 
-async function updateAnnonce(newMessage) {
+async function updateAnnonce(newMessage, couleur = "#cdcdcd") {
   try {
     await fetch(API_ANNONCE_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: newMessage })
+      body: JSON.stringify({ texte: newMessage, couleur })
     });
+
     currentAnnonce = newMessage;
 
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'updateAnnonce', message: newMessage }));
+      ws.send(JSON.stringify({ type: 'updateAnnonce', message: { texte: newMessage, couleur } }));
     }
   } catch (e) {
     console.error("Erreur mise à jour annonce:", e);
@@ -295,7 +298,6 @@ function setupAdminAnnonce() {
 
   if (!adminAnnonce) return;
 
-  // afficher au chargement
   adminAnnonce.checked = !!currentAnnonce;
   if (adminAnnonce.checked) {
     nom.value = currentAnnonce;
@@ -307,7 +309,6 @@ function setupAdminAnnonce() {
     infosInput.style.display = 'block';
   }
 
-  // checkbox change
   adminAnnonce.addEventListener('change', () => {
     if (adminAnnonce.checked) {
       nom.value = currentAnnonce;
@@ -319,7 +320,6 @@ function setupAdminAnnonce() {
       messageDiv.style.display = 'none';
     }
   });
-
 }
 
 // creation ticket
@@ -351,18 +351,30 @@ async function creerTicketDepuisFormulaire() {
   }
 
   if (adminAnnonce && adminAnnonce.checked) {
-    if (nom) {
-      messageDiv.textContent = nom;  // update box
-      messageDiv.style.display = 'block';
-      updateAnnonce(nom);            // update serveur
-    } else {
-      messageDiv.textContent = nom;  // update box
-      messageDiv.style.display = 'none';
-      updateAnnonce(nom);     
+    const selectedColor = document.querySelector('.color.selected');
+    let couleur = '#d40000'; // fallback
+
+    if (selectedColor) {
+      const bg = selectedColor.style.backgroundImage;
+      console.log("bg:", bg);
+
+      const rgbMatch = bg.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/);
+      if (rgbMatch) {
+        const r = parseInt(rgbMatch[1]);
+        const g = parseInt(rgbMatch[2]);
+        const b = parseInt(rgbMatch[3]);
+        couleur = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+      }
     }
+
+    messageDiv.textContent = nom;
+    messageDiv.style.display = 'block';
+    messageDiv.style.color = couleur;
+    updateAnnonce(nom, couleur);
+
     document.getElementById('name').value = "";
-  infosInput.value = "";
-  document.getElementById("formOverlay").style.display = "none";
+    infosInput.value = "";
+    document.getElementById("formOverlay").style.display = "none";
     return;
   }
 
@@ -382,7 +394,7 @@ async function creerTicketDepuisFormulaire() {
   document.getElementById("formOverlay").style.display = "none";
 }
 
-// dom
+// DOM
 window.addEventListener('DOMContentLoaded', async () => {
   await chargerFiltres();
 
@@ -429,11 +441,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   createBtn.onclick = (e) => {
     e.preventDefault();
     overlay.style.display = "flex";
-
     const adminAnnonce = document.getElementById('adminAnnonce');
     if (adminAnnonce) adminAnnonce.checked = false;
     infosInput.style.display = 'block';
-
     form.style.animation = "none";
     form.offsetHeight;
     form.style.animation = null;

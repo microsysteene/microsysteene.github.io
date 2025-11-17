@@ -566,6 +566,7 @@ a#create:hover {
     display: flex;
     align-items: center;
     gap: 10px;
+    display: none;
 }
 
 .icon .div {
