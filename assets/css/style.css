@@ -68,7 +68,7 @@ h1 {
     display: flex;
     flex-direction: column;
     flex: 1;
-    gap: clamp(10px, 1.5vw, 30px);
+    gap: clamp(10px, 1.5vw, 10px);
 }
 
 /* ==================== */
@@ -106,6 +106,16 @@ h1 {
     flex-direction: column;
     gap: clamp(10px, 1.5vw, 20px);
     filter: drop-shadow(0px 4px 0px rgb(0, 0, 0, 0.2));
+}
+
+#message {
+    display: none;
+}
+
+p#message {
+    font-size: clamp(24px, 1.2vw, 30px);
+    color: red;
+    margin: 0;
 }
 
 /* ==================== */
@@ -596,40 +606,4 @@ a#create:hover {
 #subdiv::-webkit-scrollbar-button,
 #right::-webkit-scrollbar-button {
     display: none;
-}
-
-/* ==================== */
-/* MEDIA QUERIES        */
-/* ==================== */
-
-@media screen and (min-width: 1600px) {
-    .main {
-        padding: 3vw;
-    }
-
-    .div {
-        padding: 2.5vw;
-    }
-
-    input[type="text"] {
-        font-size: 1rem;
-    }
-
-    a#create {
-        font-size: 1.2rem;
-    }
-}
-
-@media screen and (max-width: 1280px) {
-    .main {
-        gap: 15px;
-    }
-
-    .div {
-        padding: 15px;
-    }
-
-    h1 {
-        font-size: 1.2rem;
-    }
 }
