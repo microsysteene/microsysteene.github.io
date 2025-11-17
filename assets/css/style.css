@@ -318,7 +318,7 @@ a#create:hover {
     }
 }
 
-.during.new-task {
+.during.add {
     animation: bounce-color 0.4s ease-out;
 }
 
