@@ -44,9 +44,47 @@ function notifierClients() {
   });
 }
 
-// api
+// message admin
+let adminMessage = "";
+let adminMessageTimeout = null;
 
-// GET
+function notifierAnnonce() {
+  const message = JSON.stringify({ type: 'updateAnnonce', message: adminMessage });
+  clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN)
+      client.send(message);
+  });
+}
+
+function clearAdminMessage() {
+  adminMessage = "";
+  adminMessageTimeout = null;
+  notifierAnnonce();
+}
+
+// GET message admin
+app.get('/api/announcement', (req, res) => {
+  res.json({ message: adminMessage });
+});
+
+// PUT message admin
+app.put('/api/announcement', (req, res) => {
+  const { message } = req.body;
+  if (typeof message !== 'string') return res.status(400).json({ error: "message invalide" });
+
+  adminMessage = message;
+  notifierAnnonce();
+
+  // reset timer de suppression après 3 heures
+  if (adminMessageTimeout) clearTimeout(adminMessageTimeout);
+  adminMessageTimeout = setTimeout(clearAdminMessage, 3 * 60 * 60 * 1000);
+
+  res.json({ message: adminMessage });
+});
+
+// api ticket
+
+// GET tickets
 app.get('/api/tickets', (req, res) => {
   db.all("SELECT * FROM tickets ORDER BY dateCreation DESC", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -54,7 +92,7 @@ app.get('/api/tickets', (req, res) => {
   });
 });
 
-// POST
+// POST tickets
 app.post('/api/tickets', (req, res) => {
   const { nom, description, couleur, etat, userId } = req.body;
   if (!nom || !userId) return res.status(400).json({ error: 'Nom et userId requis' });
@@ -74,7 +112,7 @@ app.post('/api/tickets', (req, res) => {
   });
 });
 
-// PUT
+// PUT tickets
 app.put('/api/tickets/:id', (req, res) => {
   const { nom, description, couleur, etat } = req.body;
   const id = req.params.id;
@@ -95,7 +133,7 @@ app.put('/api/tickets/:id', (req, res) => {
   });
 });
 
-// DELETE
+// DELETE tickets
 app.delete('/api/tickets/:id', (req, res) => {
   const userId = req.query.userId;
   const isAdmin = req.query.admin === 'true';
@@ -114,7 +152,7 @@ app.delete('/api/tickets/:id', (req, res) => {
   });
 });
 
-// Expiration auto
+// expiration automatique des tickets
 function supprimerTicketsExpires() {
   const maintenant = Date.now();
   const troisHeuresDix = 3 * 60 * 60 * 1000 + 10 * 60 * 1000;
