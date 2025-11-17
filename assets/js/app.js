@@ -330,7 +330,7 @@ async function creerTicketDepuisFormulaire() {
   const messageDiv = document.getElementById('message');
   const adminAnnonce = document.getElementById('adminAnnonce');
 
-  if (!nom) return alert("Le nom est obligatoire");
+  if (!nom && !adminAnnonce.checked) return alert("Le nom est obligatoire");
 
   const contenu = (nom + " " + description).toLowerCase();
   const interdit = filtresCache.find(t => contenu.includes(t.toLowerCase()));
@@ -355,6 +355,10 @@ async function creerTicketDepuisFormulaire() {
       messageDiv.textContent = nom;  // update box
       messageDiv.style.display = 'block';
       updateAnnonce(nom);            // update serveur
+    } else {
+      messageDiv.textContent = nom;  // update box
+      messageDiv.style.display = 'none';
+      updateAnnonce(nom);     
     }
     document.getElementById('name').value = "";
   infosInput.value = "";
