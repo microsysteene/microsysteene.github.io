@@ -1,21 +1,21 @@
 const API_URL = "https://ticketapi.juhdd.me/api/tickets";
 const WS_URL = "wss://ticketapi.juhdd.me";
+const API_ANNONCE_URL = "https://ticketapi.juhdd.me/api/announcement";
 const maxDuringTicket = 1;
 let lastAddedTicketId = null;
 
 let previousIds = new Set();
-
 let filtresCache = [];
 let ws = null;
+let currentAnnonce = "";
 
-// Identifiant unique de l'utilisateur (pour gérer permissions)
 let userId = localStorage.getItem('userId');
 if (!userId) {
   userId = crypto.randomUUID();
   localStorage.setItem('userId', userId);
 }
 
-// Connexion WebSocket pour synchro temps réel
+// Connexion websocket
 function connectWebSocket() {
   ws = new WebSocket(WS_URL);
 
@@ -29,10 +29,21 @@ function connectWebSocket() {
     }
     try {
       const message = JSON.parse(data);
-      if (message.type === 'update') {
-        afficherTickets(true); // externe = true
+
+      // Mise à jour des tickets
+      if (message.type === 'update') afficherTickets(true);
+
+      // Mise à jour en temps réel du message admin
+      if (message.type === 'updateAnnonce') {
+        currentAnnonce = message.message;
+        const messageDiv = document.getElementById('message');
+        messageDiv.textContent = currentAnnonce;
+        const adminAnnonce = document.getElementById('adminAnnonce');
+        const infosInput = document.getElementById('infos');
+        if (adminAnnonce?.checked) infosInput.value = currentAnnonce;
       }
-    } catch {}
+
+    } catch { }
   };
 
   ws.onerror = (error) => console.error('Erreur WebSocket:', error);
@@ -43,7 +54,7 @@ function connectWebSocket() {
   };
 }
 
-// Récupération des tickets
+// Récupération de tous les tickets
 async function getTickets() {
   try {
     const res = await fetch(API_URL);
@@ -54,7 +65,7 @@ async function getTickets() {
   }
 }
 
-// Création d’un ticket
+// Ajouter un ticket
 async function ajouterTicket(ticket) {
   const res = await fetch(API_URL, {
     method: "POST",
@@ -62,20 +73,17 @@ async function ajouterTicket(ticket) {
     body: JSON.stringify(ticket)
   });
   const data = await res.json();
-
-  // Animation spécifique pour celui qu’on vient d’ajouter depuis CE device
   lastAddedTicketId = data.id;
-
   return data;
 }
 
-// Suppression
+// Supprimer un ticket
 async function supprimerTicket(id) {
   const isAdmin = localStorage.getItem('admin') === 'true';
   await fetch(`${API_URL}/${id}?userId=${userId}&admin=${isAdmin}`, { method: "DELETE" });
 }
 
-// modif etat
+// Modifier un ticket
 async function modifierTicket(id, modifications) {
   await fetch(`${API_URL}/${id}`, {
     method: "PUT",
@@ -86,7 +94,7 @@ async function modifierTicket(id, modifications) {
 
 var jstextimport = "OHMwTTc4Y3Y=";
 
-// age ticket
+// Formater le temps écoulé
 function formatTempsEcoule(dateCreation) {
   if (!dateCreation) return '';
   const now = new Date();
@@ -100,11 +108,10 @@ function formatTempsEcoule(dateCreation) {
   return `(${diffMins}mins)`;
 }
 
-//animations
+// Afficher les tickets
 async function afficherTickets(externe = false) {
   const tickets = await getTickets();
 
-  // Détection d’un nouveau ticket venant d’ailleurs
   let newTicketId = null;
   const currentIds = new Set(tickets.map(t => t.id));
 
@@ -114,13 +121,10 @@ async function afficherTickets(externe = false) {
     }
   }
 
-  previousIds = currentIds; // mise à jour mémoire
+  previousIds = currentIds;
 
   const enCours = tickets.filter(t => t.etat === "en cours");
   const historique = tickets.filter(t => t.etat !== "en cours");
-
-  // 
-  //en cours
 
   const right = document.getElementById("right");
   right.querySelectorAll('.during').forEach(e => e.remove());
@@ -152,9 +156,6 @@ async function afficherTickets(externe = false) {
     right.appendChild(div);
   });
 
-
-  //historique
- 
   const subdiv = document.getElementById("subdiv");
   subdiv.querySelectorAll('.history').forEach(e => e.remove());
   historique.forEach(ticket => {
@@ -180,12 +181,10 @@ async function afficherTickets(externe = false) {
     subdiv.appendChild(div);
   });
 
-  // Animation suppression
   document.querySelectorAll('.delete').forEach(btn => {
     btn.onclick = async () => {
       const id = btn.dataset.id;
       const el = btn.closest('.during, .history');
-
       el.classList.add('bounce-reverse');
       el.addEventListener('animationend', async () => {
         await supprimerTicket(id);
@@ -195,7 +194,7 @@ async function afficherTickets(externe = false) {
   });
 }
 
-// terminer le ticket
+// Gestion clic checkbox ticket pour terminer
 document.getElementById("right").addEventListener("click", async (e) => {
   const checkbox = e.target.closest(".checkbox");
   if (!checkbox) return;
@@ -206,7 +205,7 @@ document.getElementById("right").addEventListener("click", async (e) => {
 
   const tickets = await getTickets();
   if (localStorage.getItem('admin') !== 'true' &&
-      !tickets.find(t => t.id === id && t.userId === userId)) {
+    !tickets.find(t => t.id === id && t.userId === userId)) {
     alert("Vous n'avez pas la permission de modifier ce ticket.");
     return;
   }
@@ -223,14 +222,14 @@ function toBase64(str) {
   catch (e) { return btoa(unescape(encodeURIComponent(str))); }
 }
 
-// Load filter list (mots interdits)
+// Charger filtres de mots interdits
 async function chargerFiltres() {
   const res = await fetch("./assets/filter.json?cb=" + Date.now());
   const data = await res.json();
   filtresCache = data.banned_terms || [];
 }
 
-// Admin
+// Activer/désactiver mode admin
 function activerModeAdmin() {
   localStorage.setItem('admin', 'true');
   const titre = document.getElementById('lefttitle');
@@ -247,7 +246,7 @@ function desactiverModeAdmin() {
   afficherTickets();
 }
 
-// Check admin password input
+// Vérifier saisie admin
 function verifierAdminInput() {
   const nomInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
@@ -261,10 +260,79 @@ function verifierAdminInput() {
   }
 }
 
-// Création ticket via formulaire
+// ---------------------- gestion message admin ----------------------
+
+// Récupérer le message d'annonce depuis l'API
+async function fetchAnnonce() {
+  try {
+    const res = await fetch(API_ANNONCE_URL);
+    const data = await res.json();
+    currentAnnonce = data.message || "";
+    const messageDiv = document.getElementById('message');
+    messageDiv.textContent = currentAnnonce;
+  } catch (e) {
+    console.error("Erreur récupération annonce:", e);
+  }
+}
+
+// Mettre à jour le message sur l'API et envoyer via websocket
+async function updateAnnonce(newMessage) {
+  try {
+    await fetch(API_ANNONCE_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: newMessage })
+    });
+    currentAnnonce = newMessage;
+
+    // envoyer sur websocket pour tous les clients
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'updateAnnonce', message: newMessage }));
+    }
+  } catch (e) {
+    console.error("Erreur mise à jour annonce:", e);
+  }
+}
+
+// Initialisation du message admin formulaire
+function setupAdminAnnonce() {
+  const adminAnnonce = document.getElementById('adminAnnonce');
+  const infosInput = document.getElementById('infos');
+  const messageDiv = document.getElementById('message');
+
+  if (!adminAnnonce) return;
+
+  // checkbox
+  adminAnnonce.addEventListener('change', () => {
+    if (adminAnnonce.checked) {
+      infosInput.style.display = 'none';
+      messageDiv.style.display = 'block';
+      messageDiv.textContent = currentAnnonce;
+      infosInput.value = currentAnnonce;
+    } else {
+      infosInput.style.display = 'block';
+      messageDiv.style.display = 'none';
+      infosInput.value = '';
+    }
+  });
+
+  // update live du message et API
+  infosInput.addEventListener('input', () => {
+    if (adminAnnonce.checked) {
+      messageDiv.textContent = infosInput.value;
+      updateAnnonce(infosInput.value);
+    }
+  });
+}
+
+// creation ticket
 async function creerTicketDepuisFormulaire() {
   const nom = document.getElementById('name').value.trim();
-  const description = document.getElementById('infos').value.trim();
+  const infosInput = document.getElementById('infos');
+  const description = infosInput.value.trim();
+  const messageDiv = document.getElementById('message');
+  const adminAnnonce = document.getElementById('adminAnnonce');
+
   if (!nom) return alert("Le nom est obligatoire");
 
   const contenu = (nom + " " + description).toLowerCase();
@@ -285,6 +353,16 @@ async function creerTicketDepuisFormulaire() {
     return;
   }
 
+  if (adminAnnonce && adminAnnonce.checked) {
+    if (nom) {
+      messageDiv.textContent = nom;
+      messageDiv.style.display = 'block';
+    }
+    document.getElementById('name').value = '';
+    document.getElementById('infos').value = '';
+    return;
+  }
+
   const tickets = await getTickets();
   const enCoursUtilisateur = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
   if (enCoursUtilisateur.length >= maxDuringTicket && localStorage.getItem('admin') !== 'true') {
@@ -297,18 +375,35 @@ async function creerTicketDepuisFormulaire() {
   await ajouterTicket({ nom, description, couleur, etat: "en cours", userId });
 
   document.getElementById('name').value = "";
-  document.getElementById('infos').value = "";
+  infosInput.value = "";
   document.getElementById("formOverlay").style.display = "none";
 }
 
-// Initialisation
+// dom
 window.addEventListener('DOMContentLoaded', async () => {
   await chargerFiltres();
-  
+
+  const form = document.querySelector(".ticket-form");
+  const infosInput = document.getElementById('infos');
+  const messageDiv = document.getElementById('message');
+
+  await fetchAnnonce();
+
   if (localStorage.getItem('admin') === 'true') {
     const titre = document.getElementById('lefttitle');
     if (titre && !titre.textContent.includes('(admin mode)'))
       titre.textContent += ' (admin mode)';
+
+    let annonceWrapper = document.createElement('div');
+    annonceWrapper.style.margin = "5px 0";
+    annonceWrapper.innerHTML = `
+      <label>
+        <input type="checkbox" id="adminAnnonce"/> Message d'annonce
+      </label>
+    `;
+    infosInput.parentNode.insertBefore(annonceWrapper, infosInput);
+
+    setupAdminAnnonce();
   }
 
   afficherTickets();
@@ -319,22 +414,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     creerTicketDepuisFormulaire();
   });
+
+  const overlay = document.getElementById("formOverlay");
+  const createBtn = document.getElementById("createbutton");
+  overlay.style.display = "none";
+
+  overlay.onclick = (e) => {
+    if (e.target === overlay) overlay.style.display = "none";
+  };
+
+  createBtn.onclick = (e) => {
+    e.preventDefault();
+    overlay.style.display = "flex";
+
+    const adminAnnonce = document.getElementById('adminAnnonce');
+    if (adminAnnonce) adminAnnonce.checked = false;
+    infosInput.style.display = 'block';
+
+    form.style.animation = "none";
+    form.offsetHeight;
+    form.style.animation = null;
+  };
 });
-
-const overlay = document.getElementById("formOverlay");
-const createBtn = document.getElementById("createbutton");
-
-overlay.style.display = "none";
-
-overlay.onclick = (e) => {
-  if (e.target === overlay) overlay.style.display = "none";
-};
-
-createBtn.onclick = (e) => {
-  e.preventDefault();
-  overlay.style.display = "flex";
-  const form = document.querySelector(".ticket-form");
-  form.style.animation = "none";
-  form.offsetHeight;
-  form.style.animation = null;
-};
