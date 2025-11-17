@@ -16,7 +16,7 @@ if (!userId) {
 // websocket
 function connectWebSocket() {
   ws = new WebSocket(WS_URL);
-  
+
   ws.onopen = () => {
     console.log('WebSocket connecté');
   };
@@ -278,6 +278,8 @@ async function creerTicketDepuisFormulaire() {
   await ajouterTicket(ticket);
   document.getElementById('name').value = "";
   document.getElementById('infos').value = "";
+
+  document.getElementById("formOverlay").style.display = "none";
 }
 
 
@@ -299,4 +301,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     creerTicketDepuisFormulaire();
   });
+});
+
+// overlay formulaire
+const overlay = document.getElementById("formOverlay");
+const createBtn = document.getElementById("createbutton");
+
+overlay.style.display = "none";
+
+createBtn.addEventListener("click", (e) => {
+  e.preventDefault(); 
+  overlay.style.display = "flex";
+});
+
+
+overlay.addEventListener("click", (e) => {
+  if (e.target === overlay) overlay.style.display = "none";
+});
+
+createBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  overlay.style.display = "flex";
+
+  const form = document.querySelector(".ticket-form");
+  form.style.animation = "none";
+  form.offsetHeight;
+  form.style.animation = null;
 });

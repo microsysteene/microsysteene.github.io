@@ -14,29 +14,39 @@
   <div class="main">
     <div class="left-container">
       <a href="" class="div" id="createbutton">Nouveau ticket</a>
-      
-      <div class="div" id="left">
-        <h1 id="lefttitle">Ouvrir un ticket</h1>
-        <div class="input">
-          <input type="text" id="name" name="name" placeholder="Nom" />
-          <input type="text" id="infos" name="infos" placeholder="Description (optionnelle)" />
-          <div class="coloor">
-            <h1>Couleurs</h1>
-            <div class="colorbox">
-              <a class='color' id="default" style="background-color: #cdcdcd;"></a>
-              <a class="color" style="background-image: linear-gradient(to right top, #ff7070, #ff796f, #ff816f, #ff896f, #ff9170);"></a>
-              <a class='color' style="background-image: linear-gradient(to right top, #ffd760, #fde05a, #f9ea56, #f3f552, #ebff51);"></a>
-              <a class='color' style="background-image: linear-gradient(to right top, #79e056, #71e76a, #6aee7e, #62f591, #5bfba3);"></a>
-              <a class='color' style="background-image: linear-gradient(to right top, #61ffb8, #4fffcf, #47fee2, #4efcf3, #61faff);"></a>
-              <a class='color' style="background-image: linear-gradient(to right top, #61b5ff, #5aa5fd, #5d93f8, #6880f1, #776be5);"></a>
-              <a class='color' style="background-image: linear-gradient(to right top, #c0acff, #bd9aff, #be87ff, #c171fe, #c657f9);"></a>
-              <a class='color' style="background-image: linear-gradient(to right top, #ff99f8, #fe84ea, #fd6ddb, #fc53ca, #fb30b8);"></a>
+
+      <div class="form-overlay" id="formOverlay">
+        <div class="ticket-form">
+          <!-- ton code de formulaire existant -->
+          <h1 id="lefttitle">Ouvrir un ticket</h1>
+          <div class="input">
+            <input type="text" id="name" name="name" placeholder="Nom" />
+            <input type="text" id="infos" name="infos" placeholder="Description (optionnelle)" />
+            <div class="coloor">
+              <h1>Couleurs</h1>
+              <div class="colorbox">
+                <a class='color selected' id="default" style="background-color: #cdcdcd;"></a>
+                <a class="color"
+                  style="background-image: linear-gradient(to right top, #ff7070, #ff796f, #ff816f, #ff896f, #ff9170);"></a>
+                <a class='color'
+                  style="background-image: linear-gradient(to right top, #ffd760, #fde05a, #f9ea56, #f3f552, #ebff51);"></a>
+                <a class='color'
+                  style="background-image: linear-gradient(to right top, #79e056, #71e76a, #6aee7e, #62f591, #5bfba3);"></a>
+                <a class='color'
+                  style="background-image: linear-gradient(to right top, #61ffb8, #4fffcf, #47fee2, #4efcf3, #61faff);"></a>
+                <a class='color'
+                  style="background-image: linear-gradient(to right top, #61b5ff, #5aa5fd, #5d93f8, #6880f1, #776be5);"></a>
+                <a class='color'
+                  style="background-image: linear-gradient(to right top, #c0acff, #bd9aff, #be87ff, #c171fe, #c657f9);"></a>
+                <a class='color'
+                  style="background-image: linear-gradient(to right top, #ff99f8, #fe84ea, #fd6ddb, #fc53ca, #fb30b8);"></a>
+              </div>
             </div>
           </div>
+          <a id='create' href='#'>+ Créer</a>
         </div>
-        <a id='create' href='#'>+ Créer</a>
       </div>
-      
+
       <div class="div" id="subdiv">
         <h1>Historique</h1>
       </div>
