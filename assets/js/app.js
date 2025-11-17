@@ -1,19 +1,17 @@
 const API_URL = "https://ticketapi.juhdd.me/api/tickets";
 const WS_URL = "wss://ticketapi.juhdd.me";
 const maxDuringTicket = 1;
+let lastAddedTicketId = null;
 
-// Cache filtres
 let filtresCache = [];
 let ws = null;
 
-// identifiant utilisateur
 let userId = localStorage.getItem('userId');
 if (!userId) {
   userId = crypto.randomUUID();
   localStorage.setItem('userId', userId);
 }
 
-// websocket
 function connectWebSocket() {
   ws = new WebSocket(WS_URL);
 
@@ -23,22 +21,16 @@ function connectWebSocket() {
 
   ws.onmessage = (event) => {
     const data = event.data;
-
-    // ping png
     if (data === 'ping') {
       ws.send('pong');
       return;
     }
-
-    // update des tickets
     try {
       const message = JSON.parse(data);
       if (message.type === 'update') {
         afficherTickets();
       }
-    } catch (err) {
-      console.warn("Message non JSON reçu:", data);
-    }
+    } catch {}
   };
 
   ws.onerror = (error) => {
@@ -51,64 +43,44 @@ function connectWebSocket() {
   };
 }
 
-// api
 async function getTickets() {
   try {
     const res = await fetch(API_URL);
     const data = await res.json();
     return Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.error('Erreur lors de la récupération des tickets:', error);
+  } catch {
     return [];
   }
 }
 
 async function ajouterTicket(ticket) {
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(ticket)
-    });
-    if (!res.ok) throw new Error('Erreur lors de la création du ticket');
-    return await res.json();
-  } catch (error) {
-    console.error("Erreur lors de l'ajout du ticket:", error);
-    alert("Erreur lors de l'ajout du ticket");
-  }
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(ticket)
+  });
+  const data = await res.json();
+  lastAddedTicketId = data.id;
+  return data;
 }
 
 async function supprimerTicket(id) {
-  try {
-    const isAdmin = localStorage.getItem('admin') === 'true';
-    const res = await fetch(`${API_URL}/${id}?userId=${userId}&admin=${isAdmin}`, {
-      method: "DELETE"
-    });
-    if (!res.ok) throw new Error('Erreur lors de la suppression');
-    return await res.json();
-  } catch (error) {
-    console.error("Erreur lors de la suppression du ticket:", error);
-    alert("Erreur lors de la suppression");
-  }
+  const isAdmin = localStorage.getItem('admin') === 'true';
+  await fetch(`${API_URL}/${id}?userId=${userId}&admin=${isAdmin}`, {
+    method: "DELETE"
+  });
 }
 
 async function modifierTicket(id, modifications) {
-  try {
-    const res = await fetch(`${API_URL}/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(modifications)
-    });
-    if (!res.ok) throw new Error('Erreur lors de la modification');
-    return await res.json();
-  } catch (error) {
-    console.error("Erreur lors de la modification du ticket:", error);
-    alert("Erreur lors de la modification");
-  }
+  await fetch(`${API_URL}/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(modifications)
+  });
 }
+
 var jstextimport = "OHMwTTc4Y3Y=";
 
-// ui
 function formatTempsEcoule(dateCreation) {
   if (!dateCreation) return '';
   const now = new Date();
@@ -127,17 +99,27 @@ async function afficherTickets() {
   const enCours = tickets.filter(t => t.etat === "en cours");
   const historique = tickets.filter(t => t.etat !== "en cours");
 
-  // Tickets en cours
   const right = document.getElementById("right");
   right.querySelectorAll('.during').forEach(e => e.remove());
   enCours.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "during";
     div.id = ticket.id;
+
+    if (ticket.id === lastAddedTicketId) {
+      div.classList.add('add');
+      setTimeout(() => {
+        div.classList.remove('add');
+        lastAddedTicketId = null;
+      }, 600);
+    }
+
     if (ticket.couleur && ticket.couleur.includes('gradient')) div.style.backgroundImage = ticket.couleur;
     else div.style.backgroundColor = ticket.couleur || "#cdcdcd";
+
     let infoContent = `<p id="name">${ticket.nom}</p>`;
     if (ticket.description && ticket.description.trim()) infoContent += `<p id="desc">${ticket.description}</p>`;
+
     div.innerHTML = `
       <div class="checkbox" data-id="${ticket.id}"></div>
       <div class="info">${infoContent}</div>
@@ -150,14 +132,23 @@ async function afficherTickets() {
     right.appendChild(div);
   });
 
-  // historique
   const subdiv = document.getElementById("subdiv");
   subdiv.querySelectorAll('.history').forEach(e => e.remove());
   historique.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "history";
+
+    if (ticket.id === lastAddedTicketId) {
+      div.classList.add('add');
+      setTimeout(() => {
+        div.classList.remove('add');
+        lastAddedTicketId = null;
+      }, 600);
+    }
+
     if (ticket.couleur && ticket.couleur.includes('gradient')) div.style.backgroundImage = ticket.couleur;
     else div.style.backgroundColor = ticket.couleur || "#cdcdcd";
+
     div.innerHTML = `
       <p class="name">${ticket.nom}</p>
       <div class="time">
@@ -169,48 +160,57 @@ async function afficherTickets() {
     subdiv.appendChild(div);
   });
 
-  // delete
   document.querySelectorAll('.delete').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await supprimerTicket(btn.dataset.id);
-    });
-  });
-
-  // checkbox terminer
-  document.querySelectorAll('.checkbox').forEach(checkbox => {
-    checkbox.addEventListener('click', async () => {
-      const id = checkbox.dataset.id;
-      if (localStorage.getItem('admin') !== 'true' && !tickets.find(t => t.id === id && t.userId === userId)) {
-        alert("Vous n'avez pas la permission de modifier ce ticket.");
-        return;
-      }
-      await modifierTicket(id, { etat: "terminé" });
-    });
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const el = btn.closest('.during, .history');
+      el.classList.add('deleting');
+      const onEnd = async () => {
+        el.removeEventListener('animationend', onEnd);
+        await supprimerTicket(id);
+        el.remove();
+      };
+      el.addEventListener('animationend', onEnd);
+    };
   });
 }
 
-// filtre
+document.getElementById("right").addEventListener("click", async (e) => {
+  const checkbox = e.target.closest(".checkbox");
+  if (!checkbox) return;
+
+  const id = checkbox.dataset.id;
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const tickets = await getTickets();
+  if (localStorage.getItem('admin') !== 'true' &&
+      !tickets.find(t => t.id === id && t.userId === userId)) {
+    alert("Vous n'avez pas la permission de modifier ce ticket.");
+    return;
+  }
+
+  el.classList.add("moving");
+  const handler = async () => {
+    el.removeEventListener("animationend", handler);
+    await modifierTicket(id, { etat: "terminé" });
+    afficherTickets();
+  };
+  el.addEventListener("animationend", handler);
+});
+
 function toBase64(str) {
   try { return btoa(str); }
   catch (e) { return btoa(unescape(encodeURIComponent(str))); }
 }
 
 async function chargerFiltres() {
-  try {
-    const res = await fetch("./assets/filter.json?cb=" + Date.now());
-    if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
-    const data = await res.json();
-    filtresCache = data.banned_terms || [];
-  } catch (error) {
-    console.error("Erreur de chargement du filtre:", error);
-    filtresCache = [];
-  }
+  const res = await fetch("./assets/filter.json?cb=" + Date.now());
+  const data = await res.json();
+  filtresCache = data.banned_terms || [];
 }
 
-// mode admin
 function activerModeAdmin() {
-  console.log("Activation du mode admin");
   localStorage.setItem('admin', 'true');
   const titre = document.getElementById('lefttitle');
   if (titre && !titre.textContent.includes('(admin mode)'))
@@ -219,10 +219,10 @@ function activerModeAdmin() {
 }
 
 function desactiverModeAdmin() {
-  console.log("Désactivation du mode admin");
   localStorage.removeItem('admin');
   const titre = document.getElementById('lefttitle');
-  if (titre) titre.textContent = titre.textContent.replace(' (admin mode)', '');
+  if (titre)
+    titre.textContent = titre.textContent.replace(' (admin mode)', '');
   afficherTickets();
 }
 
@@ -239,7 +239,6 @@ function verifierAdminInput() {
   }
 }
 
-// creation ticket
 async function creerTicketDepuisFormulaire() {
   const nom = document.getElementById('name').value.trim();
   const description = document.getElementById('infos').value.trim();
@@ -263,7 +262,6 @@ async function creerTicketDepuisFormulaire() {
     return;
   }
 
-  // vérifier si l'utilisateur n'a pas dépassé le max
   const tickets = await getTickets();
   const enCoursUtilisateur = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
   if (enCoursUtilisateur.length >= maxDuringTicket && localStorage.getItem('admin') !== 'true') {
@@ -278,12 +276,9 @@ async function creerTicketDepuisFormulaire() {
   await ajouterTicket(ticket);
   document.getElementById('name').value = "";
   document.getElementById('infos').value = "";
-
   document.getElementById("formOverlay").style.display = "none";
 }
 
-
-// init
 window.addEventListener('DOMContentLoaded', async () => {
   await chargerFiltres();
 
@@ -303,28 +298,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// overlay formulaire
 const overlay = document.getElementById("formOverlay");
 const createBtn = document.getElementById("createbutton");
 
 overlay.style.display = "none";
 
-createBtn.addEventListener("click", (e) => {
-  e.preventDefault(); 
-  overlay.style.display = "flex";
-});
-
-
-overlay.addEventListener("click", (e) => {
+overlay.onclick = (e) => {
   if (e.target === overlay) overlay.style.display = "none";
-});
+};
 
-createBtn.addEventListener("click", (e) => {
+createBtn.onclick = (e) => {
   e.preventDefault();
   overlay.style.display = "flex";
-
   const form = document.querySelector(".ticket-form");
   form.style.animation = "none";
   form.offsetHeight;
   form.style.animation = null;
-});
+};
