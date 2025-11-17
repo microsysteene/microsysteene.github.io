@@ -15,6 +15,7 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS announcement (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     message TEXT,
+    couleur TEXT,
     dateCreation TEXT
   )`);
 

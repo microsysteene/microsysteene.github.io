@@ -44,8 +44,8 @@ function notifierClients() {
   });
 }
 
-// message admin
-let adminMessage = "";
+// message admin avec couleur
+let adminMessage = { texte: "", couleur: "#cdcdcd" };
 let adminMessageTimeout = null;
 
 function notifierAnnonce() {
@@ -57,32 +57,32 @@ function notifierAnnonce() {
 }
 
 function clearAdminMessage() {
-  adminMessage = "";
+  adminMessage = { texte: "", couleur: "#cdcdcd" };
   adminMessageTimeout = null;
   notifierAnnonce();
 }
 
 // GET message admin
 app.get('/api/announcement', (req, res) => {
-  res.json({ message: adminMessage });
+  res.json(adminMessage);
 });
 
 // PUT message admin
 app.put('/api/announcement', (req, res) => {
-  const { message } = req.body;
-  if (typeof message !== 'string') return res.status(400).json({ error: "message invalide" });
+  const { texte, couleur } = req.body;
+  if (typeof texte !== 'string') return res.status(400).json({ error: "texte invalide" });
 
-  adminMessage = message;
+  adminMessage = { texte, couleur: couleur || "#cdcdcd" };
   notifierAnnonce();
 
   // reset timer de suppression après 3 heures
   if (adminMessageTimeout) clearTimeout(adminMessageTimeout);
   adminMessageTimeout = setTimeout(clearAdminMessage, 3 * 60 * 60 * 1000);
 
-  res.json({ message: adminMessage });
+  res.json(adminMessage);
 });
 
-// api ticket
+// api tickets
 
 // GET tickets
 app.get('/api/tickets', (req, res) => {
