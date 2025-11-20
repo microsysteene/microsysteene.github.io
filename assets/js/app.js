@@ -10,7 +10,6 @@ let ws = null;
 let currentAnnonce = "";
 
 // --- Gestion de l'ID utilisateur ---
-// Crée un ID unique pour l'utilisateur et le stocke dans le localStorage
 let userId = localStorage.getItem('userId');
 if (!userId) {
   userId = crypto.randomUUID();
@@ -18,22 +17,16 @@ if (!userId) {
 }
 
 // --- Connexion WebSocket ---
-// Gère la connexion temps réel pour les mises à jour
 function connectWebSocket() {
   ws = new WebSocket(WS_URL);
   ws.onopen = () => console.log('WebSocket connecté');
 
   ws.onmessage = (event) => {
     const data = event.data;
-    // Répond au ping/pong pour maintenir la connexion
     if (data === 'ping') { ws.send('pong'); return; }
     try {
       const message = JSON.parse(data);
-
-      // Met à jour les tickets si un 'update' est reçu
       if (message.type === 'update') afficherTickets(true);
-
-      // Met à jour l'annonce si 'updateAnnonce' est reçu
       if (message.type === 'updateAnnonce') {
         currentAnnonce = message.message.texte || "";
         const couleur = message.message.couleur || "#cdcdcd";
@@ -41,7 +34,7 @@ function connectWebSocket() {
         messageDiv.textContent = currentAnnonce;
         messageDiv.style.display = currentAnnonce ? 'block' : 'none';
         messageDiv.style.color = couleur;
-        // Met à jour le formulaire admin si l'admin est en train de modifier l'annonce
+        
         const adminAnnonce = document.getElementById('adminAnnonce');
         const nom = document.getElementById('name');
         if (adminAnnonce?.checked) nom.value = currentAnnonce;
@@ -50,7 +43,6 @@ function connectWebSocket() {
   };
 
   ws.onerror = (error) => console.error('Erreur WebSocket:', error);
-  // Tente de se reconnecter après 3s en cas de fermeture
   ws.onclose = () => {
     console.log('WebSocket déconnecté, reconnexion dans 3s...');
     setTimeout(connectWebSocket, 3000);
@@ -58,19 +50,14 @@ function connectWebSocket() {
 }
 
 // --- Fonctions API (Tickets) ---
-
-// Récupération de tous les tickets
 async function getTickets() {
   try {
     const res = await fetch(API_URL);
     const data = await res.json();
     return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
-// Ajouter un ticket
 async function ajouterTicket(ticket) {
   const res = await fetch(API_URL, {
     method: "POST",
@@ -78,17 +65,15 @@ async function ajouterTicket(ticket) {
     body: JSON.stringify(ticket)
   });
   const data = await res.json();
-  lastAddedTicketId = data.id; // Stocke l'ID pour l'animation
+  lastAddedTicketId = data.id;
   return data;
 }
 
-// Supprimer un ticket
 async function supprimerTicket(id) {
   const isAdmin = localStorage.getItem('admin') === 'true';
   await fetch(`${API_URL}/${id}?userId=${userId}&admin=${isAdmin}`, { method: "DELETE" });
 }
 
-// Modifier un ticket (ex: passer à "terminé")
 async function modifierTicket(id, modifications) {
   await fetch(`${API_URL}/${id}`, {
     method: "PUT",
@@ -101,8 +86,6 @@ async function modifierTicket(id, modifications) {
 var jstextimport = "OHMwTTc4Y3Y=";
 
 // --- Fonctions Utilitaires ---
-
-// Formater le temps écoulé (ex: "(5mins)", "(2h)", "(1j)")
 function formatTempsEcoule(dateCreation) {
   if (!dateCreation) return '';
   const now = new Date();
@@ -116,21 +99,17 @@ function formatTempsEcoule(dateCreation) {
   return `(${diffMins}mins)`;
 }
 
-// Encode une chaîne en Base64
 function toBase64(str) {
   try { return btoa(str); }
   catch (e) { return btoa(unescape(encodeURIComponent(str))); }
 }
 
 // --- Affichage des Tickets (DOM) ---
-
-// Fonction principale pour rafraîchir la liste des tickets
 async function afficherTickets(externe = false) {
   const tickets = await getTickets();
   let newTicketId = null;
   const currentIds = new Set(tickets.map(t => t.id));
 
-  // Détecte un nouveau ticket ajouté par un autre utilisateur (via WebSocket)
   if (externe && previousIds.size > 0) {
     for (const id of currentIds) {
       if (!previousIds.has(id)) newTicketId = id;
@@ -138,32 +117,27 @@ async function afficherTickets(externe = false) {
   }
   previousIds = currentIds;
 
-  // Sépare les tickets "en cours" de "l'historique"
   const enCours = tickets.filter(t => t.etat === "en cours");
   const historique = tickets.filter(t => t.etat !== "en cours");
 
-  // Affichage des tickets "en cours" (colonne de droite)
   const right = document.getElementById("right");
-  right.querySelectorAll('.during').forEach(e => e.remove()); // Nettoie la liste
+  right.querySelectorAll('.during').forEach(e => e.remove());
   enCours.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "during";
     div.id = ticket.id;
 
-    // Ajoute une animation si c'est un nouveau ticket
     if (ticket.id === lastAddedTicketId || ticket.id === newTicketId) {
       div.classList.add('add');
       setTimeout(() => div.classList.remove('add'), 600);
     }
 
-    // Applique la couleur (gradient ou uni)
     if (ticket.couleur?.includes('gradient')) div.style.backgroundImage = ticket.couleur;
     else div.style.backgroundColor = ticket.couleur || "#cdcdcd";
 
     let infoContent = `<p id="name">${ticket.nom}</p>`;
     if (ticket.description?.trim()) infoContent += `<p id="desc">${ticket.description}</p>`;
 
-    // Construit l'HTML du ticket
     div.innerHTML = `
       <div class="checkbox" data-id="${ticket.id}"></div>
       <div class="info">${infoContent}</div>
@@ -176,9 +150,8 @@ async function afficherTickets(externe = false) {
     right.appendChild(div);
   });
 
-  // Affichage de l'historique (colonne de gauche)
   const subdiv = document.getElementById("subdiv");
-  subdiv.querySelectorAll('.history').forEach(e => e.remove()); // Nettoie la liste
+  subdiv.querySelectorAll('.history').forEach(e => e.remove());
   historique.forEach(ticket => {
     const div = document.createElement('div');
     div.className = "history";
@@ -202,23 +175,20 @@ async function afficherTickets(externe = false) {
     subdiv.appendChild(div);
   });
 
-  // Ajoute les écouteurs pour les boutons "supprimer"
   document.querySelectorAll('.delete').forEach(btn => {
     btn.onclick = async () => {
       const id = btn.dataset.id;
       const el = btn.closest('.during, .history');
-      el.classList.add('bounce-reverse'); // Animation de suppression
+      el.classList.add('bounce-reverse');
       el.addEventListener('animationend', async () => {
         await supprimerTicket(id);
-        el.remove(); // Supprime l'élément après l'animation
+        el.remove();
       }, { once: true });
     };
   });
 }
 
 // --- Gestionnaires d'Événements ---
-
-// Gère le clic sur la checkbox pour terminer un ticket
 document.getElementById("right").addEventListener("click", async (e) => {
   const checkbox = e.target.closest(".checkbox");
   if (!checkbox) return;
@@ -227,7 +197,6 @@ document.getElementById("right").addEventListener("click", async (e) => {
   const el = document.getElementById(id);
   if (!el) return;
 
-  // Vérifie les permissions (admin ou créateur du ticket)
   const tickets = await getTickets();
   if (localStorage.getItem('admin') !== 'true' &&
     !tickets.find(t => t.id === id && t.userId === userId)) {
@@ -235,49 +204,42 @@ document.getElementById("right").addEventListener("click", async (e) => {
     return;
   }
 
-  // Animation de transition vers l'historique
   el.classList.add("moving");
   el.addEventListener("animationend", async () => {
     await modifierTicket(id, { etat: "terminé" });
-    afficherTickets(); // Rafraîchit les listes
+    afficherTickets();
   }, { once: true });
 });
 
-
 // --- Filtres et Mode Admin ---
-
-// Charger le fichier JSON des mots interdits
 async function chargerFiltres() {
   const res = await fetch("./assets/filter.json?cb=" + Date.now());
   const data = await res.json();
   filtresCache = data.banned_terms || [];
 }
 
-// Activer le mode admin
 function activerModeAdmin() {
   localStorage.setItem('admin', 'true');
   const titre = document.getElementById('lefttitle');
   if (titre && !titre.textContent.includes('(admin mode)'))
     titre.textContent += ' (admin mode)';
-  afficherTickets(); // Rafraîchit pour afficher les boutons de suppression
+  afficherTickets();
 }
 
-// Désactiver le mode admin
 function desactiverModeAdmin() {
   localStorage.removeItem('admin');
   const titre = document.getElementById('lefttitle');
   if (titre)
     titre.textContent = titre.textContent.replace(' (admin mode)', '');
-  afficherTickets(); // Rafraîchit pour cacher les boutons
+  afficherTickets();
 }
 
-// Vérifie si l'utilisateur tape "admin" dans le champ nom
 function verifierAdminInput() {
   const nomInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
   const createBtn = document.getElementById('create');
   if (nomInput.value.trim().toLowerCase() === "admin") {
-    infosInput.type = 'password'; // Passe le champ description en mot de passe
+    infosInput.type = 'password';
     createBtn.textContent = "Valider";
   } else {
     infosInput.type = 'text';
@@ -286,8 +248,6 @@ function verifierAdminInput() {
 }
 
 // --- Fonctions API (Annonces) ---
-
-// Récupérer l'annonce actuelle au chargement
 async function fetchAnnonce() {
   try {
     const res = await fetch(API_ANNONCE_URL);
@@ -298,12 +258,9 @@ async function fetchAnnonce() {
     messageDiv.textContent = currentAnnonce;
     messageDiv.style.display = currentAnnonce ? 'block' : 'none';
     messageDiv.style.color = couleur;
-  } catch (e) {
-    console.error("Erreur récupération annonce:", e);
-  }
+  } catch (e) { console.error("Erreur récupération annonce:", e); }
 }
 
-// Mettre à jour l'annonce (admin)
 async function updateAnnonce(newMessage, couleur = "#cdcdcd") {
   try {
     await fetch(API_ANNONCE_URL, {
@@ -311,21 +268,14 @@ async function updateAnnonce(newMessage, couleur = "#cdcdcd") {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ texte: newMessage, couleur })
     });
-
     currentAnnonce = newMessage;
-
-    // Envoie la mise à jour aux autres clients via WebSocket
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'updateAnnonce', message: { texte: newMessage, couleur } }));
     }
-  } catch (e) {
-    console.error("Erreur mise à jour annonce:", e);
-  }
+  } catch (e) { console.error("Erreur mise à jour annonce:", e); }
 }
 
 // --- Logique Admin (Annonces) ---
-
-// Met en place la checkbox "Message d'annonce" pour l'admin
 function setupAdminAnnonce() {
   const adminAnnonce = document.getElementById('adminAnnonce');
   const infosInput = document.getElementById('infos');
@@ -334,7 +284,6 @@ function setupAdminAnnonce() {
 
   if (!adminAnnonce) return;
 
-  // Pré-remplit si une annonce existe déjà
   adminAnnonce.checked = !!currentAnnonce;
   if (adminAnnonce.checked) {
     nom.value = currentAnnonce;
@@ -346,23 +295,20 @@ function setupAdminAnnonce() {
     infosInput.style.display = 'block';
   }
 
-  // Gère le basculement entre création de ticket et création d'annonce
   adminAnnonce.addEventListener('change', () => {
     if (adminAnnonce.checked) {
-      nom.value = currentAnnonce; // Met le texte de l'annonce dans le champ "nom"
-      infosInput.style.display = 'none'; // Cache la description
+      nom.value = currentAnnonce;
+      infosInput.style.display = 'none';
       messageDiv.style.display = 'block';
     } else {
       nom.value = '';
-      infosInput.style.display = 'block'; // Affiche la description
+      infosInput.style.display = 'block';
       messageDiv.style.display = 'none';
     }
   });
 }
 
 // --- Création de Ticket (Logique Formulaire) ---
-
-// Gère la soumission du formulaire de création
 async function creerTicketDepuisFormulaire() {
   const nom = document.getElementById('name').value.trim();
   const infosInput = document.getElementById('infos');
@@ -372,12 +318,10 @@ async function creerTicketDepuisFormulaire() {
 
   if (!nom && !adminAnnonce.checked) return alert("Le nom est obligatoire");
 
-  // Vérification des mots interdits
   const contenu = (nom + " " + description).toLowerCase();
   const interdit = filtresCache.find(t => contenu.includes(t.toLowerCase()));
   if (interdit) return alert(`"${interdit}" est interdit.`);
 
-  // --- Logique Admin (Connexion / Déconnexion) ---
   if (nom.toLowerCase() === "admin") {
     const psw = description;
     if (toBase64(psw) === jstextimport) {
@@ -392,41 +336,34 @@ async function creerTicketDepuisFormulaire() {
     return;
   }
 
-  // --- Logique Admin (Mise à jour Annonce) ---
   if (adminAnnonce && adminAnnonce.checked) {
     const selectedColor = document.querySelector('.color.selected');
-    let couleur = '#d40000'; // Couleur par défaut
-
-    // Extrait la couleur sélectionnée
+    let couleur = '#d40000';
     if (selectedColor) {
       const bg = selectedColor.style.backgroundImage;
       const rgbMatch = bg.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/);
-      if (rgbMatch) { // Conversion RGB en HEX
+      if (rgbMatch) {
         const r = parseInt(rgbMatch[1]);
         const g = parseInt(rgbMatch[2]);
         const b = parseInt(rgbMatch[3]);
         couleur = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
       }
     }
-
-    // Met à jour l'annonce localement et via l'API
     messageDiv.textContent = nom;
     messageDiv.style.display = 'block';
     messageDiv.style.color = couleur;
     updateAnnonce(nom, couleur);
 
-    // Réinitialise et ferme le formulaire
     document.getElementById('name').value = "";
     infosInput.value = "";
-    document.getElementById("formOverlay").style.display = "none";
+    // Ferme l'overlay spécifique du formulaire ticket
+    document.getElementById("formOverlay").style.display = "none"; 
     return;
   }
 
-  // --- Logique Standard (Création Ticket) ---
   const tickets = await getTickets();
   const enCoursUtilisateur = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
   
-  // Limite le nombre de tickets par utilisateur (sauf admin)
   if (enCoursUtilisateur.length >= maxDuringTicket && localStorage.getItem('admin') !== 'true') {
     return alert(`Vous ne pouvez pas avoir plus de ${maxDuringTicket} tickets en cours.`);
   }
@@ -436,24 +373,19 @@ async function creerTicketDepuisFormulaire() {
 
   await ajouterTicket({ nom, description, couleur, etat: "en cours", userId });
 
-  // Réinitialise et ferme le formulaire
   document.getElementById('name').value = "";
   infosInput.value = "";
   document.getElementById("formOverlay").style.display = "none";
 }
 
 // --- Initialisation (DOM) ---
-
-// Se déclenche quand la page est chargée
 window.addEventListener('DOMContentLoaded', async () => {
-  await chargerFiltres(); // Charge les mots interdits
+  await chargerFiltres();
 
-  const form = document.querySelector(".ticket-form");
   const infosInput = document.getElementById('infos');
 
-  await fetchAnnonce(); // Récupère l'annonce actuelle
+  await fetchAnnonce();
 
-  // Si l'utilisateur est admin, ajoute la checkbox "Message d'annonce"
   if (localStorage.getItem('admin') === 'true') {
     const titre = document.getElementById('lefttitle');
     if (titre && !titre.textContent.includes('(admin mode)'))
@@ -468,43 +400,68 @@ window.addEventListener('DOMContentLoaded', async () => {
     `;
     infosInput.parentNode.insertBefore(annonceWrapper, infosInput);
 
-    setupAdminAnnonce(); // Configure la logique de la checkbox
+    setupAdminAnnonce();
   }
 
-  // Affichage initial
   afficherTickets();
   connectWebSocket();
 
-  // Écouteurs pour le formulaire
   document.getElementById('name').addEventListener('input', verifierAdminInput);
   document.getElementById('create').addEventListener('click', (e) => {
     e.preventDefault();
     creerTicketDepuisFormulaire();
   });
 
-  // Écouteurs pour l'ouverture/fermeture du formulaire modal
-  const overlay = document.getElementById("formOverlay");
-  const createBtn = document.getElementById("createbutton");
-  overlay.style.display = "none";
+  // --- GESTION DES MENUS (NOUVEAU SYSTÈME) ---
+  
+  // Fonction pour ouvrir n'importe quel menu
+  function openMenu(overlayId) {
+    const overlay = document.getElementById(overlayId);
+    if(overlay) {
+        overlay.style.display = "flex";
+        // Relance l'animation sur la boîte (menu-box)
+        const box = overlay.querySelector('.menu-box');
+        if(box) {
+            box.style.animation = "none";
+            box.offsetHeight; // Force le reflow
+            box.style.animation = null;
+        }
+    }
+  }
 
-  // Ferme l'overlay si on clique à l'extérieur
-  overlay.onclick = (e) => {
-    if (e.target === overlay) overlay.style.display = "none";
-  };
-
-  // Ouvre l'overlay au clic sur "Nouveau ticket"
-  createBtn.onclick = (e) => {
+  // 1. Menu Ticket
+  document.getElementById("createbutton").addEventListener('click', (e) => {
     e.preventDefault();
-    overlay.style.display = "flex";
-    
-    // Réinitialise le formulaire (s'assure que "Message d'annonce" est décoché)
+    // Réinitialisations spécifiques au ticket
     const adminAnnonce = document.getElementById('adminAnnonce');
     if (adminAnnonce) adminAnnonce.checked = false;
     infosInput.style.display = 'block';
     
-    // Relance l'animation d'apparition
-    form.style.animation = "none";
-    form.offsetHeight; // Force le reflow
-    form.style.animation = null;
-  };
+    openMenu("formOverlay");
+  });
+
+  // 2. Menu Réglages
+  document.getElementById("setting").addEventListener('click', (e) => {
+    e.preventDefault();
+    openMenu("settingsOverlay");
+  });
+  
+  // Bouton fermer dans les réglages (si vous l'avez ajouté)
+  const closeSettingsBtn = document.getElementById("closeSettings");
+  if(closeSettingsBtn) {
+      closeSettingsBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.getElementById("settingsOverlay").style.display = "none";
+      });
+  }
+
+  // 3. Fermeture universelle au clic à l'extérieur
+  document.querySelectorAll('.menu-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+              overlay.style.display = "none";
+          }
+      });
+  });
+
 });

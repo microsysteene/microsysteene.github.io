@@ -1,6 +1,9 @@
 /* ==================== */
 /* Button               */
 /* ==================== */
+
+/* Button-simple */
+
 .button {
     display: flex;
     flex-direction: row;
@@ -41,6 +44,8 @@
   width: 36px;
 }
 
+/* Button-text */
+
 .button-text {
   align-items: center;
   background-color: #ffffff;
@@ -58,6 +63,7 @@
   padding: 0 30px;
   gap: 20px;
   text-decoration: none;
+  text-decoration-color: none;
 }
 
 .button-text:hover {
@@ -85,6 +91,15 @@
   white-space: nowrap;
 }
 
+/* Correctif BUG */
+
+/* 1. Empêche de "glisser" l'image ou de sélectionner le texte par erreur */
+.button-simple .icon,
+.button-text .icon,
+.button-text .text {
+    pointer-events: none; /* Le clic traverse l'image pour aller au bouton */
+    user-select: none;    /* Empêche la sélection de texte */
+}
 
 /* ==================== */
 /* FONTS                */
