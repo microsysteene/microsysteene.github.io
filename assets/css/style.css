@@ -35,8 +35,6 @@
   width: 36px;
 }
 
-Boutton Text
-
 .button-text {
   align-items: center;
   background-color: #ffffff;
@@ -661,28 +659,7 @@ a#create:hover {
     height: 32px;
 }
 
-.icon {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    display: none;
-}
 
-.icon .div {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 1));
-    width: 85px;
-    height: 85px;
-    border-radius: 50%;
-    overflow: hidden;
-}
-
-.icon .div img {
-    width: 32px;
-    height: 32px;
-}
 
 
 /* ==================== */
