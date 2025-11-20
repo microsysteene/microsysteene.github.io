@@ -11,30 +11,36 @@
 
 <body>
   <div class="finisher-header sunny"></div>
+
   <div class="main">
+
     <div class="left-container">
+
       <div class="top">
         <a href="#" class="button-text" id="createbutton">
           <img class="icon" src="./assets/icon/favicon.png" alt="">
-          <span class="text">Nouveau tickets</span> 
+          <span class="text">Nouveau tickets</span>
         </a>
         <div class="button">
           <a href="#" class="button-simple" id="setting">
-            <img  class="icon" src="./assets/icon/Settings.png" alt="">
+            <img class="icon" src="./assets/icon/Settings.png" alt="">
           </a>
           <a href="#" class="button-simple" id="darkmode">
-            <img  class="icon" src="./assets/icon/darkmod.png" alt="">
+            <img class="icon" src="./assets/icon/darkmod.png" alt="">
           </a>
         </div>
       </div>
-      <p class="div "id="message"> a finir avant 11h30 !</p>
+
+      <p class="div " id="message"> a finir avant 11h30 !</p>
 
       <div class="form-overlay" id="formOverlay" style="display: none;">
+        
         <div class="ticket-form">
           <h1 id="lefttitle">Ouvrir un ticket</h1>
           <div class="input">
             <input type="text" id="name" name="name" placeholder="Nom" />
             <input type="text" id="infos" name="infos" placeholder="Description (optionnelle)" />
+            
             <div class="coloor">
               <h1>Couleurs</h1>
               <div class="colorbox">
@@ -62,10 +68,12 @@
 
       <div class="div" id="subdiv">
         <h1>Historique</h1>
-      </div>
+        </div>
     </div>
+
     <div class="div" id="right">
       <h1>Ticket en cours</h1>
+      
       <div class="during" id="ID" style="background-color: #ffb7b7;">
         <div class="checkbox"></div>
         <div class="info">
@@ -88,19 +96,21 @@
           <p id="remaining">(0 mins)</p>
         </div>
       </div>
-    </div>
+      </div>
+  </div>
 
-    <script>
-      document.getElementById("default").classList.add('selected');
-      document.querySelectorAll('.colorbox .color').forEach(a => {
-        a.addEventListener('click', e => {
-          document.querySelectorAll('.colorbox .color').forEach(el => el.classList.remove('selected'));
-          a.classList.add('selected');
-        });
+  <script>
+    document.getElementById("default").classList.add('selected');
+    document.querySelectorAll('.colorbox .color').forEach(a => {
+      a.addEventListener('click', e => {
+        document.querySelectorAll('.colorbox .color').forEach(el => el.classList.remove('selected'));
+        a.classList.add('selected');
       });
-    </script>
-    <script src="./assets/js/app.js"></script>
-    <script src="./assets/js/finisher-header.es5.min.js"></script>
+    });
+  </script>
+  
+  <script src="./assets/js/app.js"></script>
+  <script src="./assets/js/finisher-header.es5.min.js"></script>
 </body>
 
 </html>
