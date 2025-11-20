@@ -32,7 +32,7 @@
 .button-simple .icon {
   height: 36px;
   object-fit: cover;
-  width: 36px;
+  width: 100%;
 }
 
 Boutton Text
@@ -46,7 +46,7 @@ Boutton Text
   box-shadow: 0px 2px 0px #000000;
   display: flex;
   justify-content: center;
-  min-height: 88px;
+  min-height: 36px;
   overflow-x: hidden;
   width: 100%;
   transition: all 0.3s ease;
