@@ -36,9 +36,9 @@
 }
 
 .button-simple .icon {
-  height: 35px;
+  height: 36px;
   object-fit: cover;
-  width: 35px;
+  width: 36px;
 }
 
 .button-text {
@@ -52,7 +52,7 @@
   justify-content: center;
   min-height: 88px;
   overflow-x: hidden;
-  width: 100%;
+  flex: 100%;
   transition: all 0.3s ease;
   cursor: pointer;
   padding: 0 30px;
