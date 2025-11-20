@@ -17,9 +17,15 @@ if (!userId) {
 }
 
 // --- Attente chargement elements ---
-window.addEventListener('load', function() {
+if (document.readyState === 'complete') {
+  // Déjà chargé
   document.body.classList.add('loaded');
-});
+} else {
+  // Pas encore chargé, attendre
+  window.addEventListener('load', function() {
+    document.body.classList.add('loaded');
+  });
+}
 // --- Connexion WebSocket ---
 function connectWebSocket() {
   ws = new WebSocket(WS_URL);
