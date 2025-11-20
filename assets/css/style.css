@@ -1,6 +1,12 @@
 /* ==================== */
 /* Button               */
 /* ==================== */
+.button {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
 .button-simple {
   align-items: center;
   background-color: #ffffff;
@@ -30,7 +36,7 @@
 }
 
 .button-simple .icon {
-  height: 36px;
+  height: 88px;
   object-fit: cover;
   width: 100%;
 }
@@ -44,7 +50,7 @@
   box-shadow: 0px 2px 0px #000000;
   display: flex;
   justify-content: center;
-  min-height: 36px;
+  min-height: 88px;
   overflow-x: hidden;
   width: 100%;
   transition: all 0.3s ease;
