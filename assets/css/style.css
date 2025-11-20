@@ -91,14 +91,11 @@
   white-space: nowrap;
 }
 
-/* Correctif BUG */
-
-/* 1. Empêche de "glisser" l'image ou de sélectionner le texte par erreur */
 .button-simple .icon,
 .button-text .icon,
 .button-text .text {
-    pointer-events: none; /* Le clic traverse l'image pour aller au bouton */
-    user-select: none;    /* Empêche la sélection de texte */
+    pointer-events: none;
+    user-select: none;
 }
 
 /* ==================== */
@@ -241,9 +238,10 @@ h1 {
 input[type="text"],
 input[type="password"] {
     width: 100%;
-    background: rgba(255, 255, 255, 0.212);
+    height: 60px;
+    background: rgb(255, 255, 255);
     padding: clamp(8px, 1vw, 14px);
-    margin: 10px 0;
+    margin: 20px 0;
     font-size: clamp(14px, 1vw, 18px);
     border: 2px solid black;
     border-radius: 50px;
@@ -311,12 +309,12 @@ input[type="password"]:focus {
 
 .menu-box {
     background: #ffffffd2;
-    padding: clamp(20px, 3vw, 40px);
+    padding: clamp(30px, 3vw, 40px);
     border-radius: 2.5rem;
     border: 2px solid black;
     text-align: center;
     width: 100%;            
-    max-width: 600px;
+    max-width: 700px;
     height: auto;
     max-height: 90vh;
     overflow-y: auto;
@@ -339,7 +337,7 @@ input[type="password"]:focus {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: clamp(10px, 1vw, 20px);
+    gap: clamp(10px, 2vw, 20px);
 }
 
 .color {
