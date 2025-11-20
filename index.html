@@ -21,6 +21,7 @@
           <img class="icon" src="./assets/icon/icon thin.png" alt="">
           <span class="text">Nouveau tickets</span>
         </a>
+        
         <div class="button">
           <a href="#" class="button-simple" id="setting">
             <img class="icon" src="./assets/icon/Settings.png" alt="">
@@ -31,11 +32,10 @@
         </div>
       </div>
 
-      <p class="div " id="message"> a finir avant 11h30 !</p>
+      <p class="div" id="message"> a finir avant 11h30 !</p>
 
-      <div class="form-overlay" id="formOverlay" style="display: none;">
-        
-        <div class="ticket-form">
+      <div class="menu-overlay" id="formOverlay" style="display: none;">
+        <div class="menu-box">
           <h1 id="lefttitle">Ouvrir un ticket</h1>
           <div class="input">
             <input type="text" id="name" name="name" placeholder="Nom" />
@@ -45,20 +45,13 @@
               <h1>Couleurs</h1>
               <div class="colorbox">
                 <a class='color selected' id="default" style="background-color: #cdcdcd;"></a>
-                <a class="color"
-                  style="background-image: linear-gradient(to right top, #ff7070, #ff796f, #ff816f, #ff896f, #ff9170);"></a>
-                <a class='color'
-                  style="background-image: linear-gradient(to right top, #ffd760, #fde05a, #f9ea56, #f3f552, #ebff51);"></a>
-                <a class='color'
-                  style="background-image: linear-gradient(to right top, #79e056, #71e76a, #6aee7e, #62f591, #5bfba3);"></a>
-                <a class='color'
-                  style="background-image: linear-gradient(to right top, #61ffb8, #4fffcf, #47fee2, #4efcf3, #61faff);"></a>
-                <a class='color'
-                  style="background-image: linear-gradient(to right top, #61b5ff, #5aa5fd, #5d93f8, #6880f1, #776be5);"></a>
-                <a class='color'
-                  style="background-image: linear-gradient(to right top, #c0acff, #bd9aff, #be87ff, #c171fe, #c657f9);"></a>
-                <a class='color'
-                  style="background-image: linear-gradient(to right top, #ff99f8, #fe84ea, #fd6ddb, #fc53ca, #fb30b8);"></a>
+                <a class="color" style="background-image: linear-gradient(to right top, #ff7070, #ff796f, #ff816f, #ff896f, #ff9170);"></a>
+                <a class='color' style="background-image: linear-gradient(to right top, #ffd760, #fde05a, #f9ea56, #f3f552, #ebff51);"></a>
+                <a class='color' style="background-image: linear-gradient(to right top, #79e056, #71e76a, #6aee7e, #62f591, #5bfba3);"></a>
+                <a class='color' style="background-image: linear-gradient(to right top, #61ffb8, #4fffcf, #47fee2, #4efcf3, #61faff);"></a>
+                <a class='color' style="background-image: linear-gradient(to right top, #61b5ff, #5aa5fd, #5d93f8, #6880f1, #776be5);"></a>
+                <a class='color' style="background-image: linear-gradient(to right top, #c0acff, #bd9aff, #be87ff, #c171fe, #c657f9);"></a>
+                <a class='color' style="background-image: linear-gradient(to right top, #ff99f8, #fe84ea, #fd6ddb, #fc53ca, #fb30b8);"></a>
               </div>
             </div>
           </div>
@@ -69,14 +62,25 @@
         </div>
       </div>
 
+      <div class="menu-overlay" id="settingsOverlay" style="display: none;">
+        <div class="menu-box">
+            <h1>Paramètres</h1>
+            <p>Options de l'application (Langue, etc.)</p>
+            
+            <div class="button">
+                <a class="button-text" id="closeSettings" href="#">
+                    <span class="text">Fermer</span>
+                </a>
+            </div>
+        </div>
+      </div>
       <div class="div" id="subdiv">
         <h1>Historique</h1>
-        </div>
+      </div>
     </div>
 
     <div class="div" id="right">
       <h1>Ticket en cours</h1>
-      
       <div class="during" id="ID" style="background-color: #ffb7b7;">
         <div class="checkbox"></div>
         <div class="info">
@@ -99,7 +103,7 @@
           <p id="remaining">(0 mins)</p>
         </div>
       </div>
-      </div>
+    </div>
   </div>
 
   <script>
@@ -115,5 +119,4 @@
   <script src="./assets/js/app.js"></script>
   <script src="./assets/js/finisher-header.es5.min.js"></script>
 </body>
-
 </html>

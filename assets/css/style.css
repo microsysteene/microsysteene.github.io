@@ -279,8 +279,8 @@ input[type="password"]:focus {
     }
 }
 
-.form-overlay {
-    display: none; /* Géré par JS */
+.menu-overlay {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
@@ -288,21 +288,26 @@ input[type="password"]:focus {
     height: 100vh;
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
-    display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: center; 
+    
     z-index: 999;
 }
 
-.ticket-form {
+.menu-box {
     background: #ffffffd2;
-    padding: 30px;
+    padding: clamp(20px, 3vw, 40px);
     border-radius: 2.5rem;
-    width: 40rem;
-    height: 27rem;
-    max-width: 90%;
     border: 2px solid black;
     text-align: center;
+    width: 100%;            
+    max-width: 600px;
+    height: auto;
+    max-height: 90vh;
+    overflow-y: auto;
+
+    animation: bounce-in-entire 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    transform-origin: center;
 }
 
 /* ==================== */
