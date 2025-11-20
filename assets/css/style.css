@@ -36,9 +36,9 @@
 }
 
 .button-simple .icon {
-  height: 88px;
+  height: 35px;
   object-fit: cover;
-  width: 100%;
+  width: 35px;
 }
 
 .button-text {
@@ -57,6 +57,7 @@
   cursor: pointer;
   padding: 0 30px;
   gap: 20px;
+  text-decoration: none;
 }
 
 .button-text:hover {
@@ -302,31 +303,6 @@ input[type="password"]:focus {
     max-width: 90%;
     border: 2px solid black;
     text-align: center;
-}
-
-
-/* ==================== */
-/* BOUTTON <Create>     */
-/* ==================== */
-
-a#create {
-    display: block;
-    width: clamp(120px, 20%, 200px);
-    padding: clamp(5px, 0.8vw, 10px);
-    margin: 10px auto 0;
-    background-color: #ffffff;
-    font-size: clamp(16px, 1vw, 20px);
-    color: #000000;
-    text-decoration: none;
-    text-align: center;
-    border: 2px solid black;
-    border-radius: 50px;
-    transition: all 0.2s ease;
-    box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
-}
-
-a#create:hover {
-    transform: scale(1.10);
 }
 
 /* ==================== */
