@@ -16,6 +16,10 @@ if (!userId) {
   localStorage.setItem('userId', userId);
 }
 
+// --- Attente chargement elements ---
+window.addEventListener('load', function() {
+  document.body.classList.add('loaded');
+});
 // --- Connexion WebSocket ---
 function connectWebSocket() {
   ws = new WebSocket(WS_URL);

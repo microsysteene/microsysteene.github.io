@@ -229,7 +229,7 @@ h1 {
 
 /* Règle #left supprimée (non utilisée) */
 
-#subdiv {
+.loaded #subdiv {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -242,7 +242,7 @@ h1 {
     animation-delay: 100ms;
 }
 
-#right {
+.loaded #right {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -267,7 +267,7 @@ h1 {
 
 /* p#message supprimé (redondant) */
 
-.top {
+.loaded .top {
     display: flex;
     justify-content: space-between;
     align-items: center;
