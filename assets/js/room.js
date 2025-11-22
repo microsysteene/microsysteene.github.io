@@ -1,5 +1,5 @@
-const BASE_URL = "https://ticketapi.juhdd.me";
-const WS_URL = "wss://ticketapi.juhdd.me";
+const BASE_URL = "http://localhost:3000";
+const WS_URL = "ws://localhost:3000";
 
 // get room code
 const urlParams = new URLSearchParams(window.location.search);

@@ -1,4 +1,4 @@
-const BASE_URL = "https://ticketapi.juhdd.me";
+const BASE_URL = "http://localhost:3000";
 
 // get user id
 let userId = localStorage.getItem('userId');
@@ -16,7 +16,7 @@ const createBtn = buttons[1]; // second button is create
 if (joinBtn) {
   joinBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    
+
     // simple prompt for room code
     const code = prompt("Entrez le code du groupe :");
     if (code && code.trim() !== "") {
@@ -35,14 +35,16 @@ if (createBtn) {
       const res = await fetch(`${BASE_URL}/api/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminId: userId })
+        // change adminId to userId to match server expectation
+        body: JSON.stringify({ userId: userId })
       });
 
       const data = await res.json();
 
       // redirect to new room
-      if (data && data.roomCode) {
-        window.location.href = `room.html?room=${data.roomCode}`;
+      // change data.roomCode to data.code
+      if (data && data.code) {
+        window.location.href = `room.html?room=${data.code}`;
       } else {
         alert("Erreur lors de la création du groupe");
       }
