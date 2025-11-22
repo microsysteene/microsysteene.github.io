@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:3000";
+const API_URL = "https://ticketapi.juhdd.me/api/tickets";
 
 // get user id
 let userId = localStorage.getItem('userId');
@@ -32,7 +32,7 @@ if (createBtn) {
 
     try {
       // create room api call
-      const res = await fetch(`${BASE_URL}/api/rooms`, {
+      const res = await fetch(`${API_URL}/api/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // change adminId to userId to match server expectation
