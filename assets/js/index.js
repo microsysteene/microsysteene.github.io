@@ -1,5 +1,4 @@
-const API_URL = "https://ticketapi.juhdd.me/api/tickets";
-const BASE_URL = "https://ticketapi.juhdd.me";
+const API_URL = "https://ticketapi.juhdd.me";
 
 // get user id
 let userId = localStorage.getItem('userId');
@@ -15,7 +14,7 @@ async function tryAutoJoin() {
   if (lastRoom) {
     try {
       // check if room exists
-      const res = await fetch(`${BASE_URL}/api/rooms/${lastRoom}`);
+      const res = await fetch(`${API_URL}/api/rooms/${lastRoom}`);
       const data = await res.json();
 
       if (data && !data.error) {

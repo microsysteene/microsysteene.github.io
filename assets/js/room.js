@@ -1,12 +1,11 @@
-const API_URL = "https://ticketapi.juhdd.me/api/tickets";
-const BASE_URL = "https://ticketapi.juhdd.me";
+const API_URL = "https://ticketapi.juhdd.me"; 
 const WS_URL = "wss://ticketapi.juhdd.me";
 
 // get room code
 const urlParams = new URLSearchParams(window.location.search);
 const roomCode = urlParams.get('room');
 
-// save room code for auto join
+// save room code
 if (roomCode) {
   localStorage.setItem('last_room', roomCode);
 }
@@ -17,7 +16,6 @@ if (!roomCode) {
 }
 
 const MAX_DURING_TICKET = 1;
-
 let ws = null;
 let currentAnnonce = "";
 let lastTicketIds = new Set();
@@ -46,7 +44,6 @@ function connectWebSocket() {
   ws = new WebSocket(`${WS_URL}?room=${roomCode}`);
   
   ws.onopen = () => console.log('ws connected', roomCode);
-
   ws.onmessage = (event) => {
     if (event.data === 'ping') {
       ws.send('pong');
@@ -60,7 +57,6 @@ function connectWebSocket() {
       console.error('ws error', e);
     }
   };
-
   ws.onerror = (err) => console.error('ws error', err);
   
   ws.onclose = () => {
@@ -80,7 +76,6 @@ function handleAnnonceUpdate(data) {
     msgDiv.style.display = currentAnnonce ? 'block' : 'none';
     msgDiv.style.color = color;
   }
-
   const adminCheck = document.getElementById('adminAnnonce');
   const nameInput = document.getElementById('name');
   if (adminCheck?.checked && nameInput) {
@@ -99,7 +94,8 @@ async function apiCall(endpoint, method = "GET", body = null) {
     };
     if (body) options.body = JSON.stringify(body);
     
-    const res = await fetch(`${BASE_URL}${endpoint}`, options);
+    // use api_url here
+    const res = await fetch(`${API_URL}${endpoint}`, options);
     if (method === "DELETE") return true; 
     return await res.json();
   } catch (e) {
@@ -113,13 +109,13 @@ async function checkRoomPermissions() {
   const roomData = await apiCall(`/api/rooms/${roomCode}`);
   
   if (!roomData || roomData.error) {
-    // clear invalid room from storage
+    // clear invalid room
     localStorage.removeItem('last_room');
     alert("room not found");
     window.location.href = "/";
     return;
   }
-
+  
   // compare ids
   if (roomData.adminId === userId) {
     console.log("admin detected");
@@ -144,7 +140,8 @@ async function createTicket(ticket) {
 // delete ticket
 async function deleteTicket(id) {
   const endpoint = `/api/tickets/${id}?userId=${userId}&admin=${isRoomAdmin}&roomCode=${roomCode}`;
-  await fetch(`${BASE_URL}${endpoint}`, { method: "DELETE" });
+  // use api_url here
+  await fetch(`${API_URL}${endpoint}`, { method: "DELETE" });
 }
 
 // update ticket
@@ -184,7 +181,6 @@ function formatTimeElapsed(dateString) {
   const mins = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-
   if (days > 0) return `(${days}j)`;
   if (hours > 0) return `(${hours}h)`;
   return `(${mins}mins)`;
@@ -206,7 +202,6 @@ function rgbToHex(rgbStr) {
 async function renderTickets(isExternalUpdate = false) {
   if (isRendering) return; 
   isRendering = true;
-
   const tickets = await getTickets();
   const currentIds = new Set(tickets.map(t => t.id));
   
@@ -220,13 +215,10 @@ async function renderTickets(isExternalUpdate = false) {
     }
   }
   lastTicketIds = currentIds;
-
   const listActive = tickets.filter(t => t.etat === "en cours");
   const listHistory = tickets.filter(t => t.etat !== "en cours");
-
   updateContainer("right", listActive, newTicketId, true);
   updateContainer("subdiv", listHistory, newTicketId, false);
-
   isRendering = false;
 }
 
@@ -234,23 +226,18 @@ async function renderTickets(isExternalUpdate = false) {
 function updateContainer(containerId, tickets, newId, isActiveList) {
   const container = document.getElementById(containerId);
   if (!container) return;
-
   const oldItems = container.querySelectorAll(isActiveList ? '.during' : '.history');
   oldItems.forEach(el => el.remove());
-
   tickets.forEach(t => {
     const div = document.createElement('div');
     div.className = isActiveList ? "during" : "history";
     div.id = t.id;
-
     if (t.id === newId) {
       div.classList.add('add');
       setTimeout(() => div.classList.remove('add'), 600);
     }
-
     if (t.couleur?.includes('gradient')) div.style.backgroundImage = t.couleur;
     else div.style.backgroundColor = t.couleur || "#cdcdcd";
-
     const timeStr = t.dateCreation 
       ? new Date(t.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
       : '';
@@ -258,7 +245,6 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
     // check delete rights
     const canDelete = isRoomAdmin || (isActiveList && t.userId === userId);
     const deleteBtn = canDelete ? `<a class="delete" data-id="${t.id}">—</a>` : "";
-
     if (isActiveList) {
       let info = `<p id="name">${t.nom}</p>`;
       if (t.description?.trim()) info += `<p id="desc">${t.description}</p>`;
@@ -282,10 +268,8 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
         ${deleteBtn}
       `;
     }
-
     container.appendChild(div);
   });
-
   container.querySelectorAll('.delete').forEach(btn => {
     btn.onclick = (e) => handleDeleteClick(e, btn.dataset.id);
   });
@@ -296,7 +280,6 @@ async function handleDeleteClick(e, id) {
   e.stopPropagation();
   const el = e.target.closest('.during, .history');
   if (!el) return;
-
   el.classList.add('bounce-reverse');
   el.addEventListener('animationend', async () => {
     await deleteTicket(id);
@@ -309,7 +292,6 @@ async function handleDeleteClick(e, id) {
 document.getElementById("right").addEventListener("click", async (e) => {
   const checkbox = e.target.closest(".checkbox");
   if (!checkbox) return;
-
   const id = checkbox.dataset.id;
   const el = document.getElementById(id);
   
@@ -320,7 +302,6 @@ document.getElementById("right").addEventListener("click", async (e) => {
     alert("no permission");
     return;
   }
-
   el.classList.add("moving");
   el.addEventListener("animationend", async () => {
     await updateTicket(id, { etat: "terminé" });
@@ -354,16 +335,13 @@ function setAdminMode(enable) {
 function setupAdminControls() {
   const infosInput = document.getElementById('infos');
   if (!infosInput || document.getElementById('adminAnnonce')) return;
-
   const wrapper = document.createElement('div');
   wrapper.style.margin = "5px 0";
   wrapper.innerHTML = `<label><input type="checkbox" id="adminAnnonce"/> Message d'annonce</label>`;
   infosInput.parentNode.insertBefore(wrapper, infosInput);
-
   const check = wrapper.querySelector('input');
   const nameInput = document.getElementById('name');
   const msgDiv = document.getElementById('message');
-
   const toggle = () => {
     if (check.checked) {
       nameInput.value = currentAnnonce;
@@ -375,32 +353,25 @@ function setupAdminControls() {
       msgDiv.style.display = 'none';
     }
   };
-
   check.addEventListener('change', toggle);
 }
 
 // form submit
-
 async function handleFormSubmit() {
   const nameInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
   const adminCheck = document.getElementById('adminAnnonce');
-
   const name = nameInput.value.trim();
   const description = infosInput.value.trim();
-
   // required name
   if (!name && !adminCheck?.checked) return alert("name required");
-
   // check bad words
   const content = (name + " " + description).toLowerCase();
   const forbidden = filterCache.find(term => content.includes(term.toLowerCase()));
   if (forbidden) return alert("word forbidden");
-
   // admin update
   if (adminCheck?.checked) {
     if (!isRoomAdmin) return alert("not authorized");
-
     const selectedColor = document.querySelector('.color.selected');
     let hexColor = '#d40000';
     
@@ -416,20 +387,16 @@ async function handleFormSubmit() {
     closeAllOverlays();
     return;
   }
-
   // check limits
   const tickets = await getTickets();
   const myActiveTickets = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
-
   if (myActiveTickets.length >= MAX_DURING_TICKET && !isRoomAdmin) {
     return alert("limit reached");
   }
-
   const selectedColor = document.querySelector('.color.selected');
   const color = selectedColor 
     ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) 
     : '#cdcdcd';
-
   // create
   await createTicket({ 
     nom: name, 
@@ -438,14 +405,12 @@ async function handleFormSubmit() {
     etat: "en cours", 
     userId 
   });
-
   nameInput.value = "";
   infosInput.value = "";
   closeAllOverlays();
 }
 
 // menu functions
-
 function openOverlay(id) {
   const el = document.getElementById(id);
   if (el) {
@@ -458,13 +423,11 @@ function openOverlay(id) {
     }
   }
 }
-
 function closeAllOverlays() {
   document.querySelectorAll('.menu-overlay').forEach(el => el.style.display = "none");
 }
 
 // init
-
 window.addEventListener('DOMContentLoaded', async () => {
   // check permissions first
   await checkRoomPermissions();
@@ -474,13 +437,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   await fetchAnnonce();
   renderTickets();
   connectWebSocket();
-
+  // show room code 
+  document.getElementById('codebutton').textContent = `${roomCode}`;
   // events
   document.getElementById('create').addEventListener('click', (e) => {
     e.preventDefault();
     handleFormSubmit();
   });
-
   document.getElementById("createbutton").addEventListener('click', (e) => {
     e.preventDefault();
     const adminCheck = document.getElementById('adminAnnonce');
@@ -488,27 +451,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('infos').style.display = 'block';
     openOverlay("formOverlay");
   });
-
   document.getElementById("setting").addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("settingsOverlay");
   });
-
   document.getElementById("closeSettings")?.addEventListener('click', (e) => {
     e.preventDefault();
     closeAllOverlays();
   });
-
   document.querySelectorAll('.menu-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) closeAllOverlays();
     });
   });
-
   // logout
   document.getElementById("logout")?.addEventListener('click', (e) => {
     e.preventDefault();
-    // clear saved room on explicit logout
+    // clear saved room
     localStorage.removeItem('last_room');
     window.location.href = '/'; 
   });
