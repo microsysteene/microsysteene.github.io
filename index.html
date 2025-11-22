@@ -7,71 +7,83 @@
     <title>Ticket - Connexion</title>
     <link rel="stylesheet" href="./assets/css/style.css" />
     <link rel="icon" type="image/png" href="./assets/icon/favicon.png">
-</head>
-<style>
-    body {
-        background-image: url("assets/wallpaper/background.png") !important;
-        background-size: cover !important;
 
-        .landing-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 25vh;
-            height: 100vh;
-            width: 100%;
-            position: relative;
-            z-index: 1;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .logo {
-            width: 30%;
-            height: auto;
-            padding: 5px;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: 24px;
-        }
-
-
-        .logo-name {
-            font-family: 'Inconsolata', monospace;
-            font-weight: 700;
-            font-size: 3rem;
-            color: black;
+    <style>
+        /* 1. Configuration essentielle pour le fond animé */
+        body, html {
             margin: 0;
-        }
-
-
-        .action-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
+            padding: 0;
             width: 100%;
-            max-width: 380px;
+            height: 100%;
+            overflow: hidden; /* Important pour éviter le scroll */
         }
 
-
-        .version-text {
+        #bgCanvas {
             position: absolute;
-            bottom: 30px;
-            font-family: 'Inconsolata', monospace;
-            color: #00000040;
-            font-size: 0.9rem;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Place le canvas DERRIÈRE tout le reste */
         }
-    }
-</style>
+
+        /* 2. Votre CSS original (nettoyé de l'image de fond) */
+        body {
+            /* background-image retiré car remplacé par le canvas */
+            
+            /* J'ai conservé votre structure de nesting CSS */
+            .landing-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                width: 100%;
+                gap: 20px;
+                position: relative;
+                z-index: 1; /* Le contenu passe DEVANT les vagues */
+            }
+
+            .logo {
+                position: absolute;
+                top: 120px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 320px;
+                max-width: 100%;
+                height: auto;
+                z-index: 2;
+            }
+
+            .action-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 25px;
+                width: 100%;
+                max-width: 380px;
+                /* Important : assure que les boutons sont cliquables */
+                position: relative;
+                z-index: 2; 
+            }
+
+            .version-text {
+                position: absolute;
+                bottom: 30px;
+                font-family: 'Inconsolata', monospace;
+                color: #00000040;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
 
 <body>
 
+    <canvas id="bgCanvas"></canvas>
+
+    <img src="./assets/icon/logo.png" alt="Logo" class="logo" onerror="this.style.display='none'">
+
     <div class="landing-container">
-        <img src="./assets/icon/logo.png" alt="Logo" class="logo" onerror="this.style.display='none'">
 
         <div class="action-buttons">
 
@@ -86,12 +98,65 @@
                 <span class="text">Créer un groupe</span>
             </a>
 
-
         </div>
 
         <p class="version-text">version 1.0.0</p>
     </div>
-<script src="./assets/js/index.js"></script>
-</body>
 
+    <script>
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let increment = 0;
+
+        const waves = [
+            { y: 0.65, length: 0.007, amplitude: 40, speed: -0.003, offset: 0 }, 
+            { y: 0.75, length: 0.005, amplitude: 35, speed: 0.005, offset: 2 },
+            { y: 0.85, length: 0.004, amplitude: 30, speed: -0.007, offset: 4 }
+        ];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, '#FFF8E7'); 
+            gradient.addColorStop(1, '#FFFFFF'); 
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            waves.forEach((wave) => {
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.lineWidth = 1;
+
+                ctx.moveTo(0, height);
+                for (let i = 0; i < width; i++) {
+                    const y = height * wave.y + Math.sin(i * wave.length + increment * wave.speed + wave.offset) * wave.amplitude;
+                    ctx.lineTo(i, y);
+                }
+                ctx.lineTo(width, height);
+                ctx.lineTo(0, height);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            });
+            increment += 1;
+        }
+        animate();
+    </script>
+
+    <script src="./assets/js/index.js"></script>
+</body>
 </html>
