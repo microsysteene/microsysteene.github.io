@@ -1,4 +1,5 @@
 const API_URL = "https://ticketapi.juhdd.me/api/tickets";
+const BASE_URL = "https://ticketapi.juhdd.me";
 
 // get user id
 let userId = localStorage.getItem('userId');
@@ -6,6 +7,34 @@ if (!userId) {
   userId = crypto.randomUUID();
   localStorage.setItem('userId', userId);
 }
+
+// auto join room if saved
+async function tryAutoJoin() {
+  const lastRoom = localStorage.getItem('last_room');
+  
+  if (lastRoom) {
+    try {
+      // check if room exists
+      const res = await fetch(`${BASE_URL}/api/rooms/${lastRoom}`);
+      const data = await res.json();
+
+      if (data && !data.error) {
+        // room valid, redirect
+        window.location.href = `room.html?room=${lastRoom}`;
+      } else {
+        // room invalid, clear storage
+        localStorage.removeItem('last_room');
+      }
+    } catch (err) {
+      // api error, clear storage to be safe
+      console.error("auto join error", err);
+      localStorage.removeItem('last_room');
+    }
+  }
+}
+
+// run auto join check
+tryAutoJoin();
 
 // select buttons
 const buttons = document.querySelectorAll('.button-text');

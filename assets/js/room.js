@@ -1,9 +1,15 @@
 const API_URL = "https://ticketapi.juhdd.me/api/tickets";
+const BASE_URL = "https://ticketapi.juhdd.me";
 const WS_URL = "wss://ticketapi.juhdd.me";
 
 // get room code
 const urlParams = new URLSearchParams(window.location.search);
 const roomCode = urlParams.get('room');
+
+// save room code for auto join
+if (roomCode) {
+  localStorage.setItem('last_room', roomCode);
+}
 
 // redirect if no room
 if (!roomCode) {
@@ -107,6 +113,8 @@ async function checkRoomPermissions() {
   const roomData = await apiCall(`/api/rooms/${roomCode}`);
   
   if (!roomData || roomData.error) {
+    // clear invalid room from storage
+    localStorage.removeItem('last_room');
     alert("room not found");
     window.location.href = "/";
     return;
@@ -500,6 +508,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   // logout
   document.getElementById("logout")?.addEventListener('click', (e) => {
     e.preventDefault();
+    // clear saved room on explicit logout
+    localStorage.removeItem('last_room');
     window.location.href = '/'; 
   });
 });
