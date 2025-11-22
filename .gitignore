@@ -1,3 +1,4 @@
 /node_modules
 /tickets.json
 .DS_Store
+tickets.db

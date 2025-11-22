@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./tickets.db');
 
 db.serialize(() => {
+  // create tickets table with room link
   db.run(`CREATE TABLE IF NOT EXISTS tickets (
     id TEXT PRIMARY KEY,
     nom TEXT,
@@ -9,21 +10,19 @@ db.serialize(() => {
     couleur TEXT,
     etat TEXT,
     dateCreation TEXT,
-    userId TEXT
+    userId TEXT,
+    roomCode TEXT
   )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS announcement (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    message TEXT,
-    couleur TEXT,
-    dateCreation TEXT
+  // create rooms table
+  db.run(`CREATE TABLE IF NOT EXISTS rooms (
+    code TEXT PRIMARY KEY,
+    adminId TEXT,
+    announcementMessage TEXT,
+    announcementColor TEXT,
+    lastActivity TEXT,
+    createdAt TEXT
   )`);
-
-  db.get("SELECT * FROM announcement WHERE id = 1", (err, row) => {
-    if (!row) {
-      db.run("INSERT INTO announcement (id, message, dateCreation) VALUES (1, '', ?)", new Date().toISOString());
-    }
-  });
 });
 
 module.exports = db;
