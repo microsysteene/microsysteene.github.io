@@ -4,7 +4,7 @@
 
 /* VARIABLES & DARK MODE */
 :root {
-    --bg-color: rgba(255, 252, 246, 1);
+    --bg-color: #FFF9ED;
     --text-color: #000000;
     --card-bg: #ffffff;
 }
@@ -102,6 +102,7 @@ body.dark-mode {
     font-weight: 600;
     color: var(--text-color);
     white-space: nowrap;
+    transition: all 0.3s ease;
 }
 
 .button-simple .icon,
@@ -254,6 +255,7 @@ h1 {
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     animation-delay: 200ms;
     background-color: var(--card-bg);
+    transition: all 0.3s ease;
 }
 
 .loaded #right {
@@ -268,6 +270,7 @@ h1 {
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     animation-delay: 300ms;
     background-color: var(--card-bg);
+    transition: all 0.3s ease;
 }
 
 /* Barre d'annonce */
@@ -282,6 +285,7 @@ h1 {
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     animation-delay: 100ms;
     background-color: var(--card-bg);
+    transition: all 0.3s ease;
 }
 
 /* p#message supprimé (redondant) */
@@ -418,6 +422,7 @@ input[type="password"]:focus {
     backdrop-filter: blur(10px);
     justify-content: center;
     align-items: center;
+    transition: all 0.3s ease;
 
     z-index: 999;
 }
@@ -434,6 +439,7 @@ input[type="password"]:focus {
     height: auto;
     max-height: 90vh;
     overflow-y: auto;
+    transition: all 0.3s ease;
 
     animation: bounce-in-entire 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     transform-origin: center;
