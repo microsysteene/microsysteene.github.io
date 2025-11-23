@@ -269,11 +269,30 @@ async function renderTickets(isExternalUpdate = false) {
 }
 
 // update container
+// update container
 function updateContainer(containerId, tickets, newId, isActiveList) {
   const container = document.getElementById(containerId);
   if (!container) return;
+
+  // 1. Supprimer les tickets existants
   const oldItems = container.querySelectorAll(isActiveList ? '.during' : '.history');
   oldItems.forEach(el => el.remove());
+
+  // 2. Supprimer l'ancien message "Aucun ticket" s'il existe déjà
+  const oldMsg = container.querySelector('.empty-message');
+  if (oldMsg) oldMsg.remove();
+
+  // 3. Si aucun ticket à afficher -> Mettre le message
+  if (tickets.length === 0) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'empty-message';
+      // Le texte change selon si c'est la liste active ou historique
+      msgDiv.textContent = isActiveList ? "<Aucun ticket en cours>" : "<Aucun ticket terminé>";
+      container.appendChild(msgDiv);
+      return; // On arrête la fonction ici, pas besoin de boucle
+  }
+
+  // 4. Sinon, afficher les tickets (Code habituel)
   tickets.forEach(t => {
     const div = document.createElement('div');
     div.className = isActiveList ? "during" : "history";
@@ -282,8 +301,11 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
       div.classList.add('add');
       setTimeout(() => div.classList.remove('add'), 600);
     }
+    
+    // Gestion des couleurs
     if (t.couleur?.includes('gradient')) div.style.backgroundImage = t.couleur;
     else div.style.backgroundColor = t.couleur || "#cdcdcd";
+    
     const timeStr = t.dateCreation 
       ? new Date(t.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
       : '';
@@ -291,6 +313,7 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
     // check delete rights
     const canDelete = isRoomAdmin || (isActiveList && t.userId === userId);
     const deleteBtn = canDelete ? `<a class="delete" data-id="${t.id}">—</a>` : "";
+    
     if (isActiveList) {
       let info = `<p id="name">${t.nom}</p>`;
       if (t.description?.trim()) info += `<p id="desc">${t.description}</p>`;
@@ -316,6 +339,8 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
     }
     container.appendChild(div);
   });
+  
+  // Réattacher les événements de suppression
   container.querySelectorAll('.delete').forEach(btn => {
     btn.onclick = (e) => handleDeleteClick(e, btn.dataset.id);
   });
