@@ -19,6 +19,7 @@ body.dark-mode {
     font-style: italic;
     opacity: 0.6;
     color: var(--text-color); /* S'adapte au dark mode */
+    transition: all 0.3s ease;
 }
 
 /* ==================== */
