@@ -269,30 +269,25 @@ async function renderTickets(isExternalUpdate = false) {
 }
 
 // update container
-// update container
 function updateContainer(containerId, tickets, newId, isActiveList) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // 1. Supprimer les tickets existants
   const oldItems = container.querySelectorAll(isActiveList ? '.during' : '.history');
   oldItems.forEach(el => el.remove());
 
-  // 2. Supprimer l'ancien message "Aucun ticket" s'il existe déjà
   const oldMsg = container.querySelector('.empty-message');
   if (oldMsg) oldMsg.remove();
 
-  // 3. Si aucun ticket à afficher -> Mettre le message
   if (tickets.length === 0) {
       const msgDiv = document.createElement('div');
       msgDiv.className = 'empty-message';
       // Le texte change selon si c'est la liste active ou historique
       msgDiv.textContent = isActiveList ? "<Aucun ticket en cours>" : "<Aucun ticket terminé>";
       container.appendChild(msgDiv);
-      return; // On arrête la fonction ici, pas besoin de boucle
+      return;
   }
 
-  // 4. Sinon, afficher les tickets (Code habituel)
   tickets.forEach(t => {
     const div = document.createElement('div');
     div.className = isActiveList ? "during" : "history";
@@ -538,9 +533,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   // logout
   document.getElementById("logout")?.addEventListener('click', (e) => {
-    e.preventDefault();
-    // clear saved room
-    localStorage.removeItem('last_room');
-    window.location.href = '/'; 
+      e.preventDefault();
+      openOverlay("logoutOverlay");
+  });
+
+  document.getElementById("cancelLogout")?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeAllOverlays();
+  });
+
+  document.getElementById("confirmLogout")?.addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('last_room');
+      window.location.href = '/';
   });
 });

@@ -57,10 +57,14 @@
                 <a class='color' style="background-image: linear-gradient(to right top, #ff99f8, #fe84ea, #fd6ddb, #fc53ca, #fb30b8);"></a>
               </div>
             </div>
-              <a class="button-text" id='create' href='#'>
-                <img class="icon" src="./assets/icon/add.png">
-                <span class="text">Créer</span>
-            </a>
+
+            <div class="button" style="justify-content: center; margin-top: 20px;">
+              <a class="button-text" id='create' href='#' style="max-width: 150px">
+                  <img class="icon" src="./assets/icon/add.png">
+                  <span class="text">Créer</span>
+              </a>
+            </div>
+
           </div>
         </div>
       </div>
@@ -89,8 +93,8 @@
               </a>
             </div>
 
-            <div class="button" style="margin-top: 30px;">
-                <a class="button-text" id="closeSettings" href="#">
+            <div class="button" style="margin-top: 30px; justify-content: center;">
+                <a class="button-text" id="closeSettings" href="#" style="max-width: 150px">
                   <img class="icon" src="./assets/icon/check.png" alt="">  
                   <span class="text">Fermer</span>
                 </a>
@@ -98,6 +102,30 @@
           </div>
         </div>
       </div>
+
+      <div class="menu-overlay" id="logoutOverlay" style="display: none;">
+        <div class="menu-box" style="max-width: 400px;">
+          <div class="input">
+            <h1>Déconnexion ?</h1>
+            <p style="margin: 20px 0; opacity: 0.7;">Tu devras rentrer le code de la room pour revenir.</p>
+            
+            <div class="button" style="flex-direction: column; gap: 15px; align-items: center;">
+              
+              <a class="button-text" id="confirmLogout" href="#" style="max-width: 150px; background-color: #ff7070;">
+                <img class="icon" src="./assets/icon/logout.png" alt="" style="width: 24px; height: 24px;">
+                <span class="text">Oui, partir</span>
+              </a>
+
+              <a class="button-text" id="cancelLogout" href="#" style="max-width: 150px">
+                <img class="icon" src="./assets/icon/logout.png" alt="" style="width: 24px; height: 24px;">
+                <span class="text">Non, rester</span>
+              </a>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="div" id="subdiv">
         <h1>Historique</h1>
       </div>
