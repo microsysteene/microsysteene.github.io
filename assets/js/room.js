@@ -438,7 +438,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderTickets();
   connectWebSocket();
   // show room code 
-  document.getElementById('codebutton').textContent = `${roomCode}`;
+  document.querySelector('#codebutton .text').textContent = roomCode;
   // events
   document.getElementById('create').addEventListener('click', (e) => {
     e.preventDefault();
