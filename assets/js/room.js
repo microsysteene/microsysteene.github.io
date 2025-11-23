@@ -1,6 +1,52 @@
 const API_URL = "https://ticketapi.juhdd.me"; 
 const WS_URL = "wss://ticketapi.juhdd.me";
 
+// --- FONCTIONS DARK MODE & COPIE ---
+
+function initFeatures() {
+  // 1. Charger et appliquer le Dark Mode
+  const isDarkMode = localStorage.getItem('dark_mode') === 'true';
+  const darkToggle = document.getElementById('darkModeToggle');
+  
+  if (darkToggle) {
+    darkToggle.checked = isDarkMode;
+    // Appliquer la classe si sauvegardé
+    if (isDarkMode) document.body.classList.add('dark-mode');
+    
+    // Écouteur pour le changement immédiat
+    darkToggle.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('dark_mode', 'true');
+      } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('dark_mode', 'false');
+      }
+    });
+  }
+
+  // 2. Gestion du bouton Copier le lien
+  const copyBtn = document.getElementById('copyLink');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const link = window.location.href;
+      
+      navigator.clipboard.writeText(link).then(() => {
+        const textSpan = document.getElementById('copyText');
+        const originalText = textSpan.textContent;
+        
+        // Feedback visuel
+        textSpan.textContent = "Copié !";
+        setTimeout(() => textSpan.textContent = originalText, 2000);
+      }).catch(err => {
+        console.error('Erreur copie :', err);
+        alert("Impossible de copier le lien automatiquement.");
+      });
+    });
+  }
+}
+
 // get room code
 const urlParams = new URLSearchParams(window.location.search);
 const roomCode = urlParams.get('room');
@@ -429,6 +475,7 @@ function closeAllOverlays() {
 
 // init
 window.addEventListener('DOMContentLoaded', async () => {
+  initFeatures();
   // check permissions first
   await checkRoomPermissions();
   

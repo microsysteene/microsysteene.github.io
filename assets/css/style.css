@@ -2,6 +2,19 @@
 /* Button               */
 /* ==================== */
 
+/* VARIABLES & DARK MODE */
+:root {
+    --bg-color: rgba(255, 252, 246, 1);
+    --text-color: #000000;
+    --card-bg: #ffffff;
+}
+
+body.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --card-bg: #2d2d2d;
+}
+
 /* Button-simple */
 
 .button {
@@ -12,7 +25,7 @@
 
 .button-simple {
     align-items: center;
-    background-color: #ffffff;
+    background-color: var(--card-bg);
     border: 2px solid;
     border-color: #000000;
     border-radius: 50%;
@@ -48,7 +61,7 @@
 
 .button-text {
     align-items: center;
-    background-color: #ffffff;
+    background-color: var(--card-bg);
     border: 2px solid;
     border-color: #000000;
     border-radius: 100px;
@@ -87,17 +100,23 @@
 .button-text .text {
     font-size: 18px;
     font-weight: 600;
-    color: #000000;
+    color: var(--text-color);
     white-space: nowrap;
 }
 
 .button-simple .icon,
 .button-text .icon,
 .button-text .text {
+    color: var(--text-color);
     pointer-events: none;
     user-select: none;
 }
 
+.button-simple, .button-text, .menu-box, input[type="text"] {
+    /* background-color: #ffffff; <-- REMPLACE CA PAR : */
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
 /* Toggle */
 
 .toggle-checkbox {
@@ -172,15 +191,8 @@ body {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-}
-
-.finisher-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 110%;
-    height: 110%;
-    z-index: -1;
+    background-color: var(--bg-color);
+    transition: background-color 0.3s ease;
 }
 
 /* ==================== */
@@ -213,7 +225,8 @@ h1 {
 
 .div {
     padding: clamp(15px, 40px, 10px) 20px;
-    background: rgba(255, 252, 246, 1);
+    background: var(--bg-color);
+    color: var(--text-color);
     border: 2px solid #000000;
     box-sizing: border-box;
     text-align: center;
@@ -240,6 +253,7 @@ h1 {
     filter: drop-shadow(0px 4px 0px rgb(0, 0, 0, 0.2));
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     animation-delay: 200ms;
+    background-color: var(--card-bg);
 }
 
 .loaded #right {
@@ -253,6 +267,7 @@ h1 {
     filter: drop-shadow(0px 4px 0px rgb(0, 0, 0, 0.2));
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     animation-delay: 300ms;
+    background-color: var(--card-bg);
 }
 
 /* Barre d'annonce */
@@ -263,10 +278,10 @@ h1 {
     filter: drop-shadow(0px 4px 0px rgb(0, 0, 0, 0.2));
     font-size: 1.2rem;
     color: red;
-    /* Couleur par défaut, gérée par JS */
     margin: 0;
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     animation-delay: 100ms;
+    background-color: var(--card-bg);
 }
 
 /* p#message supprimé (redondant) */
@@ -325,11 +340,17 @@ h1 {
     margin: 0 auto;
 }
 
+input[type="text"]::placeholder {
+    color: var(--text-color);
+    opacity: 0.5;
+}
+
 input[type="text"],
 input[type="password"] {
     width: 100%;
     height: 60px;
-    background: rgb(255, 255, 255);
+    background: var(--card-bg);
+    color: var(--text-color);
     padding: clamp(8px, 1vw, 14px);
     margin: 20px 0;
     font-size: clamp(14px, 1vw, 18px);
@@ -402,7 +423,8 @@ input[type="password"]:focus {
 }
 
 .menu-box {
-    background: #ffffffd2;
+    background: var(--card-bg);
+    color: var(--text-color);
     padding: clamp(30px, 3vw, 40px);
     border-radius: 2.5rem;
     border: 2px solid black;
@@ -492,7 +514,7 @@ input[type="password"]:focus {
 .during .checkbox {
     width: 60px;
     height: 60px;
-    background-color: rgb(255, 255, 255);
+    background-color: var(--card-bg);
     border: 2px solid black;
     filter: drop-shadow(0px 2px 0px rgb(0, 0, 0));
     border-radius: 50%;
@@ -647,15 +669,12 @@ input[type="password"]:focus {
     justify-content: center;
     align-items: center;
     width: 0px;
-    /* Apparaît au survol */
     height: 0px;
-    /* Apparaît au survol */
     padding: 0;
-    background-color: rgb(255, 255, 255);
+    background-color: var(--card-bg); /* <--- Utilise la variable ici */
     border: 2px solid rgba(0, 0, 0, 1);
     border-radius: 50%;
     opacity: 0;
-    /* Apparaît au survol */
     cursor: pointer;
     filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 1));
     transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.65);

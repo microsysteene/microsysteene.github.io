@@ -10,7 +10,6 @@
 </head>
 
 <body>
-  <div class="finisher-header sunny"></div>
 
   <div class="main">
 
@@ -69,22 +68,33 @@
       <div class="menu-overlay" id="settingsOverlay" style="display: none;">
         <div class="menu-box">
           <div class="input">
-              <h1>Paramètre</h1>
-              <p>Theme</p>
+            <h1>Paramètres</h1>
+            
+            <h2 style="text-align: left; margin-top: 20px;">Apparence</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+              <span>Mode Sombre</span>
               <label>
-                <input type="checkbox" class="toggle-checkbox">
+                <input type="checkbox" class="toggle-checkbox" id="darkModeToggle">
                 <span class="toggle-slider"></span>
               </label>
-              <p>Langue</p>
-              <p>Charly Chatreux</p>
-              <p>Caillat Ethan</p>
-              <p>https://github.com/microsysteene/microsysteene.github.io</p>
-              <div class="button">
-                  <a class="button-text" id="closeSettings" href="#">
-                    <img class="icon" src="./assets/icon/check.png" alt="">  
-                    <span class="text">Sauvegarder</span>
-                  </a>
-              </div>
+            </div>
+
+            <h2 style="text-align: left; margin-top: 20px;">Room</h2>
+            <p style="font-size: 14px; opacity: 0.7; margin-bottom: 10px;">Partage ce lien avec ton équipe :</p>
+            
+            <div class="button">
+              <a class="button-text" id="copyLink" href="#" style="min-height: 60px; padding: 0 20px;">
+                <img class="icon" src="./assets/icon/icon thin.png" alt="" style="width: 24px; height: 24px;">
+                <span class="text" id="copyText">Copier le lien d'invitation</span>
+              </a>
+            </div>
+
+            <div class="button" style="margin-top: 30px;">
+                <a class="button-text" id="closeSettings" href="#">
+                  <img class="icon" src="./assets/icon/check.png" alt="">  
+                  <span class="text">Fermer</span>
+                </a>
+            </div>
           </div>
         </div>
       </div>
@@ -131,6 +141,5 @@
   </script>
   
   <script src="./assets/js/room.js"></script>
-  <script src="./assets/js/finisher-header.es5.min.js"></script>
 </body>
 </html>
