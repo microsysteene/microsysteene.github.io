@@ -18,7 +18,7 @@ body.dark-mode {
     font-size: 1.1rem;
     font-style: italic;
     opacity: 0.6;
-    color: var(--text-color); /* S'adapte au dark mode */
+    color: var(--text-color);
     transition: all 0.3s ease;
 }
 
@@ -66,6 +66,11 @@ body.dark-mode {
     height: 36px;
     object-fit: cover;
     width: 36px;
+    transition: filter 0.3s ease;
+}
+
+body.dark-mode .icon {
+    filter: invert(100%);
 }
 
 /* Button-text */
@@ -106,6 +111,7 @@ body.dark-mode {
     object-fit: cover;
     width: 36px;
     flex-shrink: 0;
+    transition: filter 0.3s ease;
 }
 
 .button-text .text {
