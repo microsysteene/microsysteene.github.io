@@ -84,7 +84,7 @@ body.dark-mode .icon {
     box-shadow: 0px 2px 0px #000000;
     display: flex;
     justify-content: center;
-    min-height: 88px;
+    min-height: 60px;
     overflow-x: hidden;
     flex: 100%;
     transition: all 0.3s ease;
@@ -131,7 +131,6 @@ body.dark-mode .icon {
 }
 
 .button-simple, .button-text, .menu-box, input[type="text"] {
-    /* background-color: #ffffff; <-- REMPLACE CA PAR : */
     background-color: var(--card-bg);
     color: var(--text-color);
 }
@@ -359,6 +358,7 @@ h1 {
 .input {
     width: 80%;
     margin: 0 auto;
+    padding: 0px;
 }
 
 input[type="text"]::placeholder {
