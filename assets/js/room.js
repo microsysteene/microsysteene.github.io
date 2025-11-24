@@ -1,41 +1,20 @@
-const API_URL = "https://ticketapi.juhdd.me"; 
-const WS_URL = "wss://ticketapi.juhdd.me";
+const API_URL = "http://localhost:3000";
+const WS_URL = "ws://localhost:3000";
 
-// --- FONCTIONS DARK MODE & COPIE ---
+// copie
 
 function initFeatures() {
-  // 1. Charger et appliquer le Dark Mode
-  const isDarkMode = localStorage.getItem('dark_mode') === 'true';
-  const darkToggle = document.getElementById('darkModeToggle');
-  
-  if (darkToggle) {
-    darkToggle.checked = isDarkMode;
-    // Appliquer la classe si sauvegardé
-    if (isDarkMode) document.body.classList.add('dark-mode');
-    
-    // Écouteur pour le changement immédiat
-    darkToggle.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        document.body.classList.add('dark-mode');
-        localStorage.setItem('dark_mode', 'true');
-      } else {
-        document.body.classList.remove('dark-mode');
-        localStorage.setItem('dark_mode', 'false');
-      }
-    });
-  }
-
-  // 2. Gestion du bouton Copier le lien
+  //Gestion du bouton Copier le lien
   const copyBtn = document.getElementById('copyLink');
   if (copyBtn) {
     copyBtn.addEventListener('click', (e) => {
       e.preventDefault();
       const link = window.location.href;
-      
+
       navigator.clipboard.writeText(link).then(() => {
         const textSpan = document.getElementById('copyText');
         const originalText = textSpan.textContent;
-        
+
         // Feedback visuel
         textSpan.textContent = "Copié !";
         setTimeout(() => textSpan.textContent = originalText, 2000);
@@ -46,6 +25,25 @@ function initFeatures() {
     });
   }
 }
+
+// copy code when cliqued on a#codebutton
+const codeButton = document.getElementById('codebutton');
+if (codeButton) {
+  codeButton.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    navigator.clipboard.writeText(roomCode).then(() => {
+      const textSpan = codeButton.querySelector('.text');
+      const originalText = textSpan.textContent;
+
+      // Feedback visuel
+      textSpan.textContent = "Copié";
+      setTimeout(() => textSpan.textContent = originalText, 2000);
+  })
+  })
+}
+
+
 
 // get room code
 const urlParams = new URLSearchParams(window.location.search);
@@ -88,7 +86,7 @@ if (document.readyState === 'complete') {
 // connect ws
 function connectWebSocket() {
   ws = new WebSocket(`${WS_URL}?room=${roomCode}`);
-  
+
   ws.onopen = () => console.log('ws connected', roomCode);
   ws.onmessage = (event) => {
     if (event.data === 'ping') {
@@ -104,7 +102,7 @@ function connectWebSocket() {
     }
   };
   ws.onerror = (err) => console.error('ws error', err);
-  
+
   ws.onclose = () => {
     console.log('ws closed, retry in 3s');
     setTimeout(connectWebSocket, 3000);
@@ -115,7 +113,7 @@ function connectWebSocket() {
 function handleAnnonceUpdate(data) {
   currentAnnonce = data.texte || "";
   const color = data.couleur || "#cdcdcd";
-  
+
   const msgDiv = document.getElementById('message');
   if (msgDiv) {
     msgDiv.textContent = currentAnnonce;
@@ -139,10 +137,10 @@ async function apiCall(endpoint, method = "GET", body = null) {
       headers: { "Content-Type": "application/json" }
     };
     if (body) options.body = JSON.stringify(body);
-    
+
     // use api_url here
     const res = await fetch(`${API_URL}${endpoint}`, options);
-    if (method === "DELETE") return true; 
+    if (method === "DELETE") return true;
     return await res.json();
   } catch (e) {
     console.error(`api error ${method}`, e);
@@ -153,7 +151,7 @@ async function apiCall(endpoint, method = "GET", body = null) {
 // check if admin
 async function checkRoomPermissions() {
   const roomData = await apiCall(`/api/rooms/${roomCode}`);
-  
+
   if (!roomData || roomData.error) {
     // clear invalid room
     localStorage.removeItem('last_room');
@@ -161,7 +159,7 @@ async function checkRoomPermissions() {
     window.location.href = "/";
     return;
   }
-  
+
   // compare ids
   if (roomData.adminId === userId) {
     console.log("admin detected");
@@ -204,10 +202,10 @@ async function fetchAnnonce() {
 
 // set announcement
 async function updateAnnonceApi(text, color = "#cdcdcd") {
-  await apiCall(`/api/announcement/${roomCode}`, "PUT", { 
-    texte: text, 
+  await apiCall(`/api/announcement/${roomCode}`, "PUT", {
+    texte: text,
     couleur: color,
-    userId: userId 
+    userId: userId
   });
   currentAnnonce = text;
 }
@@ -235,7 +233,7 @@ function formatTimeElapsed(dateString) {
 // rgb to hex
 function rgbToHex(rgbStr) {
   const match = rgbStr.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/);
-  if (!match) return '#d40000'; 
+  if (!match) return '#d40000';
   const r = parseInt(match[1]);
   const g = parseInt(match[2]);
   const b = parseInt(match[3]);
@@ -246,17 +244,17 @@ function rgbToHex(rgbStr) {
 
 // render list
 async function renderTickets(isExternalUpdate = false) {
-  if (isRendering) return; 
+  if (isRendering) return;
   isRendering = true;
   const tickets = await getTickets();
   const currentIds = new Set(tickets.map(t => t.id));
-  
+
   let newTicketId = null;
   if (isExternalUpdate) {
     for (const id of currentIds) {
       if (!lastTicketIds.has(id)) {
         newTicketId = id;
-        break; 
+        break;
       }
     }
   }
@@ -280,12 +278,12 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
   if (oldMsg) oldMsg.remove();
 
   if (tickets.length === 0) {
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'empty-message';
-      // Le texte change selon si c'est la liste active ou historique
-      msgDiv.textContent = isActiveList ? "<Aucun ticket en cours>" : "<Aucun ticket terminé>";
-      container.appendChild(msgDiv);
-      return;
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'empty-message';
+    // Le texte change selon si c'est la liste active ou historique
+    msgDiv.textContent = isActiveList ? "<Aucun ticket en cours>" : "<Aucun ticket terminé>";
+    container.appendChild(msgDiv);
+    return;
   }
 
   tickets.forEach(t => {
@@ -296,23 +294,23 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
       div.classList.add('add');
       setTimeout(() => div.classList.remove('add'), 600);
     }
-    
+
     // Gestion des couleurs
     if (t.couleur?.includes('gradient')) div.style.backgroundImage = t.couleur;
     else div.style.backgroundColor = t.couleur || "#cdcdcd";
-    
-    const timeStr = t.dateCreation 
-      ? new Date(t.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+
+    const timeStr = t.dateCreation
+      ? new Date(t.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '';
-    
+
     // check delete rights
     const canDelete = isRoomAdmin || (isActiveList && t.userId === userId);
     const deleteBtn = canDelete ? `<a class="delete" data-id="${t.id}">—</a>` : "";
-    
+
     if (isActiveList) {
       let info = `<p id="name">${t.nom}</p>`;
       if (t.description?.trim()) info += `<p id="desc">${t.description}</p>`;
-      
+
       div.innerHTML = `
         <div class="checkbox" data-id="${t.id}"></div>
         <div class="info">${info}</div>
@@ -334,7 +332,7 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
     }
     container.appendChild(div);
   });
-  
+
   // Réattacher les événements de suppression
   container.querySelectorAll('.delete').forEach(btn => {
     btn.onclick = (e) => handleDeleteClick(e, btn.dataset.id);
@@ -350,7 +348,7 @@ async function handleDeleteClick(e, id) {
   el.addEventListener('animationend', async () => {
     await deleteTicket(id);
     el.remove();
-    renderTickets(); 
+    renderTickets();
   }, { once: true });
 }
 
@@ -360,10 +358,10 @@ document.getElementById("right").addEventListener("click", async (e) => {
   if (!checkbox) return;
   const id = checkbox.dataset.id;
   const el = document.getElementById(id);
-  
+
   const tickets = await getTickets();
   const ticket = tickets.find(t => t.id === id);
-  
+
   if (!isRoomAdmin && (!ticket || ticket.userId !== userId)) {
     alert("no permission");
     return;
@@ -381,7 +379,7 @@ document.getElementById("right").addEventListener("click", async (e) => {
 function setAdminMode(enable) {
   const title = document.getElementById('lefttitle');
   isRoomAdmin = enable;
-  
+
   if (enable) {
     if (title && !title.textContent.includes('(admin mode)')) {
       title.textContent += ' (admin mode)';
@@ -440,14 +438,14 @@ async function handleFormSubmit() {
     if (!isRoomAdmin) return alert("not authorized");
     const selectedColor = document.querySelector('.color.selected');
     let hexColor = '#d40000';
-    
+
     if (selectedColor) {
       const bg = selectedColor.style.backgroundImage || selectedColor.style.backgroundColor;
       if (bg) hexColor = rgbToHex(bg) || bg;
     }
-    
+
     await updateAnnonceApi(name, hexColor);
-    
+
     nameInput.value = "";
     infosInput.value = "";
     closeAllOverlays();
@@ -460,16 +458,16 @@ async function handleFormSubmit() {
     return alert("limit reached");
   }
   const selectedColor = document.querySelector('.color.selected');
-  const color = selectedColor 
-    ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) 
+  const color = selectedColor
+    ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor)
     : '#cdcdcd';
   // create
-  await createTicket({ 
-    nom: name, 
-    description, 
-    couleur: color, 
-    etat: "en cours", 
-    userId 
+  await createTicket({
+    nom: name,
+    description,
+    couleur: color,
+    etat: "en cours",
+    userId
   });
   nameInput.value = "";
   infosInput.value = "";
@@ -484,7 +482,7 @@ function openOverlay(id) {
     const box = el.querySelector('.menu-box');
     if (box) {
       box.style.animation = 'none';
-      box.offsetHeight; 
+      box.offsetHeight;
       box.style.animation = null;
     }
   }
@@ -498,7 +496,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   initFeatures();
   // check permissions first
   await checkRoomPermissions();
-  
+
   // load data
   await loadFilters();
   await fetchAnnonce();
@@ -533,18 +531,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   // logout
   document.getElementById("logout")?.addEventListener('click', (e) => {
-      e.preventDefault();
-      openOverlay("logoutOverlay");
+    e.preventDefault();
+    openOverlay("logoutOverlay");
   });
 
   document.getElementById("cancelLogout")?.addEventListener('click', (e) => {
-      e.preventDefault();
-      closeAllOverlays();
+    e.preventDefault();
+    closeAllOverlays();
   });
 
   document.getElementById("confirmLogout")?.addEventListener('click', (e) => {
-      e.preventDefault();
-      localStorage.removeItem('last_room');
-      window.location.href = '/';
+    e.preventDefault();
+    localStorage.removeItem('last_room');
+    window.location.href = '/';
   });
 });

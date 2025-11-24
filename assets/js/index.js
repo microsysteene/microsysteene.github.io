@@ -1,4 +1,4 @@
-const API_URL = "https://ticketapi.juhdd.me";
+const API_URL = "http://localhost:3000";
 
 // get user id
 let userId = localStorage.getItem('userId');
@@ -10,7 +10,7 @@ if (!userId) {
 // auto join room if saved
 async function tryAutoJoin() {
   const lastRoom = localStorage.getItem('last_room');
-  
+
   if (lastRoom) {
     try {
       // check if room exists
@@ -49,6 +49,8 @@ if (joinBtn) {
     const code = prompt("Entrez le code du groupe :");
     if (code && code.trim() !== "") {
       window.location.href = `room.html?room=${code.trim()}`;
+    } else {
+      alert("Code de groupe invalide");
     }
   });
 }
