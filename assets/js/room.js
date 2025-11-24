@@ -1,10 +1,9 @@
 const API_URL = "http://localhost:3000";
 const WS_URL = "ws://localhost:3000";
 
-// copie
-
+// copy features
 function initFeatures() {
-  //Gestion du bouton Copier le lien
+  // copy link button
   const copyBtn = document.getElementById('copyLink');
   if (copyBtn) {
     copyBtn.addEventListener('click', (e) => {
@@ -15,12 +14,12 @@ function initFeatures() {
         const textSpan = document.getElementById('copyText');
         const originalText = textSpan.textContent;
 
-        // Feedback visuel
+        // visual feedback
         textSpan.textContent = "Copié !";
         setTimeout(() => textSpan.textContent = originalText, 2000);
       }).catch(err => {
         console.error('Erreur copie :', err);
-        alert("Impossible de copier le lien automatiquement.");
+        alert("Échec de la copie du lien.");
       });
     });
   }
@@ -36,14 +35,12 @@ if (codeButton) {
       const textSpan = codeButton.querySelector('.text');
       const originalText = textSpan.textContent;
 
-      // Feedback visuel
+      // visual feedback
       textSpan.textContent = "Copié";
       setTimeout(() => textSpan.textContent = originalText, 2000);
-  })
+    })
   })
 }
-
-
 
 // get room code
 const urlParams = new URLSearchParams(window.location.search);
@@ -155,7 +152,7 @@ async function checkRoomPermissions() {
   if (!roomData || roomData.error) {
     // clear invalid room
     localStorage.removeItem('last_room');
-    alert("room not found");
+    alert("Salle introuvable.");
     window.location.href = "/";
     return;
   }
@@ -210,10 +207,17 @@ async function updateAnnonceApi(text, color = "#cdcdcd") {
   currentAnnonce = text;
 }
 
-// load bad words
+// load bad words in local /assets/filter.json
 async function loadFilters() {
-  const data = await apiCall("/assets/filter.json?cb=" + Date.now());
-  filterCache = data.banned_terms || [];
+  try {
+    const res = await fetch("./assets/filter.json?cb=" + Date.now());
+    if (!res.ok) throw new Error("Erreur lors du chargement de filter.json");
+    const data = await res.json();
+    filterCache = data.banned_terms || [];
+  } catch (error) {
+    console.error("Erreur de chargement du filtre:", error);
+    filtresCache = [];
+  }
 }
 
 // utils
@@ -280,7 +284,7 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
   if (tickets.length === 0) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'empty-message';
-    // Le texte change selon si c'est la liste active ou historique
+    // text changes depending on whether it is the active or historical list
     msgDiv.textContent = isActiveList ? "<Aucun ticket en cours>" : "<Aucun ticket terminé>";
     container.appendChild(msgDiv);
     return;
@@ -295,7 +299,7 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
       setTimeout(() => div.classList.remove('add'), 600);
     }
 
-    // Gestion des couleurs
+    // color handling
     if (t.couleur?.includes('gradient')) div.style.backgroundImage = t.couleur;
     else div.style.backgroundColor = t.couleur || "#cdcdcd";
 
@@ -333,7 +337,7 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
     container.appendChild(div);
   });
 
-  // Réattacher les événements de suppression
+  // reattach delete events
   container.querySelectorAll('.delete').forEach(btn => {
     btn.onclick = (e) => handleDeleteClick(e, btn.dataset.id);
   });
@@ -362,8 +366,8 @@ document.getElementById("right").addEventListener("click", async (e) => {
   const tickets = await getTickets();
   const ticket = tickets.find(t => t.id === id);
 
-  if (!isRoomAdmin && (!ticket || ticket.userId !== userId)) {
-    alert("no permission");
+  if (!isRoomAdmin) {
+    alert("Permission refusée.");
     return;
   }
   el.classList.add("moving");
@@ -428,14 +432,16 @@ async function handleFormSubmit() {
   const name = nameInput.value.trim();
   const description = infosInput.value.trim();
   // required name
-  if (!name && !adminCheck?.checked) return alert("name required");
+  if (!name && !adminCheck?.checked) return alert("Le nom est obligatoire.");
   // check bad words
   const content = (name + " " + description).toLowerCase();
-  const forbidden = filterCache.find(term => content.includes(term.toLowerCase()));
-  if (forbidden) return alert("word forbidden");
+  const words = content.toLowerCase().split(/\s+/);
+  const forbidden = filterCache.find(term => words.includes(term.toLowerCase()));
+
+  if (forbidden) return alert("Mot interdit détecté.");
   // admin update
   if (adminCheck?.checked) {
-    if (!isRoomAdmin) return alert("not authorized");
+    if (!isRoomAdmin) return alert("Action non autorisée.");
     const selectedColor = document.querySelector('.color.selected');
     let hexColor = '#d40000';
 
@@ -455,7 +461,7 @@ async function handleFormSubmit() {
   const tickets = await getTickets();
   const myActiveTickets = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
   if (myActiveTickets.length >= MAX_DURING_TICKET && !isRoomAdmin) {
-    return alert("limit reached");
+    return alert("Limite de tickets atteinte.");
   }
   const selectedColor = document.querySelector('.color.selected');
   const color = selectedColor
