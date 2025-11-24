@@ -49,8 +49,6 @@ if (joinBtn) {
     const code = prompt("Entrez le code du groupe :");
     if (code && code.trim() !== "") {
       window.location.href = `room.html?room=${code.trim()}`;
-    } else {
-      alert("Code de groupe invalide");
     }
   });
 }
