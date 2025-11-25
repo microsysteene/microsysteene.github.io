@@ -117,9 +117,10 @@ function handleAnnonceUpdate(data) {
     msgDiv.style.display = currentAnnonce ? 'block' : 'none';
     msgDiv.style.color = color;
   }
-  const adminCheck = document.getElementById('adminAnnonce');
+  
+  // update input if admin panel is open
   const nameInput = document.getElementById('name');
-  if (adminCheck?.checked && nameInput) {
+  if (isRoomAdmin && nameInput && document.getElementById('formOverlay').style.display !== 'none') {
     nameInput.value = currentAnnonce;
   }
 }
@@ -135,7 +136,6 @@ async function apiCall(endpoint, method = "GET", body = null) {
     };
     if (body) options.body = JSON.stringify(body);
 
-    // use api_url here
     const res = await fetch(`${API_URL}${endpoint}`, options);
     if (method === "DELETE") return true;
     return await res.json();
@@ -181,7 +181,6 @@ async function createTicket(ticket) {
 // delete ticket
 async function deleteTicket(id) {
   const endpoint = `/api/tickets/${id}?userId=${userId}&admin=${isRoomAdmin}&roomCode=${roomCode}`;
-  // use api_url here
   await fetch(`${API_URL}${endpoint}`, { method: "DELETE" });
 }
 
@@ -381,67 +380,58 @@ document.getElementById("right").addEventListener("click", async (e) => {
 
 // toggle admin ui
 function setAdminMode(enable) {
-  const title = document.getElementById('lefttitle');
   isRoomAdmin = enable;
+  const createBtnText = document.querySelector('#createbutton .text');
+  const nameInput = document.getElementById('name');
+  const infosInput = document.getElementById('infos');
+  const modalTitle = document.getElementById('lefttitle');
+  
+  // admin buttons
+  const deleteBtn = document.getElementById('deleteAnnonce');
 
   if (enable) {
-    if (title && !title.textContent.includes('(admin mode)')) {
-      title.textContent += ' (admin mode)';
+    // admin mode active: announcement ui
+    if (createBtnText) createBtnText.textContent = "Nouveau Message";
+    if (nameInput) {
+      nameInput.placeholder = "Message";
+      if (currentAnnonce) nameInput.value = currentAnnonce;
     }
-    setupAdminControls();
+    if (infosInput) infosInput.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = "Publier une annonce";
+    if (deleteBtn) deleteBtn.style.display = 'flex';
   } else {
-    if (title) {
-      title.textContent = title.textContent.replace(' (admin mode)', '');
+    // standard user: ticket ui
+    if (createBtnText) createBtnText.textContent = "Nouveau tickets";
+    if (nameInput) {
+      nameInput.placeholder = "Nom";
+      nameInput.value = "";
     }
-    const adminCheck = document.getElementById('adminAnnonce')?.parentElement;
-    if (adminCheck) adminCheck.remove();
+    if (infosInput) infosInput.style.display = 'block';
+    if (modalTitle) modalTitle.textContent = "Ouvrir un ticket";
+    if (deleteBtn) deleteBtn.style.display = 'none';
   }
   renderTickets();
-}
-
-// add admin checkbox
-function setupAdminControls() {
-  const infosInput = document.getElementById('infos');
-  if (!infosInput || document.getElementById('adminAnnonce')) return;
-  const wrapper = document.createElement('div');
-  wrapper.style.margin = "5px 0";
-  wrapper.innerHTML = `<label><input type="checkbox" id="adminAnnonce"/> Message d'annonce</label>`;
-  infosInput.parentNode.insertBefore(wrapper, infosInput);
-  const check = wrapper.querySelector('input');
-  const nameInput = document.getElementById('name');
-  const msgDiv = document.getElementById('message');
-  const toggle = () => {
-    if (check.checked) {
-      nameInput.value = currentAnnonce;
-      infosInput.style.display = 'none';
-      msgDiv.style.display = 'block';
-    } else {
-      nameInput.value = '';
-      infosInput.style.display = 'block';
-      msgDiv.style.display = 'none';
-    }
-  };
-  check.addEventListener('change', toggle);
 }
 
 // form submit
 async function handleFormSubmit() {
   const nameInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
-  const adminCheck = document.getElementById('adminAnnonce');
+  
   const name = nameInput.value.trim();
   const description = infosInput.value.trim();
-  // required name
-  if (!name && !adminCheck?.checked) return alert("Le nom est obligatoire.");
+
+  // required name or msg
+  if (!name) return alert("Le champ est vide.");
+  
   // check bad words
   const content = (name + " " + description).toLowerCase();
   const words = content.toLowerCase().split(/\s+/);
   const forbidden = filterCache.find(term => words.includes(term.toLowerCase()));
-
   if (forbidden) return alert("Mot interdit détecté.");
-  // admin update
-  if (adminCheck?.checked) {
-    if (!isRoomAdmin) return alert("Action non autorisée.");
+
+  // admin action: update announcement
+  if (isRoomAdmin) {
     const selectedColor = document.querySelector('.color.selected');
     let hexColor = '#d40000';
 
@@ -452,21 +442,24 @@ async function handleFormSubmit() {
 
     await updateAnnonceApi(name, hexColor);
 
-    nameInput.value = "";
-    infosInput.value = "";
+    // close and clear
     closeAllOverlays();
     return;
   }
+
+  // user action: create ticket
   // check limits
   const tickets = await getTickets();
   const myActiveTickets = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
-  if (myActiveTickets.length >= MAX_DURING_TICKET && !isRoomAdmin) {
+  if (myActiveTickets.length >= MAX_DURING_TICKET) {
     return alert("Limite de tickets atteinte.");
   }
+  
   const selectedColor = document.querySelector('.color.selected');
   const color = selectedColor
     ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor)
     : '#cdcdcd';
+  
   // create
   await createTicket({
     nom: name,
@@ -475,6 +468,7 @@ async function handleFormSubmit() {
     etat: "en cours",
     userId
   });
+  
   nameInput.value = "";
   infosInput.value = "";
   closeAllOverlays();
@@ -510,18 +504,29 @@ window.addEventListener('DOMContentLoaded', async () => {
   connectWebSocket();
   // show room code 
   document.querySelector('#codebutton .text').textContent = roomCode;
+  
   // events
   document.getElementById('create').addEventListener('click', (e) => {
     e.preventDefault();
     handleFormSubmit();
   });
+
+  // delete announcement (admin)
+  document.getElementById('deleteAnnonce')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!isRoomAdmin) return;
+    if (confirm("Supprimer l'annonce ?")) {
+      await updateAnnonceApi("");
+      closeAllOverlays();
+    }
+  });
+  
+  // open create menu (updated)
   document.getElementById("createbutton").addEventListener('click', (e) => {
     e.preventDefault();
-    const adminCheck = document.getElementById('adminAnnonce');
-    if (adminCheck) adminCheck.checked = false;
-    document.getElementById('infos').style.display = 'block';
     openOverlay("formOverlay");
   });
+  
   document.getElementById("setting").addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("settingsOverlay");
