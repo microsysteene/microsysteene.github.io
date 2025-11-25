@@ -1,6 +1,14 @@
 const API_URL = "https://ticketapi.juhdd.me";
 const WS_URL = "wss://ticketapi.juhdd.me";
 
+let activeUploads = []; // track xhr requests
+const MAX_FILES = 10;
+const MAX_DURING_TICKET = 1;
+
+// cache and crypto globals
+let cryptoKey = null; // derived from room code
+let currentFilesList = []; // store files list for announcement display
+
 // copy features
 function initFeatures() {
   // copy link button
@@ -56,13 +64,13 @@ if (!roomCode) {
   window.location.href = "/";
 }
 
-const MAX_DURING_TICKET = 1;
 let ws = null;
 let currentAnnonce = "";
 let lastTicketIds = new Set();
 let filterCache = [];
 let isRendering = false;
 let isRoomAdmin = false;
+let isUploading = false;
 
 // get user id
 let userId = localStorage.getItem('userId');
@@ -76,6 +84,300 @@ if (document.readyState === 'complete') {
   document.body.classList.add('loaded');
 } else {
   window.addEventListener('load', () => document.body.classList.add('loaded'));
+}
+
+// crypto
+
+// init crypto key from room code
+async function initCrypto() {
+  const enc = new TextEncoder();
+  const keyMaterial = await window.crypto.subtle.importKey(
+    "raw",
+    enc.encode(roomCode),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+
+  // derive aes-gcm key
+  cryptoKey = await window.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: enc.encode("ticket-static-salt"), 
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+  console.log('crypto key ready');
+}
+
+// encrypt file (returns blob with iv prepended)
+async function encryptFile(file) {
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const buffer = await file.arrayBuffer();
+  
+  const encryptedContent = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv },
+    cryptoKey,
+    buffer
+  );
+
+  // combine iv + encrypted data
+  return new Blob([iv, encryptedContent], { type: 'application/octet-stream' });
+}
+
+// decrypt blob (extracts iv first)
+async function decryptFile(blob) {
+  const buffer = await blob.arrayBuffer();
+  const iv = buffer.slice(0, 12);
+  const data = buffer.slice(12);
+
+  const decryptedContent = await window.crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: iv },
+    cryptoKey,
+    data
+  );
+
+  return new Blob([decryptedContent]);
+}
+
+// sync & download
+
+// sync files (list only, no preload)
+async function syncRoomFiles() {
+  // fetch list of files
+  const data = await apiCall(`/api/files/${roomCode}`);
+  
+  // check if files exist in response
+  const filesList = (data && data.files) ? data.files : [];
+
+  // update global list
+  currentFilesList = filesList;
+
+  // update storage ui
+  updateStorageUI(filesList);
+  renderRoomFilesList(filesList);
+
+  // render announcement with files
+  renderAnnouncement();
+  updateDeleteButtonVisibility();
+  
+  // render list inside admin form
+  renderFormFiles();
+}
+
+// fetch encrypted content
+async function fetchFileContent(fileId) {
+  const res = await fetch(`${API_URL}/api/files/download/${fileId}`);
+  if (!res.ok) throw new Error('download error');
+  return await res.blob();
+}
+
+// handle download click (direct fetch)
+async function handleFileDownload(fileId, fileName) {
+  // log download start
+  console.log(`[LOG] download started: ${fileName} (id: ${fileId})`);
+
+  try {
+    // 1. fetch encrypted blob
+    const blobToDecrypt = await fetchFileContent(fileId);
+    
+    // 2. decrypt
+    const clearBlob = await decryptFile(blobToDecrypt);
+    
+    // 3. trigger download
+    const url = URL.createObjectURL(clearBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log(`[LOG] download success: ${fileName}`);
+  } catch (e) {
+    console.error('download/decrypt error', e);
+    alert("Erreur lors du téléchargement.");
+  }
+}
+
+// delete file by id
+async function deleteFile(fileId) {
+  if (!confirm("Supprimer ce fichier ?")) return;
+
+  try {
+    // call api delete
+    const res = await fetch(`${API_URL}/api/files/${fileId}?userId=${userId}&roomCode=${roomCode}`, {
+      method: 'DELETE'
+    });
+
+    if (res.ok) {
+      // update list after delete
+      await syncRoomFiles();
+    } else {
+      alert("Erreur lors de la suppression.");
+    }
+  } catch (e) {
+    console.error('delete error', e);
+  }
+}
+
+// update storage text
+function updateStorageUI(files) {
+  const totalBytes = files.reduce((acc, f) => acc + (f.size || 0), 0);
+  const gb = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+  const storageEl = document.getElementById('storageDisplay');
+  if (storageEl) storageEl.textContent = `${gb} Go / 2 Go`;
+}
+
+// render shared files list in settings or main
+function renderRoomFilesList(files) {
+  const container = document.getElementById('roomFilesContainer');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  if (files.length === 0) {
+    container.innerHTML = '<p style="opacity:0.5; font-size:14px;">Aucun fichier partagé</p>';
+    return;
+  }
+
+  files.forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML = `
+      <span class="fname">${f.name}</span>
+      <span class="fsize">${(f.size / 1024 / 1024).toFixed(1)} MB</span>
+      <button class="download-btn" data-id="${f.id}" data-name="${f.name}">↓</button>
+    `;
+    container.appendChild(div);
+  });
+
+  // attach events
+  container.querySelectorAll('.download-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      handleFileDownload(btn.dataset.id, btn.dataset.name);
+    };
+  });
+}
+
+// render files inside admin form
+function renderFormFiles() {
+  const container = document.getElementById('fileUploadContainer');
+  if (!container) return;
+
+  // check if list container exists, create if not
+  let listDiv = document.getElementById('adminFilesList');
+  if (!listDiv) {
+    listDiv = document.createElement('div');
+    listDiv.id = 'adminFilesList';
+    listDiv.className = 'admin-files-list';
+    // basic style for the list
+    listDiv.style.marginTop = "10px";
+    listDiv.style.width = "100%";
+    container.appendChild(listDiv);
+  }
+
+  listDiv.innerHTML = '';
+
+  // loop global files list
+  currentFilesList.forEach(f => {
+    const item = document.createElement('div');
+    // simple styling
+    item.style.display = "flex";
+    item.style.justifyContent = "space-between";
+    item.style.alignItems = "center";
+    item.style.background = "rgba(0,0,0,0.05)";
+    item.style.padding = "5px 10px";
+    item.style.marginBottom = "5px";
+    item.style.borderRadius = "4px";
+    item.style.fontSize = "13px";
+
+    const fName = f.originalName || f.name;
+
+    item.innerHTML = `
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%;">${fName}</span>
+      <button class="del-btn" style="background:none;border:none;color:red;cursor:pointer;font-weight:bold;">✕</button>
+    `;
+
+    // attach delete event
+    item.querySelector('.del-btn').onclick = (e) => {
+      e.preventDefault();
+      deleteFile(f.id);
+    };
+
+    listDiv.appendChild(item);
+  });
+}
+
+// render announcement combined (text + files)
+function renderAnnouncement() {
+  const msgDiv = document.getElementById('message');
+  if (!msgDiv) return;
+
+  // hide if empty
+  if (!currentAnnonce && currentFilesList.length === 0) {
+    msgDiv.style.display = 'none';
+    return;
+  }
+
+  msgDiv.style.display = 'block';
+  msgDiv.innerHTML = ''; // clear
+
+  // 1. render text
+  if (currentAnnonce) {
+    const textSpan = document.createElement('div');
+    textSpan.className = 'message-content';
+    textSpan.textContent = currentAnnonce;
+
+    // remove margin if no files attached
+    if (currentFilesList.length === 0) {
+      textSpan.style.marginBottom = "0";
+    }
+
+    msgDiv.appendChild(textSpan);
+  }
+
+  // 2. render files buttons
+  if (currentFilesList.length > 0) {
+    const filesContainer = document.createElement('div');
+    filesContainer.className = 'message-files';
+
+    currentFilesList.forEach(file => {
+      const btn = document.createElement('button');
+      btn.className = 'message-file-btn';
+      // use originalName if available (from db), else name
+      const fName = file.originalName || file.name; 
+      btn.innerHTML = `<span>📎</span> ${fName}`;
+      
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleFileDownload(file.id, fName);
+      };
+      
+      filesContainer.appendChild(btn);
+    });
+
+    msgDiv.appendChild(filesContainer);
+  }
+}
+
+// update delete button visibility (admin only)
+function updateDeleteButtonVisibility() {
+  if (isRoomAdmin) {
+    const deleteBtn = document.getElementById('deleteAnnonce');
+    if (deleteBtn) {
+      const hasContent = currentAnnonce || (currentFilesList && currentFilesList.length > 0);
+      deleteBtn.style.display = hasContent ? 'flex' : 'none';
+    }
+  }
 }
 
 // websocket functions
@@ -94,6 +396,8 @@ function connectWebSocket() {
       const msg = JSON.parse(event.data);
       if (msg.type === 'update') renderTickets(true);
       if (msg.type === 'updateAnnonce') handleAnnonceUpdate(msg.message);
+      //sync on update
+      if (msg.type === 'filesUpdate' || msg.type === 'newFile' || msg.type === 'deleteFile') syncRoomFiles(); 
     } catch (e) {
       console.error('ws error', e);
     }
@@ -113,19 +417,11 @@ function handleAnnonceUpdate(data) {
 
   const msgDiv = document.getElementById('message');
   if (msgDiv) {
-    msgDiv.textContent = currentAnnonce;
-    msgDiv.style.display = currentAnnonce ? 'block' : 'none';
     msgDiv.style.color = color;
   }
   
-
-  // update delete button visibility based on content
-  if (isRoomAdmin) {
-    const deleteBtn = document.getElementById('deleteAnnonce');
-    if (deleteBtn) {
-      deleteBtn.style.display = currentAnnonce ? 'flex' : 'none';
-    }
-  }
+  renderAnnouncement();
+  updateDeleteButtonVisibility();
 }
 
 // api functions
@@ -388,7 +684,7 @@ function setAdminMode(enable) {
   const nameInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
   const modalTitle = document.getElementById('lefttitle');
-  const deleteBtn = document.getElementById('deleteAnnonce');
+  const uploadContainer = document.getElementById('fileUploadContainer');
 
   if (enable) {
     // admin mode active: announcement ui
@@ -400,10 +696,13 @@ function setAdminMode(enable) {
     if (infosInput) infosInput.style.display = 'none';
     if (modalTitle) modalTitle.textContent = "Nouveau message";
     
-    // show delete button ONLY if announcement exists
-    if (deleteBtn) {
-      deleteBtn.style.display = currentAnnonce ? 'flex' : 'none';
-    }
+    // show upload field in admin
+    if (uploadContainer) uploadContainer.style.display = 'flex';
+    
+    // update files list in admin
+    renderFormFiles();
+
+    updateDeleteButtonVisibility();
 
   } else {
     // standard user: ticket ui
@@ -415,22 +714,147 @@ function setAdminMode(enable) {
     if (infosInput) infosInput.style.display = 'block';
     if (modalTitle) modalTitle.textContent = "Nouveau ticket";
     
+    // hide upload field in user mode
+    if (uploadContainer) uploadContainer.style.display = 'none';
+
     // always hide delete button
+    const deleteBtn = document.getElementById('deleteAnnonce');
     if (deleteBtn) deleteBtn.style.display = 'none';
   }
   renderTickets();
 }
 
+// --- upload logic (new) ---
+
+// set ui state during upload
+function setUploadingState(uploading) {
+  isUploading = uploading;
+  const warning = document.getElementById('uploadWarning');
+  const createBtn = document.getElementById('create');
+  const deleteBtn = document.getElementById('deleteAnnonce');
+  
+  if (uploading) {
+    if (warning) warning.style.display = 'block';
+    if (createBtn) createBtn.classList.add('button-disabled');
+    if (deleteBtn) deleteBtn.classList.add('button-disabled');
+  } else {
+    // only hide if no active uploads remaining
+    if (activeUploads.length === 0) {
+      if (warning) warning.style.display = 'none';
+      if (createBtn) createBtn.classList.remove('button-disabled');
+      if (deleteBtn) deleteBtn.classList.remove('button-disabled');
+    }
+  }
+}
+
+// handle file encryption & upload immediately
+async function uploadFile(file) {
+  setUploadingState(true);
+
+  // create progress ui
+  const container = document.getElementById('uploadProgressContainer');
+  const uiId = 'up-' + Date.now() + Math.random().toString(36).substr(2, 5);
+  const div = document.createElement('div');
+  div.className = 'upload-item';
+  div.id = uiId;
+  div.innerHTML = `
+    <div class="upload-info">
+      <span>${file.name.length > 25 ? file.name.substring(0,22)+'...' : file.name}</span>
+      <span class="pct">Encrypting...</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill"></div>
+    </div>
+  `;
+  container.appendChild(div);
+
+  try {
+    // 1. encrypt
+    const encryptedBlob = await encryptFile(file);
+    div.querySelector('.pct').textContent = "0%";
+
+    // 2. upload with progress via xhr
+    const formData = new FormData();
+    formData.append('file', encryptedBlob, file.name);
+    formData.append('name', file.name);
+    formData.append('roomCode', roomCode);
+    formData.append('userId', userId);
+
+    const xhr = new XMLHttpRequest();
+    activeUploads.push(xhr);
+
+    xhr.open('POST', `${API_URL}/api/files`, true);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        const fill = div.querySelector('.progress-bar-fill');
+        const text = div.querySelector('.pct');
+        if (fill) fill.style.width = percent + '%';
+        if (text) text.textContent = percent + '%';
+      }
+    };
+
+    xhr.onload = async () => {
+        // remove xhr from list
+        activeUploads = activeUploads.filter(x => x !== xhr);
+        
+        if (xhr.status === 200 || xhr.status === 201) {
+            console.log("upload complete", file.name);
+            div.querySelector('.pct').textContent = "Done";
+            div.querySelector('.progress-bar-fill').style.backgroundColor = "#79e056"; // green
+            
+            // refresh list from server
+            await syncRoomFiles();
+            
+            // remove ui after small delay
+            setTimeout(() => {
+                div.remove();
+                if (activeUploads.length === 0) setUploadingState(false);
+            }, 1000);
+        } else {
+            div.querySelector('.pct').textContent = "Error";
+            div.querySelector('.progress-bar-fill').style.backgroundColor = "#ff7070";
+            alert("Erreur upload: " + xhr.statusText);
+            activeUploads = activeUploads.filter(x => x !== xhr);
+            if (activeUploads.length === 0) setUploadingState(false);
+        }
+    };
+
+    xhr.onerror = () => {
+        div.querySelector('.pct').textContent = "Fail";
+        activeUploads = activeUploads.filter(x => x !== xhr);
+        if (activeUploads.length === 0) setUploadingState(false);
+    };
+
+    xhr.send(formData);
+
+  } catch (err) {
+    console.error(err);
+    div.querySelector('.pct').textContent = "Error Encrypt";
+    if (activeUploads.length === 0) setUploadingState(false);
+  }
+}
+
 // form submit
 async function handleFormSubmit() {
+  // block if uploading
+  if (isUploading || activeUploads.length > 0) {
+    alert("Veuillez attendre la fin des uploads.");
+    return;
+  }
+
   const nameInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
   
   const name = nameInput.value.trim();
   const description = infosInput.value.trim();
+  
+  // check files presence
+  const hasFiles = currentFilesList && currentFilesList.length > 0;
 
-  // required name or msg
-  if (!name) return alert("Le champ est vide.");
+  // required name or msg or files
+  if (!name && !hasFiles) return alert("Le champ est vide.");
   
   // check bad words
   const content = (name + " " + description).toLowerCase();
@@ -450,6 +874,9 @@ async function handleFormSubmit() {
 
     await updateAnnonceApi(name, hexColor);
 
+    // reset uploads ui just in case
+    document.getElementById('uploadProgressContainer').innerHTML = '';
+    
     // close and clear
     closeAllOverlays();
     return;
@@ -479,6 +906,7 @@ async function handleFormSubmit() {
   
   nameInput.value = "";
   infosInput.value = "";
+  
   closeAllOverlays();
 }
 
@@ -497,6 +925,19 @@ function openOverlay(id) {
 }
 function closeAllOverlays() {
   document.querySelectorAll('.menu-overlay').forEach(el => el.style.display = "none");
+  
+  // cancel uploads if closing
+  if (activeUploads.length > 0) {
+    if(confirm("Annuler les uploads en cours ?")) {
+        activeUploads.forEach(xhr => xhr.abort());
+        activeUploads = [];
+        setUploadingState(false);
+        document.getElementById('uploadProgressContainer').innerHTML = '';
+    } else {
+        // reopen if user cancelled close (hacky but keeps ui logic simple)
+        openOverlay("formOverlay");
+    }
+  }
 }
 
 // init
@@ -505,9 +946,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   // check permissions first
   await checkRoomPermissions();
 
+  //  init crypto
+  await initCrypto();
+
   // load data
   await loadFilters();
   await fetchAnnonce();
+  
+  //  initial sync
+  await syncRoomFiles();
+
   renderTickets();
   connectWebSocket();
   // show room code 
@@ -523,6 +971,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('deleteAnnonce')?.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!isRoomAdmin) return;
+    if (activeUploads.length > 0) return;
     if (confirm("Supprimer l'annonce ?")) {
       await updateAnnonceApi("");
       closeAllOverlays();
@@ -564,4 +1013,68 @@ window.addEventListener('DOMContentLoaded', async () => {
     localStorage.removeItem('last_room');
     window.location.href = '/';
   });
+
+  // file upload listeners
+  const dropArea = document.getElementById('dropArea');
+  const fileInput = document.getElementById('fileInput');
+
+  if (dropArea && fileInput) {
+    // click trigger
+    dropArea.addEventListener('click', () => {
+        // allow click even if uploading, just check limit
+        if (activeUploads.length >= MAX_FILES) {
+            alert("Limit reached.");
+            return;
+        }
+        fileInput.click();
+    });
+
+    // file select
+    fileInput.addEventListener('change', () => {
+      const files = Array.from(fileInput.files);
+      if (files.length === 0) return;
+
+      // check limit before adding
+      if (activeUploads.length + files.length > MAX_FILES) {
+        alert(`Too many files (max ${MAX_FILES}).`);
+        fileInput.value = '';
+        return;
+      }
+
+      files.forEach(f => uploadFile(f));
+      // reset to allow same file again
+      fileInput.value = ''; 
+    });
+
+    // drag events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
+
+    // visual feedback
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropArea.addEventListener(eventName, () => dropArea.classList.add('drag-over'));
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, () => dropArea.classList.remove('drag-over'));
+    });
+
+    // drop handle
+    dropArea.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = Array.from(dt.files);
+
+      // check limit
+      if (activeUploads.length + files.length > MAX_FILES) {
+          alert(`Too many files (max ${MAX_FILES}).`);
+          return;
+      }
+
+      files.forEach(f => uploadFile(f));
+    });
+  }
 });
