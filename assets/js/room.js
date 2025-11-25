@@ -118,11 +118,6 @@ function handleAnnonceUpdate(data) {
     msgDiv.style.color = color;
   }
   
-  // update input if admin panel is open
-  const nameInput = document.getElementById('name');
-  if (isRoomAdmin && nameInput && document.getElementById('formOverlay').style.display !== 'none') {
-    nameInput.value = currentAnnonce;
-  }
 
   // update delete button visibility based on content
   if (isRoomAdmin) {
