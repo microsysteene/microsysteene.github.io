@@ -23,6 +23,17 @@ db.serialize(() => {
     lastActivity TEXT,
     createdAt TEXT
   )`);
+
+  // create files table
+  db.run(`CREATE TABLE IF NOT EXISTS files (
+    id TEXT PRIMARY KEY,
+    originalName TEXT,
+    encryptedName TEXT,
+    mimeType TEXT,
+    size INTEGER,
+    roomCode TEXT,
+    userId TEXT
+  )`);
 });
 
 module.exports = db;
