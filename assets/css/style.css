@@ -416,7 +416,7 @@ input[type="password"]:focus {
 }
 
 .menu-overlay {
-    display: none;
+    display: flex;
     position: fixed;
     top: 0;
     left: 0;
@@ -427,8 +427,8 @@ input[type="password"]:focus {
     justify-content: center;
     align-items: center;
     transition: all 0.3s ease;
-
     z-index: 999;
+    overscroll-behavior: contain;
 }
 
 .menu-box {
@@ -441,12 +441,12 @@ input[type="password"]:focus {
     width: 100%;
     max-width: 700px;
     height: auto;
-    max-height: 90vh;
+    max-height: calc(100vh - 200px);
     overflow-y: auto;
-    transition: all 0.3s ease;
-
     animation: bounce-in-entire 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     transform-origin: center;
+    transition: all 0.3s ease;
+    scrollbar-gutter: stable;
 }
 
 /* ==================== */
@@ -716,6 +716,14 @@ input[type="password"]:focus {
 /* SCROLLBAR            */
 /* ==================== */
 
+#subdiv,
+#right {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(129, 129, 129, 0.5) transparent;
+}
+
 #subdiv::-webkit-scrollbar,
 #right::-webkit-scrollbar {
     width: 8px;
@@ -728,7 +736,7 @@ input[type="password"]:focus {
 
 #subdiv::-webkit-scrollbar-thumb,
 #right::-webkit-scrollbar-thumb {
-    background: rgba(129, 129, 129, 0.5);
+    background-color: rgba(129, 129, 129, 0.5);
     border-radius: 4px;
 }
 
@@ -736,8 +744,6 @@ input[type="password"]:focus {
 #right::-webkit-scrollbar-button {
     display: none;
 }
-
-
 
 /* ==================== */
 /* FILE UPLOAD          */
@@ -749,16 +755,17 @@ input[type="password"]:focus {
     width: 100%;
     margin: 20px 0;
     cursor: pointer;
+    transition: transform 0.3s ease;
 }
 
 .file-drop-area {
     width: 100%;
-    min-height: 60px;
+    height: 60px;
     background: var(--card-bg);
     color: var(--text-color);
     padding: 10px 20px;
     font-size: clamp(14px, 1vw, 18px);
-    border: 2px dashed black; /* dashed border as requested */
+    border: 2px dashed black;
     border-radius: 50px;
     box-sizing: border-box;
     box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
@@ -767,19 +774,22 @@ input[type="password"]:focus {
     align-items: center;
     flex-wrap: wrap;
     gap: 10px;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.3s ease;
     position: relative;
 }
 
-.file-drop-area:hover,
-.file-drop-area.drag-over {
-    transform: scale(1.05);
-    background-color: rgba(0, 0, 0, 0.05);
+.file-drop-area:hover{
+    transform: translateY(-3px);
+    box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
 }
 
-/* dark mode adjustment */
-body.dark-mode .file-drop-area.drag-over {
-    background-color: rgba(255, 255, 255, 0.1);
+.file-drop-area.drag-over {
+    background-color: rgba(0, 89, 255, 0.05);
+    border-color: #667eea;
+    transform: translateY(-3px);
+    height: 200px;
+    box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
+    transition: ease 0.3s;
 }
 
 .file-placeholder {

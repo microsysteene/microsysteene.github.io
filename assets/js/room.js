@@ -1014,14 +1014,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/';
   });
 
-  // file upload listeners
+// file upload listeners
   const dropArea = document.getElementById('dropArea');
   const fileInput = document.getElementById('fileInput');
 
   if (dropArea && fileInput) {
-    // click trigger
+    // 1. Click Trigger
     dropArea.addEventListener('click', () => {
-        // allow click even if uploading, just check limit
         if (activeUploads.length >= MAX_FILES) {
             alert("Limit reached.");
             return;
@@ -1029,12 +1028,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         fileInput.click();
     });
 
-    // file select
+    // 2. File Select via Input
     fileInput.addEventListener('change', () => {
       const files = Array.from(fileInput.files);
       if (files.length === 0) return;
 
-      // check limit before adding
       if (activeUploads.length + files.length > MAX_FILES) {
         alert(`Too many files (max ${MAX_FILES}).`);
         fileInput.value = '';
@@ -1042,33 +1040,39 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
 
       files.forEach(f => uploadFile(f));
-      // reset to allow same file again
       fileInput.value = ''; 
     });
 
-    // drag events
+    // Empêcher le comportement par défaut
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
       dropArea.addEventListener(eventName, (e) => {
         e.preventDefault();
         e.stopPropagation();
-      });
+      }, false);
     });
 
-    // visual feedback
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropArea.addEventListener(eventName, () => dropArea.classList.add('drag-over'));
+    let dragCounter = 0;
+
+    dropArea.addEventListener('dragenter', (e) => {
+        dragCounter++;
+        dropArea.classList.add('drag-over');
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropArea.addEventListener(eventName, () => dropArea.classList.remove('drag-over'));
+    dropArea.addEventListener('dragleave', (e) => {
+        dragCounter--;
+        if (dragCounter === 0) {
+            dropArea.classList.remove('drag-over');
+        }
     });
 
-    // drop handle
+    // Gestion du Drop
     dropArea.addEventListener('drop', (e) => {
+      dragCounter = 0;
+      dropArea.classList.remove('drag-over');
+
       const dt = e.dataTransfer;
       const files = Array.from(dt.files);
 
-      // check limit
       if (activeUploads.length + files.length > MAX_FILES) {
           alert(`Too many files (max ${MAX_FILES}).`);
           return;
