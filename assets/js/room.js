@@ -392,13 +392,13 @@ function setAdminMode(enable) {
 
   if (enable) {
     // admin mode active: announcement ui
-    if (createBtnText) createBtnText.textContent = "Nouveau Message";
+    if (createBtnText) createBtnText.textContent = "Nouveau message";
     if (nameInput) {
       nameInput.placeholder = "Message";
       if (currentAnnonce) nameInput.value = currentAnnonce;
     }
     if (infosInput) infosInput.style.display = 'none';
-    if (modalTitle) modalTitle.textContent = "Publier une annonce";
+    if (modalTitle) modalTitle.textContent = "Nouveau message";
     
     // show delete button ONLY if announcement exists
     if (deleteBtn) {
@@ -413,7 +413,7 @@ function setAdminMode(enable) {
       nameInput.value = "";
     }
     if (infosInput) infosInput.style.display = 'block';
-    if (modalTitle) modalTitle.textContent = "Ouvrir un ticket";
+    if (modalTitle) modalTitle.textContent = "Nouveau ticket";
     
     // always hide delete button
     if (deleteBtn) deleteBtn.style.display = 'none';
