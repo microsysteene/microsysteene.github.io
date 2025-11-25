@@ -123,6 +123,14 @@ function handleAnnonceUpdate(data) {
   if (isRoomAdmin && nameInput && document.getElementById('formOverlay').style.display !== 'none') {
     nameInput.value = currentAnnonce;
   }
+
+  // update delete button visibility based on content
+  if (isRoomAdmin) {
+    const deleteBtn = document.getElementById('deleteAnnonce');
+    if (deleteBtn) {
+      deleteBtn.style.display = currentAnnonce ? 'flex' : 'none';
+    }
+  }
 }
 
 // api functions
@@ -385,8 +393,6 @@ function setAdminMode(enable) {
   const nameInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
   const modalTitle = document.getElementById('lefttitle');
-  
-  // admin buttons
   const deleteBtn = document.getElementById('deleteAnnonce');
 
   if (enable) {
@@ -398,7 +404,12 @@ function setAdminMode(enable) {
     }
     if (infosInput) infosInput.style.display = 'none';
     if (modalTitle) modalTitle.textContent = "Publier une annonce";
-    if (deleteBtn) deleteBtn.style.display = 'flex';
+    
+    // show delete button ONLY if announcement exists
+    if (deleteBtn) {
+      deleteBtn.style.display = currentAnnonce ? 'flex' : 'none';
+    }
+
   } else {
     // standard user: ticket ui
     if (createBtnText) createBtnText.textContent = "Nouveau tickets";
@@ -408,6 +419,8 @@ function setAdminMode(enable) {
     }
     if (infosInput) infosInput.style.display = 'block';
     if (modalTitle) modalTitle.textContent = "Ouvrir un ticket";
+    
+    // always hide delete button
     if (deleteBtn) deleteBtn.style.display = 'none';
   }
   renderTickets();
