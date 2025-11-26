@@ -824,9 +824,6 @@ input[type="password"]:focus {
     flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(0,0,0,0.1);
 }
 
 .message-file-btn {
