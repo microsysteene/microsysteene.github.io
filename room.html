@@ -38,56 +38,56 @@
       <p class="div" id="message"> a finir avant 11h30 !</p>
 
       <div class="menu-overlay" id="formOverlay" style="display: none;">
-        <div class="menu-box">
-          <h1 id="lefttitle">Nouveau ticket</h1>
-          <div class="input">
-            <input type="text" id="name" name="name" placeholder="Nom" />
+          <div class="menu-box">
+              <div class="input" style="padding-bottom: 0;">
+                  
+                  <h1>Nouveau ticket</h1>
 
-          
-            <div class="file-upload-container" id="fileUploadContainer">
-              <input type="file" id="fileInput" multiple>
-              <div class="file-drop-area" id="dropArea">
-                <span class="file-placeholder">+ Ajouter un fichier</span>
+                  <div style="margin: 15px 0;">
+                      <input type="text" id="name" name="name" placeholder="Nom" style="width: 100%;" />
+                  </div>
+
+                  <div class="file-upload-container" id="fileUploadContainer" style="margin: 15px 0;">
+                      <input type="file" id="fileInput" multiple>
+                      <div class="file-drop-area" id="dropArea">
+                          <span class="file-placeholder">+ Ajouter un fichier</span>
+                      </div>
+                      <div id="uploadProgressContainer" class="upload-status-container"></div>
+                      <p id="uploadWarning" class="upload-warning">Exportation...</p>
+                  </div>
+
+                  <div style="margin: 15px 0;">
+                      <input type="text" id="infos" name="infos" placeholder="Description (optionnelle)" style="width: 100%;" />
+                  </div>
+
+                  <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Couleurs</h2>
+                  
+                  <div class="colorbox" style="margin: 15px 0;">
+                      <a class='color selected' id="default" style="background-color: #cdcdcd;"></a>
+                      <a class='color' style="background-color: #FFF5A6"></a>
+                      <a class='color' style="background-color: #FFA6A6"></a>
+                      <a class='color' style="background-color: #FFA6F8"></a>
+                      <a class='color' style="background-color: #A6C5FF"></a>
+                      <a class='color' style="background-color: #A6FFF0"></a>
+                      <a class='color' style="background-color: #AEFFA6"></a>
+                  </div>
+
+                  <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
+                      
+                      <a class="button-text" id='create' href='#' style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
+                          <img class="icon" src="./assets/icon/add.png">
+                          <span class="text">Créer</span>
+                      </a>
+
+                      <a class="button-text" id='deleteAnnonce' href='#' style="width: auto; padding: 0 30px; margin: 0; background-color: #ff7070; display: none; min-width: 140px;">
+                          <img class="icon" src="./assets/icon/delete.png">
+                          <span class="text">Supprimer</span>
+                      </a>
+
+                  </div>
+
               </div>
-              
-              <div id="uploadProgressContainer" class="upload-status-container"></div>
-              <p id="uploadWarning" class="upload-warning">Exportation...</p>
-            </div>
-            <input type="text" id="infos" name="infos" placeholder="Description (optionnelle)" />
-
-            <div class="coloor">
-              <h1>Couleurs</h1>
-              <div class="colorbox">
-                <a class='color selected' id="default" style="background-color: #cdcdcd;"></a>
-                <a class='color'
-                  style="background-color: #FFF5A6"></a>
-                <a class='color'
-                  style="background-color: #FFA6A6"></a>
-                <a class='color'
-                  style="background-color: #FFA6F8"></a>
-                <a class='color'
-                  style="background-color: #A6C5FF"></a>
-                <a class='color'
-                  style="background-color: #A6FFF0"></a>
-                <a class='color'
-                  style="background-color: #AEFFA6"></a>
-              </div>
-            </div>
-
-            <div class="button" style="justify-content: center; margin-top: 20px; gap: 10px;">
-              <a class="button-text" id='create' href='#' style="max-width: 150px">
-                <img class="icon" src="./assets/icon/add.png">
-                <span class="text">Créer</span>
-              </a>
-              <a class="button-text" id='deleteAnnonce' href='#'
-                style="max-width: 150px; background-color: #ff7070; display: none;">
-                <img class="icon" src="./assets/icon/delete.png">
-                <span class="text">Supprimer</span>
-              </a>
-            </div>
-
           </div>
-        </div>
       </div>
 
       <div class="menu-overlay" id="settingsOverlay" style="display: none;">
@@ -182,30 +182,34 @@
         </div>
     </div>
 
-      <div class="menu-overlay" id="logoutOverlay" style="display: none;">
-        <div class="menu-box" style="max-width: 700px;">
-          <div class="input">
-            <h1>Déconnexion ?</h1>
-            <p style="margin: 20px 0; opacity: 0.7;">Tu devras rentrer le code de la room pour revenir.</p>
-            
-            <div class="button" style="justify-content: center; margin-top: 20px; gap: 10px;">
-              
-              <a class="button-text" id="confirmLogout" href="#">
-                <img class="icon" src="./assets/icon/logout.png" alt="" style="width: 24px; height: 24px;">
-                <span class="text">Oui, partir</span>
-              </a>
+    <div class="menu-overlay" id="logoutOverlay" style="display: none;">
+        <div class="menu-box" style="max-width: 550px;">
+            <div class="input" style="padding-bottom: 0;">
+                
+                <h1>Déconnexion ?</h1>
+                
+                <p style="margin: 30px 0; opacity: 0.7; text-align: center;">
+                    Tu devras rentrer le code de la room pour revenir.
+                </p>
+                
+                <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
+                    
+                    <a class="button-text" id="confirmLogout" href="#" style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
+                        <img class="icon" src="./assets/icon/logout.png" alt="" style="width: 20px; height: 20px;">
+                        <span class="text">Oui, partir</span>
+                    </a>
 
-              <a class="button-text" id="cancelLogout" href="#" style="background-color: #ff7070">
-                <img class="icon" src="./assets/icon/cross.png" alt="" style="width: 24px; height: 24px">
-                <span class="text">Non, rester</span>
-              </a>
+                    <a class="button-text" id="cancelLogout" href="#" style="width: auto; padding: 0 30px; margin: 0; background-color: #ff7070; min-width: 140px;">
+                        <img class="icon" src="./assets/icon/cross.png" alt="" style="width: 20px; height: 20px;">
+                        <span class="text">Non, rester</span>
+                    </a>
 
+                </div>
             </div>
-          </div>
         </div>
-      </div>
+    </div>
 
-      <div class="div" id="subdiv">
+    <div class="div" id="subdiv">
         <h1>Historique</h1>
       </div>
     </div>

@@ -172,7 +172,7 @@ body.dark-mode .icon {
 /*Normal que ce soit vide */
 }
 
-/* Le rond se déplace et devient bleu */
+
 .toggle-checkbox:checked + .toggle-slider::before {
   transform: translateX(34px);
   background-color: #9ecaff;
@@ -192,8 +192,8 @@ body.dark-mode .icon {
     justify-content: space-between;
     border: 2px solid black;
     border-radius: 50px;
-    padding: 5px;
-    width: 200px;
+    width: auto;
+    padding: 0 8px 0 8px;
     height: 45px;
     background: var(--card-bg);
     box-shadow: 0px 2px 0px #000000;
@@ -224,14 +224,14 @@ body.dark-mode .icon {
     aspect-ratio: 1/1;
     background-color: black;
     border-radius: 50%;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .slider-option input:checked ~ .dot {
     width: 32px;
     aspect-ratio: 1/1;
     background-color: #A6C5FF;
-    border-radius: 50px;
+    border-radius: 50%;
     border: 2px solid black;
     display: flex;
     justify-content: center;
