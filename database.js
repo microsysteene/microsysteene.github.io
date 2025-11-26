@@ -14,15 +14,23 @@ db.serialize(() => {
     roomCode TEXT
   )`);
 
-  // create rooms table
+  // create rooms table with maxTickets
   db.run(`CREATE TABLE IF NOT EXISTS rooms (
     code TEXT PRIMARY KEY,
     adminId TEXT,
     announcementMessage TEXT,
     announcementColor TEXT,
     lastActivity TEXT,
-    createdAt TEXT
-  )`);
+    createdAt TEXT,
+    maxTickets INTEGER DEFAULT 1
+  )`, (err) => {
+    // simple migration: if table exists but maxTickets missing, add it
+    if (!err) {
+      db.run("ALTER TABLE rooms ADD COLUMN maxTickets INTEGER DEFAULT 1", (e) => {
+        // ignore error if column already exists
+      });
+    }
+  });
 
   // create files table
   db.run(`CREATE TABLE IF NOT EXISTS files (

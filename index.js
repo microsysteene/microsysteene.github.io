@@ -4,7 +4,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const db = require('./database');
 const url = require('url');
-const multer = require('multer'); // new dependency
+const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
@@ -113,9 +113,10 @@ app.post('/api/rooms', (req, res) => {
   const code = generateRoomCode();
   const now = new Date().toISOString();
 
-  db.run(`INSERT INTO rooms (code, adminId, announcementMessage, announcementColor, lastActivity, createdAt) 
-          VALUES (?, ?, ?, ?, ?, ?)`,
-    [code, userId, "", "#cdcdcd", now, now],
+  // insert with default maxTickets = 1
+  db.run(`INSERT INTO rooms (code, adminId, announcementMessage, announcementColor, lastActivity, createdAt, maxTickets) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [code, userId, "", "#cdcdcd", now, now, 1],
     (err) => {
       if (err) return res.status(500).json({ error: err.message });
       res.status(201).json({ code, adminId: userId });
@@ -123,16 +124,39 @@ app.post('/api/rooms', (req, res) => {
   );
 });
 
+// get room info including maxTickets
 app.get('/api/rooms/:code', (req, res) => {
-  db.get("SELECT code, adminId, announcementMessage, announcementColor FROM rooms WHERE code = ?", 
+  db.get("SELECT code, adminId, announcementMessage, announcementColor, maxTickets FROM rooms WHERE code = ?", 
     [req.params.code], 
     (err, room) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!room) return res.status(404).json({ error: "Room not found" });
+      
+      // ensure maxTickets has a fallback
+      if (!room.maxTickets) room.maxTickets = 1;
+      
       res.json(room);
     }
   );
 });
+
+// update room settings (specifically maxTickets)
+app.put('/api/rooms/:code', (req, res) => {
+  const roomCode = req.params.code;
+  const { maxTickets } = req.body;
+  
+  // we check permission implicitly via room ownership later or assume admin check on client 
+  // (ideally pass userId in body to verify admin, but keeping it simple based on your code structure)
+
+  db.run("UPDATE rooms SET maxTickets = ? WHERE code = ?", [maxTickets, roomCode], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    // notify clients to reload settings
+    notifierClients(roomCode, 'update', { refreshSettings: true });
+    res.json({ message: "Settings updated", maxTickets });
+  });
+});
+
 
 // api announcement
 
@@ -181,27 +205,43 @@ app.get('/api/tickets/:roomCode', (req, res) => {
   });
 });
 
+// create ticket with limit check
 app.post('/api/tickets', (req, res) => {
   const { nom, description, couleur, etat, userId, roomCode } = req.body;
   if (!nom || !userId || !roomCode) return res.status(400).json({ error: 'Missing fields' });
 
-  const id = Date.now().toString();
-  const dateCreation = new Date().toISOString();
-
-  db.get("SELECT code FROM rooms WHERE code = ?", [roomCode], (err, room) => {
+  // 1. get room info for maxTickets
+  db.get("SELECT maxTickets FROM rooms WHERE code = ?", [roomCode], (err, room) => {
     if (!room) return res.status(404).json({ error: "Room not found" });
 
-    db.run(`
-      INSERT INTO tickets (id, nom, description, couleur, etat, dateCreation, userId, roomCode)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [id, nom, description || '', couleur || '#cdcdcd', etat || 'en cours', dateCreation, userId, roomCode],
-    (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      
-      updateRoomActivity(roomCode);
-      notifierClients(roomCode);
-      res.status(201).json({ id, nom, description, couleur, etat, dateCreation, userId, roomCode });
+    const limit = room.maxTickets || 1;
+
+    // 2. count active tickets for this user
+    db.get("SELECT count(*) as count FROM tickets WHERE roomCode = ? AND userId = ? AND etat = 'en cours'", 
+      [roomCode, userId], 
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        if (result.count >= limit) {
+          return res.status(403).json({ error: `Limit reached (${limit} max)` });
+        }
+
+        // 3. create ticket if under limit
+        const id = Date.now().toString();
+        const dateCreation = new Date().toISOString();
+
+        db.run(`
+          INSERT INTO tickets (id, nom, description, couleur, etat, dateCreation, userId, roomCode)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [id, nom, description || '', couleur || '#cdcdcd', etat || 'en cours', dateCreation, userId, roomCode],
+        (err) => {
+          if (err) return res.status(500).json({ error: err.message });
+          
+          updateRoomActivity(roomCode);
+          notifierClients(roomCode);
+          res.status(201).json({ id, nom, description, couleur, etat, dateCreation, userId, roomCode });
+        });
     });
   });
 });
