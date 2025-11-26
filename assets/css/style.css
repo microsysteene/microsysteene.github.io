@@ -137,49 +137,128 @@ body.dark-mode .icon {
 /* Toggle */
 
 .toggle-checkbox {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  display: inline-block;
+  width: 70px;
+  height: 34px;
+  background-color: var(--bg-card);
+  border-radius: 100px;
+  border: 2px solid black;
+  box-shadow: 0px 2px 0px #000000; 
+  cursor: pointer;
+  transition: all 0.3s ease; 
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background-color: var(--bg-card);
+  border: 2px solid black;
+  top: 2px;
+  left: 3px;
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55), background-color 0.3s;
+}
+
+/* --- ÉTAT CHECKED (ACTIF) --- */
+
+.toggle-checkbox:checked + .toggle-slider {
+/*Normal que ce soit vide */
+}
+
+/* Le rond se déplace et devient bleu */
+.toggle-checkbox:checked + .toggle-slider::before {
+  transform: translateX(34px);
+  background-color: #9ecaff;
+}
+
+/* --- ANIMATION HOVER --- */
+
+.toggle-slider:hover {
+    transform: translateY(-3px);
+    box-shadow: 0px 5px 0px #000000;
+}
+
+/* Sliders*/
+.slider-selector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 2px solid black;
+    border-radius: 50px;
+    padding: 5px;
+    width: 200px;
+    height: 45px;
+    background: var(--card-bg);
+    box-shadow: 0px 2px 0px #000000;
+    transition: all 0.3s ease;
+}
+
+.slider-selector:hover {
+    transform: translateY(-3px);
+    box-shadow: 0px 5px 0px #000000;
+}
+
+.slider-option {
+    position: relative;
+    width: 30px;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.slider-option input {
     display: none;
 }
 
-
-.toggle-slider {
-    position: relative;
-    display: inline-block;
-    width: 60px;
-    height: 30px;
-    background-color: #ffffff00;
-    border-radius: 100px;
-    border: 2px black solid;
-    box-shadow: 0px 2px 0px #000000;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-
-.toggle-slider::before {
-    content: '';
-    position: absolute;
-    width: 24px;
-    height: 24px;
+.slider-option .dot {
+    width: 6px;
+    aspect-ratio: 1/1;
+    background-color: black;
     border-radius: 50%;
-    background-color: white;
-    top: 3px;
-    left: 3px;
-    transition: transform 0.3s;
-    box-shadow: 0px 0px 2px rgba(0, 0, 0, 1);
+    transition: all 0.2s ease;
 }
 
-.toggle-checkbox:checked+.toggle-slider {
-    background-color: #667eea;
+.slider-option input:checked ~ .dot {
+    width: 32px;
+    aspect-ratio: 1/1;
+    background-color: #A6C5FF;
+    border-radius: 50px;
+    border: 2px solid black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.toggle-checkbox:checked+.toggle-slider::before {
-    transform: translateX(30px);
+.slider-option input:checked ~ .dot::after {
+    content: attr(data-val);
+    font-family: 'Inconsolata', monospace;
+    font-weight: 600;
+    font-size: 16px;
+    color: black;
 }
 
-/* Effet hover */
-.toggle-slider:hover {
-    box-shadow: 0px 5px 0px #000000;
-    transform: translateY(-3px);
+.overlay-footer {
+    position: sticky;
+    bottom: -40px;
+    margin: 0 -40px -40px -40px;
+    padding: 20px 40px 40px 40px;
+    background: transparent;
+    box-shadow: inset 0 -80px 60px -20px var(--card-bg);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    transition: box-shadow 0.3s ease;
 }
 
 /* ==================== */
@@ -439,7 +518,7 @@ input[type="password"]:focus {
     border: 2px solid black;
     text-align: center;
     width: 100%;
-    max-width: 700px;
+    max-width: 900px;
     height: auto;
     max-height: calc(100vh - 200px);
     overflow-y: auto;
@@ -688,7 +767,7 @@ input[type="password"]:focus {
     width: 0px;
     height: 0px;
     padding: 0;
-    background-color: var(--card-bg); /* <--- Utilise la variable ici */
+    background-color: var(--card-bg);
     border: 2px solid rgba(0, 0, 0, 1);
     border-radius: 50%;
     opacity: 0;
