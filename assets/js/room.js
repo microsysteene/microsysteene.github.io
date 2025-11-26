@@ -3,7 +3,7 @@ const WS_URL = "wss://ticketapi.juhdd.me";
 
 let activeUploads = []; // track xhr requests
 const MAX_FILES = 10;
-const MAX_DURING_TICKET = 1;
+let MAX_DURING_TICKET = 1; // let allows updates
 
 // cache and crypto globals
 let cryptoKey = null; // derived from room code
@@ -394,7 +394,11 @@ function connectWebSocket() {
     }
     try {
       const msg = JSON.parse(event.data);
-      if (msg.type === 'update') renderTickets(true);
+      if (msg.type === 'update') {
+        renderTickets(true);
+        // re-check settings to sync changes like max tickets
+        checkRoomPermissions();
+      }
       if (msg.type === 'updateAnnonce') handleAnnonceUpdate(msg.message);
       //sync on update
       if (msg.type === 'filesUpdate' || msg.type === 'newFile' || msg.type === 'deleteFile') syncRoomFiles(); 
@@ -444,7 +448,7 @@ async function apiCall(endpoint, method = "GET", body = null) {
   }
 }
 
-// check if admin
+// check if admin and load settings
 async function checkRoomPermissions() {
   const roomData = await apiCall(`/api/rooms/${roomCode}`);
 
@@ -454,6 +458,15 @@ async function checkRoomPermissions() {
     alert("Salle introuvable.");
     window.location.href = "/";
     return;
+  }
+
+  // sync max tickets from server
+  if (roomData.maxTickets) {
+    MAX_DURING_TICKET = roomData.maxTickets;
+    
+    // update slider ui
+    const radio = document.querySelector(`input[name="SliderCount"][value="${MAX_DURING_TICKET}"]`);
+    if (radio) radio.checked = true;
   }
 
   // compare ids
@@ -686,7 +699,13 @@ function setAdminMode(enable) {
   const modalTitle = document.getElementById('lefttitle');
   const uploadContainer = document.getElementById('fileUploadContainer');
 
+  // get admin settings section
+  const adminSettings = document.getElementById('adminSettingsSection');
+
   if (enable) {
+    // show admin settings
+    if (adminSettings) adminSettings.style.display = 'block';
+
     // admin mode active: announcement ui
     if (createBtnText) createBtnText.textContent = "Nouveau message";
     if (nameInput) {
@@ -705,6 +724,9 @@ function setAdminMode(enable) {
     updateDeleteButtonVisibility();
 
   } else {
+    // hide admin settings
+    if (adminSettings) adminSettings.style.display = 'none';
+
     // standard user: ticket ui
     if (createBtnText) createBtnText.textContent = "Nouveau tickets";
     if (nameInput) {
@@ -987,7 +1009,28 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById("setting").addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("settingsOverlay");
+
+    // sync ui with var
+    const radio = document.querySelector(`input[name="SliderCount"][value="${MAX_DURING_TICKET}"]`);
+    if (radio) radio.checked = true;
   });
+
+  // listen for limit changes
+  document.querySelectorAll('input[name="SliderCount"]').forEach(radio => {
+    radio.addEventListener('change', async (e) => {
+        // update local limit
+        const val = parseInt(e.target.value);
+        MAX_DURING_TICKET = val;
+        
+        // save to server if admin
+        if (isRoomAdmin) {
+          await apiCall(`/api/rooms/${roomCode}`, "PUT", { 
+            maxTickets: val 
+          });
+        }
+    });
+  });
+
   document.getElementById("closeSettings")?.addEventListener('click', (e) => {
     e.preventDefault();
     closeAllOverlays();

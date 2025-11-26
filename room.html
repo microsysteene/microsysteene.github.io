@@ -111,43 +111,44 @@
                     </a>
                 </div>
 
-                <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Admin</h2>
+                <div id="adminSettingsSection" style="display: none;">
+                    <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Admin</h2>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; gap: 10px;">
-                    <span style="text-align: left;">Nombre de Ticket par utilisateur</span>
-                    
-                    <div class="slider-selector">
-                        <label class="slider-option">
-                            <input type="radio" name="SliderCount" value="1" checked>
-                            <span class="dot" data-val="1"></span>
-                        </label>
-                        <label class="slider-option">
-                            <input type="radio" name="SliderCount" value="2">
-                            <span class="dot" data-val="2"></span>
-                        </label>
-                        <label class="slider-option">
-                            <input type="radio" name="SliderCount" value="3">
-                            <span class="dot" data-val="3"></span>
-                        </label>
-                        <label class="slider-option">
-                            <input type="radio" name="SliderCount" value="4">
-                            <span class="dot" data-val="4"></span>
-                        </label>
-                        <label class="slider-option">
-                            <input type="radio" name="SliderCount" value="5">
-                            <span class="dot" data-val="5"></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; gap: 10px;">
+                        <span style="text-align: left;">Nombre de Ticket par utilisateur</span>
+                        
+                        <div class="slider-selector">
+                            <label class="slider-option">
+                                <input type="radio" name="SliderCount" value="1" checked>
+                                <span class="dot" data-val="1"></span>
+                            </label>
+                            <label class="slider-option">
+                                <input type="radio" name="SliderCount" value="2">
+                                <span class="dot" data-val="2"></span>
+                            </label>
+                            <label class="slider-option">
+                                <input type="radio" name="SliderCount" value="3">
+                                <span class="dot" data-val="3"></span>
+                            </label>
+                            <label class="slider-option">
+                                <input type="radio" name="SliderCount" value="4">
+                                <span class="dot" data-val="4"></span>
+                            </label>
+                            <label class="slider-option">
+                                <input type="radio" name="SliderCount" value="5">
+                                <span class="dot" data-val="5"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+                        <span>Partage de fichiers par les invités (Non fonctionel)</span>
+                        <label>
+                            <input type="checkbox" class="toggle-checkbox" id="fileShareToggle">
+                            <span class="toggle-slider"></span>
                         </label>
                     </div>
                 </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
-                    <span>Partage de fichiers par les invités (Non fonctionel)</span>
-                    <label>
-                        <input type="checkbox" class="toggle-checkbox" id="fileShareToggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-
                 <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Room</h2>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
