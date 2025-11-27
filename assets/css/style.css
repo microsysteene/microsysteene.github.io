@@ -453,7 +453,7 @@ input[type="password"] {
     color: var(--text-color);
     padding: clamp(8px, 1vw, 14px);
     margin: 20px 0;
-    font-size: clamp(14px, 1vw, 18px);
+    font-size: 14px;
     border: 2px solid black;
     border-radius: 50px;
     box-sizing: border-box;
