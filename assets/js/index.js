@@ -35,23 +35,82 @@ async function tryAutoJoin() {
 // run auto join check
 tryAutoJoin();
 
-// select buttons
+// select main buttons
 const buttons = document.querySelectorAll('.button-text');
 const joinBtn = buttons[0]; // first button is join
 const createBtn = buttons[1]; // second button is create
 
-// handle join click
+// select overlay elements
+const joinOverlay = document.getElementById('joinOverlay');
+const joinCodeInput = document.getElementById('joinCodeInput');
+const confirmJoinBtn = document.getElementById('confirmJoin');
+const cancelJoinBtn = document.getElementById('cancelJoin');
+
+
+/* --- LOGIQUE DU MENU REJOINDRE --- */
+
+// 1. Ouvrir le menu
 if (joinBtn) {
   joinBtn.addEventListener('click', (e) => {
     e.preventDefault();
+    // Afficher l'overlay (flex pour centrer le contenu)
+    joinOverlay.style.display = 'flex';
+    // Vider l'input précédent
+    joinCodeInput.value = '';
+    // Mettre le focus dans l'input pour taper directement
+    setTimeout(() => joinCodeInput.focus(), 50);
+  });
+}
 
-    // simple prompt for room code
-    const code = prompt("Entrez le code du groupe :");
-    if (code && code.trim() !== "") {
-      window.location.href = `room.html?room=${code.trim()}`;
+// Fonction pour fermer le menu
+function closeOverlay() {
+  joinOverlay.style.display = 'none';
+}
+
+// 2. Fermer le menu via le bouton Annuler
+if (cancelJoinBtn) {
+  cancelJoinBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeOverlay();
+  });
+}
+
+// 3. Fermer le menu au clic à l'extérieur (sur le fond gris)
+if (joinOverlay) {
+  joinOverlay.addEventListener('click', (e) => {
+    // Si l'élément cliqué est exactement l'overlay (et pas la boîte blanche à l'intérieur)
+    if (e.target === joinOverlay) {
+      closeOverlay();
     }
   });
 }
+
+// 4. Valider et rejoindre
+function submitJoin() {
+  const code = joinCodeInput.value;
+  if (code && code.trim() !== "") {
+    window.location.href = `room.html?room=${code.trim()}`;
+  }
+}
+
+if (confirmJoinBtn) {
+  confirmJoinBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    submitJoin();
+  });
+}
+
+// Bonus : Valider avec la touche Entrée dans l'input
+if (joinCodeInput) {
+  joinCodeInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      submitJoin();
+    }
+  });
+}
+
+
+/* --- LOGIQUE DE CRÉATION DE GROUPE --- */
 
 // handle create click
 if (createBtn) {
@@ -70,7 +129,6 @@ if (createBtn) {
       const data = await res.json();
 
       // redirect to new room
-      // change data.roomCode to data.code
       if (data && data.code) {
         window.location.href = `room.html?room=${data.code}`;
       } else {
