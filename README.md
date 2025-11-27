@@ -4,7 +4,7 @@
 
 **Un projet réalisé par [Charly Chartreux](https://github.com/charly-chrtx) & Ethan Caillat**<br>
 
-Code source :🄯 (copy left)
+Code source : AGPLv3
 
 Design & Contenus : BY-NC-SA
 
