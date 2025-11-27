@@ -2,7 +2,7 @@
 
 <img src="./assets/misc/AfficheTicket.png" alt="Logo Ticket"/>
 
-**Un projet réalisé par Charly Chartreux & Ethan Caillat**<br>
+**Un projet réalisé par [Charly Chartreux](https://github.com/charly-chrtx) & Ethan Caillat**<br>
 
 Code source :🄯 (copy left)
 
@@ -15,7 +15,7 @@ Design & Contenus : BY-NC-SA
 
 <br/>
 
-[Report Bug](https://github.com/votre-pseudo/votre-repo/issues) · [Request Feature](https://github.com/votre-pseudo/votre-repo/issues)
+[Report Bug](https://github.com/microsysteene/microsysteene.github.io/issues) · [Request Feature](https://github.com/microsysteene/microsysteene.github.io/pulls)
 
 </div>
 
@@ -23,13 +23,13 @@ Design & Contenus : BY-NC-SA
 
 ## 💡 L'idée
 
-**Ticket** est un outil web conçu pour simplifier radicalement la création de demandes d'assistance. Notre philosophie est simple : **pas de compte utilisateur**. Toute l'expérience tourne autour de groupes privés accessibles via un code unique.
+**Ticket** est un outil web permettant de crée un "ticket" à la place de levé la main lors de cours d'informatique.
 
 | Fonctionnement Intuitif | Gestion Avancée |
 | :--- | :--- |
-| ⚡ **Instantané** : Un créateur lance un groupe et devient **Owner**. | 👑 **Contrôle** : Le Owner gère les membres et tickets. |
-| 🔗 **Accès Facile** : Code unique ou lien rapide pour rejoindre. | 📂 **Partage XXL** : Envoi de fichiers jusqu'à **1,5 Go**. |
-| 📢 **Visibilité** : Liste de tickets commune visible par tous. | 🚮 **Nettoyage** : Groupes supprimés une fois l'utilité passée. |
+| **Instantané** : Un créateur lance un groupe et devient **Owner**. | **Contrôle** : Le Owner gère les membres et tickets. |
+| **Accès Facile** : Code unique ou lien rapide pour rejoindre. | **Partage XXL** : Envoi de fichiers jusqu'à **1,5 Go** (personnalisable dans vos serveurs privés). |
+| **Visibilité** : Liste de tickets commune visible par tous. | **Nettoyage** : Groupes supprimés une fois l'utilité passée. |
 
 <br/>
 
@@ -54,10 +54,10 @@ Nous avons placé la sécurité des données au centre de l'architecture. **Nous
       <p>Le design de Ticket est au service de l'utilisateur. Nous avons adopté une <b>direction artistique marquée</b> pour une clarté immédiate.</p>
       <br/>
       <ul>
-        <li>✨ <b>Animations travaillées</b> pour fluidifier l'expérience.</li>
-        <li>🌙 <b>Dark Mode complet</b> pour le confort visuel.</li>
-        <li>🎨 <b>Palette de couleurs</b> distinctive et informative.</li>
-        <li>👁️ <b>Icônes Material</b> pour une accessibilité maximale.</li>
+        <li> <b>Animations travaillées</b> pour fluidifier l'expérience.</li>
+        <li> <b>Dark Mode complet</b> pour le confort visuel.</li>
+        <li> <b>Palette de couleurs</b> distinctive et informative.</li>
+        <li> <b>Icônes Material</b> pour une accessibilité maximale.</li>
       </ul>
     </td>
     <td width="50%">
@@ -72,10 +72,11 @@ Nous avons placé la sécurité des données au centre de l'architecture. **Nous
 
 Ticket regorge d'outils pensés pour l'efficacité :
 
-* 🎨 **Personnalisation** : Choix de la couleur des tickets pour l'organisation visuelle.
-* 🤬 **Modération auto** : Filtrage automatique des mots interdits.
-* 🚫 **Limitation** : Le Owner peut définir un nombre max de tickets.
-* 📎 **Partage natif** : Fichiers et liens intégrés sans friction.
+*  **Personnalisation** : Choix de la couleur des tickets pour l'organisation visuelle.
+*  **Modération auto** : Filtrage automatique des mots interdits.
+*  **Limitation** : Le Owner peut définir un nombre max de tickets.
+*  **Partage natif** : Fichiers et liens intégrés sans friction.
+*  **Auto-hébergement** : Installation d'un serveur simple !
 
 ---
 
@@ -87,7 +88,7 @@ Ticket est un projet communautaire et transparent. L'Open Source permet à chacu
 
 | Vous êtes développeur ? | Vous voulez héberger ? |
 | :---: | :---: |
-| Les **Pull Requests** sont les bienvenues ! | Il est possible de **créer son propre hébergeur** pour déployer une instance privée. |
+| Les **Pull Requests** sont les bienvenues ! | Il est possible de **d'installer sa propre API** pour déployer une instance privée. |
 
 </div>
 
@@ -95,10 +96,10 @@ Ticket est un projet communautaire et transparent. L'Open Source permet à chacu
 
 ```bash
 # Clonez le repo
-git clone [https://github.com/votre-pseudo/ticket.git](https://github.com/votre-pseudo/ticket.git)
+git clone -b api https://github.com/microsysteene/microsysteene.github.io
 
 # Installez les dépendances
 npm install
 
 # Lancez le projet
-npm run dev
+node index.js
