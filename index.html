@@ -125,6 +125,37 @@
         </div>
 
     </div>
+
+    <div class="menu-overlay" id="joinOverlay" style="display: none;">
+        <div class="menu-box" style="max-width: 550px;">
+            <div class="input" style="padding-bottom: 0;">
+                
+                <h1>Rejoindre un groupe</h1>
+                
+                <p style="margin: 20px 0; opacity: 0.7; text-align: center;">
+                    Entrez le code d'accès pour rejoindre la salle.
+                </p>
+
+                <div style="margin: 30px 0;">
+                    <input type="text" id="joinCodeInput" placeholder="Code (ex: 45A2)" style="width: 100%; text-align: center; font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase;" autocomplete="off" />
+                </div>
+                
+                <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
+                    
+                    <a class="button-text" id="confirmJoin" href="#" style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
+                        <img class="icon" src="./assets/icon/check.png" onerror="this.src='./assets/icon/icon thin.png'" alt="Valider">
+                        <span class="text">Rejoindre</span>
+                    </a>
+
+                    <a class="button-text" id="cancelJoin" href="#" style="width: auto; padding: 0 30px; margin: 0; background-color: #ff7070; min-width: 140px;">
+                        <img class="icon" src="./assets/icon/cross.png" onerror="this.src='./assets/icon/icon thin.png'" alt="Annuler">
+                        <span class="text">Annuler</span>
+                    </a>
+
+                </div>
+            </div>
+        </div>
+    </div>
     
     <script src="./assets/js/darkmode.js"></script>
 
