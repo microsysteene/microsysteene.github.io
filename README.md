@@ -2,7 +2,11 @@
 
 <img src="./assets/misc/AfficheTicket.png" alt="Logo Ticket"/>
 
-**Un projet réalisé par Ethan Caillat et Charly Chartreux**
+**Un projet réalisé par Charly Chartreux & Ethan Caillat**<br>
+
+Code source :🄯 (copy left)
+
+Design & Contenus : BY-NC-SA
 
 ![Version](https://img.shields.io/badge/version-1.0.0-6366f1?style=for-the-badge&logo=appveyor)
 ![License](https://img.shields.io/badge/license-Open%20Source-22c55e?style=for-the-badge)
@@ -17,7 +21,7 @@
 
 ---
 
-## 💡 Le Concept : Zéro Friction
+## 💡 L'idée
 
 **Ticket** est un outil web conçu pour simplifier radicalement la création de demandes d'assistance. Notre philosophie est simple : **pas de compte utilisateur**. Toute l'expérience tourne autour de groupes privés accessibles via un code unique.
 
