@@ -2,7 +2,10 @@
 
 <img src="./assets/misc/AfficheTicket.png" alt="Logo Ticket"/>
 
-**Un projet réalisé par [Charly Chartreux](https://github.com/charly-chrtx) & Ethan Caillat**<br>
+**Un projet réalisé par 
+Developper : [Charly Chartreux](https://github.com/charly-chrtx)
+&
+Deisgner : [Ethan Caillat](https://github.com/7474N0U)**<br>
 
 Code source : AGPLv3
 
@@ -23,13 +26,8 @@ Design & Contenus : BY-NC-SA
 
 ## 💡 L'idée
 
-**Ticket** est un outil web permettant de crée un "ticket" à la place de levé la main lors de cours d'informatique.
-
-| Fonctionnement Intuitif | Gestion Avancée |
-| :--- | :--- |
-| **Instantané** : Un créateur lance un groupe et devient **Owner**. | **Contrôle** : Le Owner gère les membres et tickets. |
-| **Accès Facile** : Code unique ou lien rapide pour rejoindre. | **Partage XXL** : Envoi de fichiers jusqu'à **1,5 Go** (personnalisable dans vos serveurs privés). |
-| **Visibilité** : Liste de tickets commune visible par tous. | **Nettoyage** : Groupes supprimés une fois l'utilité passée. |
+**Ticket** est un outil web permettant de crée un "ticket" à la place de levé la main lors de cours.
+Ici, pas d'inscription ni de formulaire complexe : un utilisateur crée instantanément un groupe privé dont il devient l'administrateur, et invite ses collaborateurs via un simple code unique. Dans cet espace éphémère, chacun peut signaler ses problèmes, partager des fichiers volumineux et suivre la résolution en temps réel, avant que le groupe ne disparaisse une fois sa mission accomplie.
 
 <br/>
 
@@ -37,7 +35,7 @@ Design & Contenus : BY-NC-SA
 
 Nous avons placé la sécurité des données au centre de l'architecture. **Nous ne conservons rien.**
 
-> ⏱️ **Cycle de vie court** : Toutes les données sont automatiquement et **définitivement supprimées après 3 heures**.
+> ⏱️ **Cycle de vie court** : Toutes les données sont automatiquement et **définitivement supprimées après 3 heures d'inactivité**.
 
 | 🔐 Chiffrement | 🇪🇺 Hébergement | 🛡️ Éthique |
 | :--- | :--- | :--- |
