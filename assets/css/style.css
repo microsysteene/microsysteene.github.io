@@ -107,10 +107,11 @@ body.dark-mode .icon {
 }
 
 .button-text .icon {
-    height: 36px;
-    object-fit: cover;
-    width: 36px;
+    height: 28px;
+    width: 28px;
+    object-fit: contain;
     flex-shrink: 0;
+    aspect-ratio: 1/1;
     transition: filter 0.3s ease;
 }
 
