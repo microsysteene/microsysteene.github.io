@@ -199,6 +199,7 @@ input[type="text"]:focus {
     box-sizing: border-box;
     text-align: center;
     border-radius: 3rem;
+    transition: all 0.3s ease;
 }
 
 .left-container {
@@ -222,10 +223,14 @@ input[type="text"]:focus {
     transition: all 0.3s ease;
 }
 
-.loaded #subdiv { animation-delay: 200ms; }
-.loaded #right { animation-delay: 400ms; }
-.loaded #message { animation-delay: 900ms; }
-.loaded #top { animation-delay: 1000ms; }
+.loaded #subdiv { opacity: 0; animation-delay: 400ms; }
+.loaded #right { opacity: 0; animation-delay: 600ms; }
+.loaded #message { opacity: 0; animation-delay: 200ms; }
+.loaded #top { opacity: 0; animation-delay: 100ms; }
+
+#subdiv, #right, #message, .top {
+    opacity: 0;;
+}
 
 #message {
     display: none;
@@ -265,6 +270,7 @@ input[type="text"]:focus {
     justify-content: center;
     align-items: center;
     z-index: 999;
+    transition: all 0.3s ease;
 }
 
 .menu-box {
@@ -280,6 +286,8 @@ input[type="text"]:focus {
     max-height: calc(100vh - 200px);
     overflow-y: auto;
     animation: bounce-in-entire 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    transition: all 0.3s ease;
+    pad: 100px;
 }
 
 .overlay-footer {
@@ -310,6 +318,7 @@ input[type="text"]:focus {
     height: 45px;
     background: var(--card-bg);
     box-shadow: 0px 2px 0px #000000;
+    transition: all 0.3s ease;
 }
 
 .slider-option input { display: none; }
