@@ -2,3 +2,4 @@
 /tickets.json
 .DS_Store
 tickets.db
+.env
