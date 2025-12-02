@@ -16,6 +16,29 @@ let pendingFiles = [];
 // upload state
 let isSending = false;
 window.currentXhr = null; // store xhr to allow abort
+let lastDotInterval = null;
+
+function startTraitementDots(idx) {
+  // Clear any existing interval
+  if (lastDotInterval) clearInterval(lastDotInterval);
+  const txt = document.getElementById(`prog-txt-${idx}`);
+  if (!txt) return;
+  const states = ['traitement.', 'traitement..', 'traitement...'];
+  let i = 0;
+  txt.textContent = states[i];
+  txt.style.fontSize = '0.8em';
+  lastDotInterval = setInterval(() => {
+    i = (i + 1) % states.length;
+    txt.textContent = states[i];
+  }, 500);
+}
+
+function stopTraitementDots() {
+  if (lastDotInterval) {
+    clearInterval(lastDotInterval);
+    lastDotInterval = null;
+  }
+}
 
 function initFeatures() {
   // copy link
@@ -94,7 +117,7 @@ async function initCrypto() {
   cryptoKey = await window.crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
-      salt: enc.encode("ticket-static-salt"), 
+      salt: enc.encode("ticket-static-salt"),
       iterations: 100000,
       hash: "SHA-256"
     },
@@ -110,7 +133,7 @@ async function initCrypto() {
 async function encryptFile(file) {
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   const buffer = await file.arrayBuffer();
-  
+
   const encryptedContent = await window.crypto.subtle.encrypt(
     { name: "AES-GCM", iv: iv },
     cryptoKey,
@@ -139,7 +162,7 @@ async function decryptFile(blob) {
 
 async function syncAnnouncements() {
   const data = await apiCall(`/api/announcements/${roomCode}`);
-  
+
   if (Array.isArray(data)) {
     announcementList = data;
     renderAnnouncement();
@@ -158,7 +181,7 @@ async function handleFileDownload(fileId, fileName) {
   try {
     const blobToDecrypt = await fetchFileContent(fileId);
     const clearBlob = await decryptFile(blobToDecrypt);
-    
+
     const url = URL.createObjectURL(clearBlob);
     const a = document.createElement('a');
     a.href = url;
@@ -167,7 +190,7 @@ async function handleFileDownload(fileId, fileName) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
   } catch (e) {
     console.error('download/decrypt error', e);
     alert("Erreur lors du téléchargement.");
@@ -185,7 +208,7 @@ function renderPendingFiles() {
   pendingFiles.forEach((file, index) => {
     const item = document.createElement('div');
     item.className = 'admin-file-item';
-    
+
     const fileSize = (file.size / (1024 * 1024)).toFixed(1);
 
     // render with progress bar structure
@@ -203,7 +226,7 @@ function renderPendingFiles() {
     item.querySelector('.admin-file-delete').addEventListener('click', (e) => {
       e.preventDefault();
       if (isSending) return alert("Upload en cours, impossible de retirer.");
-      
+
       pendingFiles.splice(index, 1);
       renderPendingFiles();
     });
@@ -215,16 +238,16 @@ function renderPendingFiles() {
 function renderAnnouncement() {
   const container = document.getElementById('announcementArea');
   const leftContainer = document.querySelector('.left-container');
-  
+
   if (!container) return;
 
   container.innerHTML = '';
 
   if (leftContainer) {
     if (announcementList.length === 0) {
-        leftContainer.style.gap = '0px';
+      leftContainer.style.gap = '0px';
     } else {
-        leftContainer.style.gap = ''; 
+      leftContainer.style.gap = '';
     }
   }
 
@@ -234,14 +257,14 @@ function renderAnnouncement() {
     wrapper.style.marginBottom = "15px";
 
     const hasText = annonce.content && annonce.content.trim() !== "";
-    
+
     const msgDiv = document.createElement('div');
     msgDiv.className = 'announcement-item';
-    
+
     if (annonce.color && annonce.color.includes('gradient')) {
-        msgDiv.style.backgroundImage = annonce.color;
+      msgDiv.style.backgroundImage = annonce.color;
     } else {
-        msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
+      msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
     }
 
     msgDiv.style.display = 'flex';
@@ -250,19 +273,19 @@ function renderAnnouncement() {
     msgDiv.style.gap = '8px';
 
     if (hasText) {
-        const textRow = document.createElement('div');
-        textRow.style.display = 'flex';
-        textRow.style.justifyContent = 'space-between';
-        textRow.style.alignItems = 'center';
-        textRow.style.width = '100%';
+      const textRow = document.createElement('div');
+      textRow.style.display = 'flex';
+      textRow.style.justifyContent = 'space-between';
+      textRow.style.alignItems = 'center';
+      textRow.style.width = '100%';
 
-        const deleteBtn = isRoomAdmin ? `
+      const deleteBtn = isRoomAdmin ? `
             <button class="announcement-delete" title="Supprimer">
                 <img src="./assets/icon/delete.png" alt="X">
             </button>
         ` : '';
 
-        textRow.innerHTML = `
+      textRow.innerHTML = `
             <div class="announcement-content" style="width:100%;">
                 <img src="./assets/icon/icon thin.png" class="announcement-icon" style="opacity:0.6;">
                 <span class="announcement-text">${annonce.content}</span>
@@ -272,78 +295,78 @@ function renderAnnouncement() {
             </div>
         `;
 
-        if (isRoomAdmin) {
-            const btn = textRow.querySelector('.announcement-delete');
-            if(btn) btn.addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
-        }
-        
-        msgDiv.appendChild(textRow);
+      if (isRoomAdmin) {
+        const btn = textRow.querySelector('.announcement-delete');
+        if (btn) btn.addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
+      }
+
+      msgDiv.appendChild(textRow);
     }
 
     if (annonce.files && annonce.files.length > 0) {
-        const fileContainer = document.createElement('div');
-        fileContainer.style.display = 'flex';
-        fileContainer.style.flexDirection = 'column';
-        fileContainer.style.gap = '4px';
-        fileContainer.style.width = '100%';
+      const fileContainer = document.createElement('div');
+      fileContainer.style.display = 'flex';
+      fileContainer.style.flexDirection = 'column';
+      fileContainer.style.gap = '4px';
+      fileContainer.style.width = '100%';
 
-        annonce.files.forEach(file => {
-            const fileRow = document.createElement('div');
-            fileRow.style.display = 'flex';
-            fileRow.style.alignItems = 'center';
-            fileRow.style.justifyContent = 'space-between';
-            fileRow.style.padding = '4px 0px';
-            fileRow.style.borderRadius = '4px';
-            fileRow.style.fontSize = '0.85em';
+      annonce.files.forEach(file => {
+        const fileRow = document.createElement('div');
+        fileRow.style.display = 'flex';
+        fileRow.style.alignItems = 'center';
+        fileRow.style.justifyContent = 'space-between';
+        fileRow.style.padding = '4px 0px';
+        fileRow.style.borderRadius = '4px';
+        fileRow.style.fontSize = '0.85em';
 
-            const fName = file.originalName || file.name;
-            const ext = fName.split('.').pop().toUpperCase();
-            const size = (file.size / 1024 / 1024).toFixed(1);
+        const fName = file.originalName || file.name;
+        const ext = fName.split('.').pop().toUpperCase();
+        const size = (file.size / 1024 / 1024).toFixed(1);
 
-            const leftPart = document.createElement('div');
-            leftPart.style.display = 'flex';
-            leftPart.style.alignItems = 'center';
-            leftPart.style.gap = '6px';
-            leftPart.style.overflow = 'hidden';
-            
-            leftPart.innerHTML = `
+        const leftPart = document.createElement('div');
+        leftPart.style.display = 'flex';
+        leftPart.style.alignItems = 'center';
+        leftPart.style.gap = '6px';
+        leftPart.style.overflow = 'hidden';
+
+        leftPart.innerHTML = `
                 <img src="./assets/icon/icon thin.png" style="width:14px; height:14px; filter:grayscale(1); opacity:0.8;">
                 <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;" title="${fName}">${fName}</span>
                 <span style="opacity:0.7; font-size:0.9em;">(${ext} • ${size} Mo)</span>
             `;
 
-            const actionsPart = document.createElement('div');
-            actionsPart.style.display = 'flex';
-            actionsPart.style.alignItems = 'center';
-            actionsPart.style.gap = '8px';
+        const actionsPart = document.createElement('div');
+        actionsPart.style.display = 'flex';
+        actionsPart.style.alignItems = 'center';
+        actionsPart.style.gap = '8px';
 
-            const dlBtn = document.createElement('button');
-            dlBtn.className = 'announcement-action-btn';
-            dlBtn.innerHTML = `<img src="./assets/icon/icon thin.png" style="width:14px; transform:rotate(180deg);">`;
-            dlBtn.title = "Télécharger";
-            dlBtn.onclick = (e) => {
-                e.preventDefault();
-                handleFileDownload(file.id, fName);
-            };
-            actionsPart.appendChild(dlBtn);
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'announcement-action-btn';
+        dlBtn.innerHTML = `<img src="./assets/icon/icon thin.png" style="width:14px; transform:rotate(180deg);">`;
+        dlBtn.title = "Télécharger";
+        dlBtn.onclick = (e) => {
+          e.preventDefault();
+          handleFileDownload(file.id, fName);
+        };
+        actionsPart.appendChild(dlBtn);
 
-            if (isRoomAdmin) {
-                const fileDelBtn = document.createElement('button');
-                fileDelBtn.className = 'announcement-action-btn';
-                fileDelBtn.style.borderColor = '#ff7070'; 
-                fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
-                fileDelBtn.title = "Supprimer ce fichier";
-                
-                fileDelBtn.onclick = (e) => handleDeleteFile(e, annonce.id, file.id, fileRow);
-                actionsPart.appendChild(fileDelBtn);
-            }
+        if (isRoomAdmin) {
+          const fileDelBtn = document.createElement('button');
+          fileDelBtn.className = 'announcement-action-btn';
+          fileDelBtn.style.borderColor = '#ff7070';
+          fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
+          fileDelBtn.title = "Supprimer ce fichier";
 
-            fileRow.appendChild(leftPart);
-            fileRow.appendChild(actionsPart);
-            fileContainer.appendChild(fileRow);
-        });
+          fileDelBtn.onclick = (e) => handleDeleteFile(e, annonce.id, file.id, fileRow);
+          actionsPart.appendChild(fileDelBtn);
+        }
 
-        msgDiv.appendChild(fileContainer);
+        fileRow.appendChild(leftPart);
+        fileRow.appendChild(actionsPart);
+        fileContainer.appendChild(fileRow);
+      });
+
+      msgDiv.appendChild(fileContainer);
     }
 
     wrapper.appendChild(msgDiv);
@@ -352,51 +375,51 @@ function renderAnnouncement() {
 }
 
 async function handleDeleteAnnouncement(e, id, domElement) {
-    e.preventDefault();
-    if (!confirm("Supprimer cette annonce et ses fichiers ?")) return;
+  e.preventDefault();
+  if (!confirm("Supprimer cette annonce et ses fichiers ?")) return;
 
-    domElement.style.opacity = '0.5';
+  domElement.style.opacity = '0.5';
 
-    try {
-        const res = await fetch(`${API_URL}/api/announcements/${id}?userId=${userId}`, {
-            method: 'DELETE'
-        });
-        
-        if (res.ok) {
-            domElement.remove();
-            await syncAnnouncements();
-        } else {
-            alert("Erreur suppression.");
-            domElement.style.opacity = '1';
-        }
-    } catch (err) {
-        console.error(err);
-        domElement.style.opacity = '1';
+  try {
+    const res = await fetch(`${API_URL}/api/announcements/${id}?userId=${userId}`, {
+      method: 'DELETE'
+    });
+
+    if (res.ok) {
+      domElement.remove();
+      await syncAnnouncements();
+    } else {
+      alert("Erreur suppression.");
+      domElement.style.opacity = '1';
     }
+  } catch (err) {
+    console.error(err);
+    domElement.style.opacity = '1';
+  }
 }
 
 async function handleDeleteFile(e, announcementId, fileId, domElement) {
-    e.preventDefault();
-    if (!confirm("Supprimer ce fichier ?")) return;
+  e.preventDefault();
+  if (!confirm("Supprimer ce fichier ?")) return;
 
-    domElement.style.opacity = '0.5';
+  domElement.style.opacity = '0.5';
 
-    try {
-        const res = await fetch(`${API_URL}/api/announcements/${announcementId}/files/${fileId}?userId=${userId}`, {
-            method: 'DELETE'
-        });
-        
-        if (res.ok) {
-            domElement.remove();
-            await syncAnnouncements();
-        } else {
-            alert("Erreur suppression fichier.");
-            domElement.style.opacity = '1';
-        }
-    } catch (err) {
-        console.error(err);
-        domElement.style.opacity = '1';
+  try {
+    const res = await fetch(`${API_URL}/api/announcements/${announcementId}/files/${fileId}?userId=${userId}`, {
+      method: 'DELETE'
+    });
+
+    if (res.ok) {
+      domElement.remove();
+      await syncAnnouncements();
+    } else {
+      alert("Erreur suppression fichier.");
+      domElement.style.opacity = '1';
     }
+  } catch (err) {
+    console.error(err);
+    domElement.style.opacity = '1';
+  }
 }
 
 // websocket
@@ -665,9 +688,9 @@ function setAdminMode(enable) {
     }
     if (infosInput) infosInput.style.display = 'none';
     if (modalTitle) modalTitle.textContent = "Nouveau message";
-    
+
     if (uploadContainer) uploadContainer.style.display = 'flex';
-    
+
     pendingFiles = [];
     renderPendingFiles();
 
@@ -681,10 +704,10 @@ function setAdminMode(enable) {
     }
     if (infosInput) infosInput.style.display = 'block';
     if (modalTitle) modalTitle.textContent = "Nouveau ticket";
-    
+
     if (uploadContainer) uploadContainer.style.display = 'none';
   }
-  
+
   syncAnnouncements();
   renderTickets();
 }
@@ -710,7 +733,7 @@ async function handleFormSubmit() {
   // --- ADMIN LOGIC ---
   if (isRoomAdmin) {
     if (!name && pendingFiles.length === 0) {
-        return alert("Message ou fichier requis.");
+      return alert("Message ou fichier requis.");
     }
 
     isSending = true;
@@ -718,117 +741,138 @@ async function handleFormSubmit() {
     if (createBtn) createBtn.classList.add('button-disabled');
 
     try {
-        const formData = new FormData();
-        formData.append('roomCode', roomCode);
-        formData.append('userId', userId);
-        formData.append('content', name);
+      const formData = new FormData();
+      formData.append('roomCode', roomCode);
+      formData.append('userId', userId);
+      formData.append('content', name);
 
-        // color
-        const selectedColor = document.querySelector('.color.selected');
-        let hexColor = '#d40000';
-        if (selectedColor) {
-            const bg = selectedColor.style.backgroundImage || selectedColor.style.backgroundColor;
-            if (bg) hexColor = rgbToHex(bg) || bg;
-        }
-        formData.append('color', hexColor);
+      // color
+      const selectedColor = document.querySelector('.color.selected');
+      let hexColor = '#d40000';
+      if (selectedColor) {
+        const bg = selectedColor.style.backgroundImage || selectedColor.style.backgroundColor;
+        if (bg) hexColor = rgbToHex(bg) || bg;
+      }
+      formData.append('color', hexColor);
 
-        // Store encrypted blobs separately to calculate individual progress
-        const encryptedFilesList = [];
+      // Store encrypted blobs separately to calculate individual progress
+      const encryptedFilesList = [];
 
-        // encrypt files
-        if (pendingFiles.length > 0) {
-            // visual feedback: encrypting
-            pendingFiles.forEach((_, idx) => {
-                const txt = document.getElementById(`prog-txt-${idx}`);
-                if(txt) txt.textContent = "Crypto...";
-            });
-
-            for (const file of pendingFiles) {
-                const encryptedBlob = await encryptFile(file);
-                // add to list for size calculation
-                encryptedFilesList.push(encryptedBlob);
-                // add to form data
-                formData.append('files', encryptedBlob, file.name);
-            }
-        }
-
-        // upload with XHR for progress
-        await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            window.currentXhr = xhr; // save reference
-
-            xhr.open('POST', `${API_URL}/api/announcements`, true);
-
-            // tracking upload progress individually
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    // e.loaded = total bytes sent so far including headers
-                    let remainingLoaded = e.loaded;
-                    
-                    encryptedFilesList.forEach((blob, idx) => {
-                        const bar = document.getElementById(`prog-bar-${idx}`);
-                        const txt = document.getElementById(`prog-txt-${idx}`);
-                        const fileSize = blob.size;
-
-                        let percent = 0;
-
-                        if (remainingLoaded >= fileSize) {
-                            // This file is fully uploaded
-                            percent = 100;
-                            remainingLoaded -= fileSize; // subtract for next file calculation
-                        } else if (remainingLoaded > 0) {
-                            // We are currently uploading this file
-                            percent = Math.round((remainingLoaded / fileSize) * 100);
-                            remainingLoaded = 0; // consumed all loaded bytes
-                        } else {
-                            // Not started yet
-                            percent = 0;
-                        }
-
-                        if (bar) bar.style.width = `${percent}%`;
-                        if (txt) txt.textContent = `${percent}%`;
-                    });
-                }
-            };
-
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    // Force all to 100% on success (fixes minor calculation drifts due to headers)
-                    encryptedFilesList.forEach((_, idx) => {
-                        const bar = document.getElementById(`prog-bar-${idx}`);
-                        const txt = document.getElementById(`prog-txt-${idx}`);
-                        if(bar) bar.style.width = '100%';
-                        if(txt) txt.textContent = '100%';
-                    });
-                    resolve(xhr.response);
-                }
-                else reject(new Error("Upload failed"));
-            };
-
-            xhr.onerror = () => reject(new Error("Network error"));
-            xhr.onabort = () => reject(new Error("Aborted"));
-
-            xhr.send(formData);
+      // encrypt files
+      if (pendingFiles.length > 0) {
+        // visual feedback: encrypting
+        pendingFiles.forEach((_, idx) => {
+          const txt = document.getElementById(`prog-txt-${idx}`);
+          if (txt) txt.textContent = "Crypto...";
         });
 
-        // success
-        closeAllOverlays();
-        nameInput.value = "";
-        pendingFiles = []; // clear list
-        renderPendingFiles();
-        await syncAnnouncements();
+        for (const file of pendingFiles) {
+          const encryptedBlob = await encryptFile(file);
+          // add to list for size calculation
+          encryptedFilesList.push(encryptedBlob);
+          // add to form data
+          formData.append('files', encryptedBlob, file.name);
+        }
+      }
+
+      // upload with XHR for progress
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        window.currentXhr = xhr; // save reference
+
+        xhr.open('POST', `${API_URL}/api/announcements`, true);
+
+        // clear any previous animation
+        stopTraitementDots();
+
+        // tracking upload progress individually
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            let remainingLoaded = e.loaded;
+
+            encryptedFilesList.forEach((blob, idx) => {
+              const bar = document.getElementById(`prog-bar-${idx}`);
+              const txt = document.getElementById(`prog-txt-${idx}`);
+              const fileSize = blob.size;
+
+              let percent = 0;
+
+              if (remainingLoaded >= fileSize) {
+                percent = 100;
+                remainingLoaded -= fileSize;
+              } else if (remainingLoaded > 0) {
+                percent = Math.round((remainingLoaded / fileSize) * 100);
+                remainingLoaded = 0;
+              } else {
+                percent = 0;
+              }
+
+              if (bar) bar.style.width = `${percent}%`;
+              if (txt) {
+                if (percent === 100) {
+                  // If this is the last file, show animated "traitement...", otherwise show "terminé"
+                  if (idx === encryptedFilesList.length - 1) {
+                    startTraitementDots(idx);
+                  } else {
+                    // stop any dot animation (ensure only last animates)
+                    txt.textContent = 'terminé';
+                    txt.style.fontSize = '';
+                  }
+                } else {
+                  txt.textContent = `${percent}%`;
+                }
+              }
+            });
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            // Force all bars to 100% and set final texts:
+            encryptedFilesList.forEach((_, idx) => {
+              const bar = document.getElementById(`prog-bar-${idx}`);
+              const txt = document.getElementById(`prog-txt-${idx}`);
+              if (bar) bar.style.width = '100%';
+              if (txt) {
+                if (idx === encryptedFilesList.length - 1) {
+                  startTraitementDots(idx);
+                } else {
+                  txt.textContent = 'terminé';
+                  txt.style.fontSize = '';
+                }
+              }
+            });
+            resolve(xhr.response);
+          } else reject(new Error("Upload failed"));
+        };
+
+        xhr.onerror = () => { stopTraitementDots(); reject(new Error("Network error")); };
+        xhr.onabort = () => { stopTraitementDots(); reject(new Error("Aborted")); };
+
+        xhr.send(formData);
+      });
+
+      // success: keep the last-file animation visible briefly, then clear it and UI
+      await new Promise(res => setTimeout(res, 1200));
+      stopTraitementDots();
+
+      closeAllOverlays();
+      nameInput.value = "";
+      pendingFiles = []; // clear list
+      renderPendingFiles();
+      await syncAnnouncements();
 
     } catch (e) {
-        if (e.message !== "Aborted") {
-            console.error(e);
-            alert("Erreur: " + e.message);
-            // reset bars on error
-            renderPendingFiles();
-        }
+      if (e.message !== "Aborted") {
+        console.error(e);
+        alert("Erreur: " + e.message);
+        // reset bars on error
+        renderPendingFiles();
+      }
     } finally {
-        isSending = false;
-        window.currentXhr = null;
-        if (createBtn) createBtn.classList.remove('button-disabled');
+      isSending = false;
+      window.currentXhr = null;
+      if (createBtn) createBtn.classList.remove('button-disabled');
     }
     return;
   }
@@ -838,10 +882,10 @@ async function handleFormSubmit() {
   const myActiveTickets = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
   if (myActiveTickets.length >= MAX_DURING_TICKET) return alert("Limite atteinte.");
   if (!name) return alert("Nom requis.");
-  
+
   const selectedColor = document.querySelector('.color.selected');
   const color = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
-  
+
   await createTicket({ nom: name, description, couleur: color, etat: "en cours", userId });
   nameInput.value = "";
   infosInput.value = "";
@@ -852,12 +896,12 @@ async function handleFormSubmit() {
 function tryCloseOverlay() {
   if (isSending) {
     if (!confirm("Envoi en cours. Annuler l'envoi ?")) return;
-    
+
     if (window.currentXhr) {
-        window.currentXhr.abort();
+      window.currentXhr.abort();
     }
     isSending = false;
-    renderPendingFiles(); 
+    renderPendingFiles();
   } else if (pendingFiles.length > 0) {
     if (!confirm("Fichiers non envoyés. Fermer et supprimer les fichiers ?")) return;
     pendingFiles = [];
@@ -885,24 +929,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   await checkRoomPermissions();
   await initCrypto();
   await loadFilters();
-  
+
   await syncAnnouncements();
 
   renderTickets();
   connectWebSocket();
-  
+
   document.querySelector('#codebutton .text').textContent = roomCode;
-  
+
   document.getElementById('create').addEventListener('click', (e) => {
     e.preventDefault();
     handleFormSubmit();
   });
-  
+
   document.getElementById("createbutton").addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("formOverlay");
   });
-  
+
   document.getElementById("setting").addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("settingsOverlay");
@@ -912,11 +956,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelectorAll('input[name="SliderCount"]').forEach(radio => {
     radio.addEventListener('change', async (e) => {
-        const val = parseInt(e.target.value);
-        MAX_DURING_TICKET = val;
-        if (isRoomAdmin) {
-          await apiCall(`/api/rooms/${roomCode}`, "PUT", { maxTickets: val });
-        }
+      const val = parseInt(e.target.value);
+      MAX_DURING_TICKET = val;
+      if (isRoomAdmin) {
+        await apiCall(`/api/rooms/${roomCode}`, "PUT", { maxTickets: val });
+      }
     });
   });
 
@@ -928,13 +972,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   // safe overlay close logic
   document.querySelectorAll('.menu-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-            if (overlay.id === 'formOverlay') {
-                tryCloseOverlay();
-            } else {
-                closeAllOverlays();
-            }
+      if (e.target === overlay) {
+        if (overlay.id === 'formOverlay') {
+          tryCloseOverlay();
+        } else {
+          closeAllOverlays();
         }
+      }
     });
   });
 
@@ -958,8 +1002,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (dropArea && fileInput) {
     dropArea.addEventListener('click', () => {
-        if (pendingFiles.length >= MAX_FILES) return alert("Limite atteinte.");
-        fileInput.click();
+      if (pendingFiles.length >= MAX_FILES) return alert("Limite atteinte.");
+      fileInput.click();
     });
 
     fileInput.addEventListener('change', () => {
@@ -974,7 +1018,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       pendingFiles = [...pendingFiles, ...files];
       renderPendingFiles();
-      fileInput.value = ''; 
+      fileInput.value = '';
     });
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -993,8 +1037,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       const files = Array.from(dt.files);
 
       if (pendingFiles.length + files.length > MAX_FILES) {
-          alert(`Trop de fichiers (max ${MAX_FILES}).`);
-          return;
+        alert(`Trop de fichiers (max ${MAX_FILES}).`);
+        return;
       }
 
       pendingFiles = [...pendingFiles, ...files];
