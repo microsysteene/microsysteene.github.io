@@ -226,7 +226,7 @@ function updateStorageUI() {
         <div style="
             width: 100%; 
             padding: 0 25px; 
-            margin-top: 38px; /* Pousse le texte vers le bas pour qu'il soit visible sous la carte principale */
+            margin-top: 38px; 
             display: flex; 
             align-items: center; 
             gap: 10px; 
@@ -371,7 +371,7 @@ function renderAnnouncement() {
   announcementList.forEach(annonce => {
     const wrapper = document.createElement('div');
     wrapper.className = 'announcement-wrapper';
-    wrapper.style.marginBottom = "15px";
+
 
     const hasText = annonce.content && annonce.content.trim() !== "";
 
