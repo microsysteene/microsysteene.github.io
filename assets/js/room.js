@@ -90,6 +90,9 @@ let filterCache = [];
 let isRendering = false;
 let isRoomAdmin = false;
 
+// cache recent tickets to avoid an extra GET when submitting
+let cachedTickets = [];
+
 let userId = localStorage.getItem('userId');
 if (!userId) {
   userId = crypto.randomUUID();
@@ -670,6 +673,8 @@ async function renderTickets(isExternalUpdate = false) {
   if (isRendering) return;
   isRendering = true;
   const tickets = await getTickets();
+  // keep a local cache of the last fetched tickets to avoid refetching
+  cachedTickets = tickets;
   const currentIds = new Set(tickets.map(t => t.id));
 
   let newTicketId = null;
@@ -995,7 +1000,8 @@ async function handleFormSubmit() {
   }
 
   // --- USER LOGIC (inchangé) ---
-  const tickets = await getTickets();
+  // use cached tickets if available to avoid an extra network roundtrip
+  const tickets = cachedTickets.length ? cachedTickets : await getTickets();
   const myActiveTickets = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
   if (myActiveTickets.length >= MAX_DURING_TICKET) return alert("Limite atteinte.");
   if (!name) return alert("Nom requis.");
