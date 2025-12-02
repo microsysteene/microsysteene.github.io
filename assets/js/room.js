@@ -235,7 +235,6 @@ function updateStorageUI() {
             gap: 10px; 
             opacity: 0.7;
         ">
-            <img src="./assets/icon/icon thin.png" style="width: 16px; height: 16px; object-fit: contain;">
             <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; font-size: 0.9rem;">
                 ${annonce.content || (annonce.files.length + ' fichier(s)')}
             </span>
@@ -407,7 +406,6 @@ function renderAnnouncement() {
 
       textRow.innerHTML = `
             <div class="announcement-content" style="width:100%;">
-                <img src="./assets/icon/icon thin.png" class="announcement-icon" style="opacity:0.6;">
                 <span class="announcement-text">${annonce.content}</span>
             </div>
             <div class="announcement-actions">
@@ -450,7 +448,6 @@ function renderAnnouncement() {
         leftPart.style.overflow = 'hidden';
 
         leftPart.innerHTML = `
-                <img src="./assets/icon/icon thin.png" style="width:14px; height:14px; filter:grayscale(1); opacity:0.8;">
                 <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;" title="${fName}">${fName}</span>
                 <span style="opacity:0.7; font-size:0.9em;">(${ext} • ${size} Mo)</span>
             `;
@@ -459,10 +456,9 @@ function renderAnnouncement() {
         actionsPart.style.display = 'flex';
         actionsPart.style.alignItems = 'center';
         actionsPart.style.gap = '8px';
-
         const dlBtn = document.createElement('button');
         dlBtn.className = 'announcement-action-btn';
-        dlBtn.innerHTML = `<img src="./assets/icon/icon thin.png" style="width:14px; transform:rotate(180deg);">`;
+        dlBtn.innerHTML = `<img src="./assets/icon/download.png" style="width:18px; height:18px;">`;
         dlBtn.title = "Télécharger";
         dlBtn.onclick = (e) => {
           e.preventDefault();
@@ -473,8 +469,8 @@ function renderAnnouncement() {
         if (isRoomAdmin) {
           const fileDelBtn = document.createElement('button');
           fileDelBtn.className = 'announcement-action-btn';
-          fileDelBtn.style.borderColor = '#ff7070';
-          fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
+          fileDelBtn.style.borderColor = '#000000';
+          fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:18px; height:18px;">`;
           fileDelBtn.title = "Supprimer ce fichier";
 
           fileDelBtn.onclick = (e) => handleDeleteFile(e, annonce.id, file.id, fileRow);

@@ -452,9 +452,9 @@ h1 {
     gap: clamp(10px, 1.5vw, 20px);
     filter: drop-shadow(0px 4px 0px rgb(0, 0, 0, 0.2));
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    animation-delay: 200ms;
     background-color: var(--card-bg);
     transition: all 0.3s ease;
+    animation-delay: 300ms;
 }
 
 .loaded #right {
@@ -467,9 +467,9 @@ h1 {
     gap: clamp(10px, 1.5vw, 20px);
     filter: drop-shadow(0px 4px 0px rgb(0, 0, 0, 0.2));
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    animation-delay: 300ms;
     background-color: var(--card-bg);
     transition: all 0.3s ease;
+    animation-delay: 400ms;
 }
 
 /* Barre d'annonce */
@@ -482,7 +482,6 @@ h1 {
     color: red;
     margin: 0;
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    animation-delay: 100ms;
     background-color: var(--card-bg);
     transition: all 0.3s ease;
 }
@@ -495,8 +494,8 @@ h1 {
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    animation-delay: 10ms;
+    animation: div 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    animation-delay: 50ms;
 }
 
 @keyframes div {
@@ -520,18 +519,19 @@ h1 {
     opacity: 0;
 }
 
-#right {
+div.main-card {
     opacity: 0;
 }
 
 #subdiv {
     opacity: 0;
+    
 }
 
-#message {
+#right {
     opacity: 0;
+    
 }
-
 /* Animations .top div :hover et @keyframes hovertop supprimées (non utilisées) */
 
 /* ==================== */
@@ -949,7 +949,7 @@ input[type="password"]:focus {
     padding: 15px 20px;
     font-size: clamp(14px, 1vw, 18px);
     border: 2px dashed black;
-    border-radius: 15px;
+    border-radius: 35px;
     box-sizing: border-box;
     box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
     display: flex;
@@ -992,8 +992,8 @@ input[type="password"]:focus {
 }
 
 .admin-file-item {
-    background: var(--bg-color);
-    border: 2px solid var(--text-color);
+    background: var(--card-bg);
+    border: 2px solid black;
     border-radius: 50px;
     padding: 10px 18px;
     font-size: 0.95rem;
@@ -1235,18 +1235,12 @@ input[type="password"]:focus {
     border: 2px solid #000000;
     border-radius: 50px;
     background-color: var(--card-bg);
-    box-shadow: 0px 3px 0px rgba(0, 0, 0, 0.2);
+    box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
     animation: bounce-in 0.4s ease-out forwards;
     min-height: 60px;
     gap: 15px;
 }
-
-.announcement-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
-}
-
 
 .announcement-content {
     display: flex;
@@ -1258,7 +1252,7 @@ input[type="password"]:focus {
 
 .announcement-icon {
     width: 32px;
-    height: 32px;
+    aspect-ratio: 1/1;
     object-fit: contain;
     flex-shrink: 0;
 }
@@ -1295,8 +1289,8 @@ input[type="password"]:focus {
 
 
 .announcement-action-btn {
-    width: 36px;
-    height: 36px;
+    width: 50px;
+    aspect-ratio: 1/1;
     border-radius: 50%;
     border: 2px solid black;
     background: #fff;
@@ -1318,8 +1312,8 @@ input[type="password"]:focus {
 
 
 .announcement-delete {
-    width: 36px;
-    height: 36px;
+    width: 50px;
+    aspect-ratio: 1/1;
     border-radius: 50%;
     border: 2px solid black;
     background: #ff7070;
@@ -1332,7 +1326,6 @@ input[type="password"]:focus {
 }
 
 .announcement-delete:hover {
-    background: #ff3636;
     transform: translateY(-2px);
     box-shadow: 0 4px 0 #000;
 }
@@ -1347,8 +1340,8 @@ input[type="password"]:focus {
 .admin-file-item {
     position: relative; 
     overflow: hidden;   
-    z-index: 1;     
-    background: var(--bg-color); 
+    z-index: 1;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
 }
 
 .admin-file-info, 
@@ -1442,7 +1435,7 @@ input[type="password"]:focus {
     position: relative;
     width: 100%;
     height: 100%;
-    background: #fff;
+    background: var(--card-bg);
     border: 2px solid black;
     border-radius: 50px;
     z-index: 10;
@@ -1450,12 +1443,9 @@ input[type="password"]:focus {
     display: flex;
     align-items: center;
     box-shadow: 0px 3px 0px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
-}
-
-.main-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    animation-delay: 200ms;
 }
 
 
@@ -1504,7 +1494,7 @@ input[type="password"]:focus {
     justify-content: center;
     z-index: 20;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
 }
 .close-storage:hover {
     background: #eee;
@@ -1521,7 +1511,7 @@ input[type="password"]:focus {
 
 .announcement-container.open .stack-card {
     opacity: 0;
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(0.5);
 }
 
 .announcement-container.open .close-storage {
