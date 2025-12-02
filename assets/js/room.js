@@ -2,18 +2,17 @@ const API_URL = "https://ticketapi.juhdd.me";
 const WS_URL = "wss://ticketapi.juhdd.me";
 
 // state
-let activeUploads = []; 
+let activeUploads = [];
 const MAX_FILES = 10;
 let MAX_DURING_TICKET = 1;
 
-// crypto globals
-let cryptoKey = null; 
+// crypto
+let cryptoKey = null;
 
-// data globals
-let announcementList = []; // stores all announcements
-let pendingFiles = []; // files waiting to be sent (admin)
+// data
+let announcementList = [];
+let pendingFiles = [];
 
-// copy features
 function initFeatures() {
   // copy link
   const copyBtn = document.getElementById('copyLink');
@@ -34,7 +33,6 @@ function initFeatures() {
   }
 }
 
-// copy code
 const codeButton = document.getElementById('codebutton');
 if (codeButton) {
   codeButton.addEventListener('click', (e) => {
@@ -72,14 +70,13 @@ if (!userId) {
   localStorage.setItem('userId', userId);
 }
 
-// loaded class
 if (document.readyState === 'complete') {
   document.body.classList.add('loaded');
 } else {
   window.addEventListener('load', () => document.body.classList.add('loaded'));
 }
 
-// --- crypto ---
+// crypto
 
 async function initCrypto() {
   const enc = new TextEncoder();
@@ -106,7 +103,7 @@ async function initCrypto() {
   console.log('crypto key ready');
 }
 
-// encrypt file (returns blob with iv)
+// encrypt file
 async function encryptFile(file) {
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   const buffer = await file.arrayBuffer();
@@ -120,7 +117,7 @@ async function encryptFile(file) {
   return new Blob([iv, encryptedContent], { type: 'application/octet-stream' });
 }
 
-// decrypt blob
+// decrypt file
 async function decryptFile(blob) {
   const buffer = await blob.arrayBuffer();
   const iv = buffer.slice(0, 12);
@@ -135,9 +132,8 @@ async function decryptFile(blob) {
   return new Blob([decryptedContent]);
 }
 
-// --- sync & data ---
+// sync
 
-// fetch all announcements
 async function syncAnnouncements() {
   const data = await apiCall(`/api/announcements/${roomCode}`);
   
@@ -147,14 +143,12 @@ async function syncAnnouncements() {
   }
 }
 
-// fetch encrypted content
 async function fetchFileContent(fileId) {
   const res = await fetch(`${API_URL}/api/files/download/${fileId}`);
   if (!res.ok) throw new Error('download error');
   return await res.blob();
 }
 
-// handle download
 async function handleFileDownload(fileId, fileName) {
   console.log(`[LOG] download started: ${fileName} (id: ${fileId})`);
 
@@ -177,9 +171,8 @@ async function handleFileDownload(fileId, fileName) {
   }
 }
 
-// --- ui render ---
+// ui
 
-// render pending files in admin form
 function renderPendingFiles() {
   const listDiv = document.getElementById('adminFilesList');
   if (!listDiv) return;
@@ -211,7 +204,6 @@ function renderPendingFiles() {
   });
 }
 
-// render main announcements stream
 function renderAnnouncement() {
   const container = document.getElementById('announcementArea');
   if (!container) return;
@@ -224,19 +216,19 @@ function renderAnnouncement() {
     wrapper.className = 'announcement-wrapper'; // container for grouped items
     wrapper.style.marginBottom = "15px";
 
-    // 1. render text part
+    // text
     if (annonce.content && annonce.content.trim() !== "") {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'announcement-item';
         
-        // background color
+        // style
         if (annonce.color && annonce.color.includes('gradient')) {
             msgDiv.style.backgroundImage = annonce.color;
         } else {
             msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
         }
 
-        // admin delete button for whole announcement
+        // admin delete
         const deleteBtn = isRoomAdmin ? `
             <button class="announcement-delete" title="Supprimer l'annonce">
                 <img src="./assets/icon/delete.png" alt="X">
@@ -260,8 +252,7 @@ function renderAnnouncement() {
 
         wrapper.appendChild(msgDiv);
     } else if (isRoomAdmin && annonce.files && annonce.files.length > 0) {
-        // if no text but has files, add a small delete button header or attach delete to first file?
-        // simple approach: rendering a small "delete group" button if strictly no text
+      // admin delete
         const toolsDiv = document.createElement('div');
         toolsDiv.style.textAlign = 'right';
         toolsDiv.style.marginBottom = '5px';
@@ -270,7 +261,7 @@ function renderAnnouncement() {
         wrapper.appendChild(toolsDiv);
     }
 
-    // 2. render files part
+    // files
     if (annonce.files && annonce.files.length > 0) {
         annonce.files.forEach(file => {
             const fileDiv = document.createElement('div');
@@ -279,7 +270,7 @@ function renderAnnouncement() {
             fileDiv.style.marginTop = '4px'; // small gap between text and file
 
             const fName = file.originalName || file.name;
-            const ext = fName.split('.').pop(); 
+            const ext = fName.split('.').pop();
 
             fileDiv.innerHTML = `
                 <div class="announcement-content">
@@ -308,7 +299,6 @@ function renderAnnouncement() {
   });
 }
 
-// delete announcement logic
 async function handleDeleteAnnouncement(e, id, domElement) {
     e.preventDefault();
     if (!confirm("Supprimer cette annonce et ses fichiers ?")) return;
@@ -335,7 +325,7 @@ async function handleDeleteAnnouncement(e, id, domElement) {
     }
 }
 
-// --- websocket ---
+// websocket
 
 function connectWebSocket() {
   ws = new WebSocket(`${WS_URL}?room=${roomCode}`);
@@ -368,7 +358,7 @@ function connectWebSocket() {
   };
 }
 
-// --- api wrappers ---
+// api
 
 async function apiCall(endpoint, method = "GET", body = null) {
   try {
@@ -403,12 +393,8 @@ async function checkRoomPermissions() {
     if (radio) radio.checked = true;
   }
 
-  if (roomData.adminId === userId) {
-    console.log("admin detected");
-    setAdminMode(true);
-  } else {
-    setAdminMode(false);
-  }
+  if (roomData.adminId === userId) setAdminMode(true);
+  else setAdminMode(false);
 }
 
 async function getTickets() {
@@ -443,7 +429,7 @@ async function loadFilters() {
   }
 }
 
-// --- utils ---
+// utils
 
 function formatTimeElapsed(dateString) {
   if (!dateString) return '';
@@ -465,7 +451,7 @@ function rgbToHex(rgbStr) {
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
-// --- tickets render ---
+// tickets
 
 async function renderTickets(isExternalUpdate = false) {
   if (isRendering) return;
@@ -553,9 +539,7 @@ function updateContainer(containerId, tickets, newId, isActiveList) {
     container.appendChild(div);
   });
 
-  container.querySelectorAll('.delete').forEach(btn => {
-    btn.onclick = (e) => handleDeleteClick(e, btn.dataset.id);
-  });
+  container.querySelectorAll('.delete').forEach(btn => btn.onclick = (e) => handleDeleteClick(e, btn.dataset.id));
 }
 
 async function handleDeleteClick(e, id) {
@@ -587,7 +571,7 @@ document.getElementById("right").addEventListener("click", async (e) => {
   }, { once: true });
 });
 
-// --- admin ui ---
+// admin
 
 function setAdminMode(enable) {
   isRoomAdmin = enable;
@@ -599,10 +583,10 @@ function setAdminMode(enable) {
   const adminSettings = document.getElementById('adminSettingsSection');
 
   if (enable) {
-    // show admin settings
+    // admin settings
     if (adminSettings) adminSettings.style.display = 'block';
 
-    // configure for announcement
+    // announcement mode
     if (createBtnText) createBtnText.textContent = "Nouveau message";
     if (nameInput) {
       nameInput.placeholder = "Message";
@@ -611,7 +595,7 @@ function setAdminMode(enable) {
     if (infosInput) infosInput.style.display = 'none';
     if (modalTitle) modalTitle.textContent = "Nouveau message";
     
-    // show upload field
+    // show upload
     if (uploadContainer) uploadContainer.style.display = 'flex';
     
     // clear pending
@@ -622,7 +606,7 @@ function setAdminMode(enable) {
     // hide admin settings
     if (adminSettings) adminSettings.style.display = 'none';
 
-    // configure for ticket
+    // ticket mode
     if (createBtnText) createBtnText.textContent = "Nouveau tickets";
     if (nameInput) {
       nameInput.placeholder = "Nom";
@@ -634,12 +618,12 @@ function setAdminMode(enable) {
     if (uploadContainer) uploadContainer.style.display = 'none';
   }
   
-  // refresh list
+  // refresh
   syncAnnouncements();
   renderTickets();
 }
 
-// --- submission logic ---
+// submission
 
 async function handleFormSubmit() {
   if (isSending) return;
@@ -655,9 +639,9 @@ async function handleFormSubmit() {
   const forbidden = filterCache.find(term => content.includes(term.toLowerCase()));
   if (forbidden) return alert("Mot interdit détecté.");
 
-  // --- ADMIN: Create Announcement ---
+  // admin create
   if (isRoomAdmin) {
-    // validation: text or files required
+    // validate
     if (!name && pendingFiles.length === 0) {
         return alert("Veuillez entrer un message ou ajouter un fichier.");
     }
@@ -672,7 +656,7 @@ async function handleFormSubmit() {
         formData.append('userId', userId);
         formData.append('content', name);
 
-        // get color
+        // color
         const selectedColor = document.querySelector('.color.selected');
         let hexColor = '#d40000';
         if (selectedColor) {
@@ -681,12 +665,12 @@ async function handleFormSubmit() {
         }
         formData.append('color', hexColor);
 
-        // encrypt and append files
+        // encrypt files
         if (pendingFiles.length > 0) {
             for (const file of pendingFiles) {
                 const encryptedBlob = await encryptFile(file);
-                // append with original name so multer sees it
-                formData.append('files', encryptedBlob, file.name);
+            // append original name
+            formData.append('files', encryptedBlob, file.name);
             }
         }
 
@@ -717,7 +701,7 @@ async function handleFormSubmit() {
     return;
   }
 
-  // --- USER: Create Ticket ---
+  // user create
   
   // check limits
   const tickets = await getTickets();
@@ -747,7 +731,7 @@ async function handleFormSubmit() {
 }
 
 
-// --- menu & init ---
+// ui init
 
 function openOverlay(id) {
   const el = document.getElementById(id);
@@ -807,11 +791,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     closeAllOverlays();
   });
 
-  document.querySelectorAll('.menu-overlay').forEach(overlay => {
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) closeAllOverlays();
-    });
-  });
+  document.querySelectorAll('.menu-overlay').forEach(overlay => overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAllOverlays(); }));
 
   // logout
   document.getElementById("logout")?.addEventListener('click', (e) => {
@@ -828,7 +808,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/';
   });
 
-  // --- file input handling ---
+  // file input
   const dropArea = document.getElementById('dropArea');
   const fileInput = document.getElementById('fileInput');
 
