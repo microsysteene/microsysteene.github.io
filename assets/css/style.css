@@ -1,3 +1,106 @@
+/* ==================== */
+/* BOUTON SUPPRIMER BOX MESSAGE/FICHIER */
+/* ==================== */
+.ticket-delete-btn {
+    background: #ff7070;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 12px;
+    box-shadow: 0px 2px 0px #000000;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+.ticket-delete-btn:hover {
+    background: #ff3636;
+    box-shadow: 0px 5px 0px #000000;
+}
+.ticket-delete-btn img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    pointer-events: none;
+}
+/* ==================== */
+/* TICKET MESSAGE STYLE */
+/* ==================== */
+
+.ticket-box {
+    background: #fff5a6;
+    border-radius: 24px;
+    box-shadow: 0px 4px 16px rgba(0,0,0,0.08), 0px 2px 0px #000000;
+    padding: 24px 28px;
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 420px;
+    min-width: 260px;
+    align-items: flex-start;
+}
+
+.ticket-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: none;
+    border-radius: 18px;
+    padding: 0;
+    margin-bottom: 8px;
+}
+
+.ticket-icon {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0px 2px 0px #000000;
+    margin-right: 8px;
+}
+
+.ticket-text {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #222;
+    text-align: left;
+    flex: 1;
+    word-break: break-word;
+}
+
+.ticket-download-btn {
+    background: #A6C5FF;
+    color: #222;
+    border: none;
+    border-radius: 100px;
+    padding: 7px 22px;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0px 2px 0px #000000;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    margin-left: 10px;
+}
+.ticket-download-btn:hover {
+    background: #7eb6ff;
+    box-shadow: 0px 5px 0px #000000;
+}
+.message-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.message-files {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 /* VARIABLES & DARK MODE */
 :root {
     --bg-color: #FFF9ED;
@@ -841,22 +944,30 @@ input[type="password"]:focus {
 
 .file-drop-area {
     width: 100%;
-    height: 60px;
     background: var(--card-bg);
     color: var(--text-color);
-    padding: 10px 20px;
+    padding: 15px 20px;
     font-size: clamp(14px, 1vw, 18px);
     border: 2px dashed black;
-    border-radius: 50px;
+    border-radius: 15px;
     box-sizing: border-box;
     box-shadow: 0 3px 0px rgba(0, 0, 0, 0.2);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     flex-wrap: wrap;
     gap: 10px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease, height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, min-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.3s ease;
     position: relative;
+    min-height: 60px;
+}
+
+.drop-area-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
 }
 
 .file-drop-area:hover{
@@ -868,9 +979,96 @@ input[type="password"]:focus {
     background-color: rgba(0, 89, 255, 0.05);
     border-color: #667eea;
     transform: translateY(-3px);
-    height: 200px;
+    min-height: 200px;
     box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
     transition: ease 0.3s;
+}
+
+.admin-files-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-file-item {
+    background: var(--bg-color);
+    border: 2px solid var(--text-color);
+    border-radius: 50px;
+    padding: 10px 18px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+    height: 48px;
+    box-sizing: border-box;
+}
+
+.admin-file-item.new-file {
+    animation: slide-in 0.3s ease;
+}
+
+@keyframes slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.admin-file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-file-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    font-weight: 500;
+}
+
+.admin-file-size {
+    opacity: 0.6;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.admin-file-delete {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 1.3rem;
+    padding: 4px 8px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    margin-left: 12px;
+}
+
+.admin-file-delete:hover {
+    opacity: 1;
+}
+
+.admin-file-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(91, 127, 255, 0.15) 0%, rgba(91, 127, 255, 0.3) 100%);
+    border-radius: 50px;
+    width: 100%;
+    animation: none;
+    z-index: -1;
 }
 
 .file-placeholder {
@@ -947,34 +1145,59 @@ input[type="password"]:focus {
 
 .upload-item {
     background: var(--bg-color);
-    border: 1px solid var(--text-color);
-    border-radius: 10px;
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    border: 2px solid var(--text-color);
+    border-radius: 50px;
+    padding: 10px 18px;
+    font-size: 0.95rem;
     position: relative;
     overflow: hidden;
+    animation: slide-in 0.3s ease;
+    height: 48px;
+    box-sizing: border-box;
 }
 
 .progress-bar-bg {
     position: absolute;
     bottom: 0;
     left: 0;
-    height: 4px;
+    height: 100%;
     width: 100%;
-    background-color: rgba(0,0,0,0.1);
+    background-color: transparent;
+    border-radius: 50px;
+    overflow: hidden;
+    z-index: 0;
 }
 
 .progress-bar-fill {
     height: 100%;
-    background-color: #667eea;
+    background: linear-gradient(90deg, #5B7FFF 0%, #6B8FFF 100%);
     width: 0%;
-    transition: width 0.2s linear;
+    transition: width 0.3s linear;
 }
 
 .upload-info {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 4px;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+}
+
+.upload-info span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    font-weight: 500;
+}
+
+.upload-info .pct {
+    opacity: 0.7;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    font-weight: 600;
 }
 
 .upload-warning {
@@ -991,4 +1214,131 @@ input[type="password"]:focus {
     opacity: 0.5;
     pointer-events: none;
     filter: grayscale(1);
+}
+
+
+
+.announcement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+
+.announcement-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border: 2px solid #000000;
+    border-radius: 50px;
+    background-color: var(--card-bg);
+    box-shadow: 0px 3px 0px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    animation: bounce-in 0.4s ease-out forwards;
+    min-height: 60px;
+    gap: 15px;
+}
+
+.announcement-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+
+.announcement-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.announcement-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.announcement-text {
+    font-weight: 600;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #222;
+}
+
+.announcement-subtext {
+    font-size: 0.85rem;
+    opacity: 0.6;
+    margin-left: 10px;
+    font-weight: 500;
+    display: none; 
+}
+
+@media (min-width: 768px) {
+    .announcement-subtext {
+        display: block;
+    }
+}
+
+
+.announcement-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+
+.announcement-action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid black;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.announcement-action-btn:hover {
+    background: #f0f0f0;
+}
+
+.announcement-action-btn img {
+    width: 18px;
+    height: 18px;
+}
+
+
+.announcement-delete {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid black;
+    background: #ff7070;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 0 #000;
+}
+
+.announcement-delete:hover {
+    background: #ff3636;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 0 #000;
+}
+
+.announcement-delete img {
+    width: 18px;
+    height: 18px;
+    filter: invert(1); 
 }
