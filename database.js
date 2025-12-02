@@ -14,7 +14,7 @@ db.serialize(() => {
     roomCode TEXT
   )`);
 
-  // create rooms table with maxTickets
+  // create rooms table
   db.run(`CREATE TABLE IF NOT EXISTS rooms (
     code TEXT PRIMARY KEY,
     adminId TEXT,
@@ -24,13 +24,20 @@ db.serialize(() => {
     createdAt TEXT,
     maxTickets INTEGER DEFAULT 1
   )`, (err) => {
-    // simple migration: if table exists but maxTickets missing, add it
     if (!err) {
-      db.run("ALTER TABLE rooms ADD COLUMN maxTickets INTEGER DEFAULT 1", (e) => {
-        // ignore error if column already exists
-      });
+      db.run("ALTER TABLE rooms ADD COLUMN maxTickets INTEGER DEFAULT 1", () => {});
     }
   });
+
+  // create announcements table (new)
+  db.run(`CREATE TABLE IF NOT EXISTS announcements (
+    id TEXT PRIMARY KEY,
+    roomCode TEXT,
+    userId TEXT,
+    content TEXT,
+    color TEXT,
+    createdAt TEXT
+  )`);
 
   // create files table
   db.run(`CREATE TABLE IF NOT EXISTS files (
@@ -40,8 +47,13 @@ db.serialize(() => {
     mimeType TEXT,
     size INTEGER,
     roomCode TEXT,
-    userId TEXT
-  )`);
+    userId TEXT,
+    announcementId TEXT
+  )`, (err) => {
+    if (!err) {
+      db.run("ALTER TABLE files ADD COLUMN announcementId TEXT", () => {});
+    }
+  });
 });
 
 module.exports = db;

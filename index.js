@@ -497,6 +497,120 @@ app.delete('/api/files/:fileId', (req, res) => {
   });
 });
 
+// announcements api
+
+// get announcements for a room
+app.get('/api/announcements/:roomCode', (req, res) => {
+    const roomCode = req.params.roomCode;
+
+    // get announcements
+    db.all("SELECT * FROM announcements WHERE roomCode = ? ORDER BY createdAt DESC", [roomCode], (err, annonces) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // get files linked to announcements for this room
+        db.all("SELECT * FROM files WHERE roomCode = ? AND announcementId IS NOT NULL", [roomCode], (err, files) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // attach files to their announcement
+            const result = annonces.map(a => {
+                return {
+                    ...a,
+                    files: files.filter(f => f.announcementId === a.id)
+                };
+            });
+
+            res.json(result);
+        });
+    });
+});
+
+// create announcement (text + optional files)
+app.post('/api/announcements', upload.array('files'), (req, res) => {
+    const { roomCode, userId, content, color } = req.body;
+    const files = req.files || [];
+
+    // validation: must have content OR files
+    if ((!content || content.trim() === "") && files.length === 0) {
+        // delete uploaded files if validation fails
+        files.forEach(f => fs.unlinkSync(f.path));
+        return res.status(400).json({ error: "Announcement cannot be empty (text or file required)" });
+    }
+
+    // check admin rights
+    db.get("SELECT adminId FROM rooms WHERE code = ?", [roomCode], (err, room) => {
+        if (!room) return res.status(404).json({ error: "Room not found" });
+        if (room.adminId !== userId) {
+            files.forEach(f => fs.unlinkSync(f.path));
+            return res.status(403).json({ error: "Not authorized" });
+        }
+
+        const id = Date.now().toString();
+        const now = new Date().toISOString();
+
+        // insert announcement
+        db.run(`INSERT INTO announcements (id, roomCode, userId, content, color, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
+            [id, roomCode, userId, content || "", color || "#cdcdcd", now],
+            (err) => {
+                if (err) {
+                    files.forEach(f => fs.unlinkSync(f.path));
+                    return res.status(500).json({ error: err.message });
+                }
+
+                // process files if any
+                if (files.length > 0) {
+                    const stmt = db.prepare(`INSERT INTO files (id, originalName, encryptedName, mimeType, size, roomCode, userId, announcementId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+                    
+                    files.forEach(f => {
+                        const fileId = Date.now().toString() + Math.round(Math.random() * 1000);
+                        stmt.run(fileId, f.originalname, f.filename, f.mimetype, f.size, roomCode, userId, id);
+                    });
+                    stmt.finalize();
+                }
+
+                updateRoomActivity(roomCode);
+                notifierClients(roomCode, 'updateAnnonce'); // notify frontend to refresh
+                res.status(201).json({ message: "Announcement created" });
+            }
+        );
+    });
+});
+
+// delete announcement
+app.delete('/api/announcements/:id', (req, res) => {
+    const { userId } = req.query;
+    const id = req.params.id;
+
+    db.get("SELECT a.*, r.adminId as roomAdminId FROM announcements a JOIN rooms r ON a.roomCode = r.code WHERE a.id = ?", [id], (err, item) => {
+        if (!item) return res.status(404).json({ error: "Announcement not found" });
+        
+        // verify admin
+        if (item.roomAdminId !== userId) return res.status(403).json({ error: "Not authorized" });
+
+        // 1. delete associated files from disk
+        db.all("SELECT * FROM files WHERE announcementId = ?", [id], (err, files) => {
+            if (files) {
+                files.forEach(f => {
+                    const p = path.join(UPLOAD_DIR, f.encryptedName);
+                    if (fs.existsSync(p)) fs.unlinkSync(p);
+                });
+            }
+
+            // 2. delete files from db
+            db.run("DELETE FROM files WHERE announcementId = ?", [id], (err) => {
+                
+                // 3. delete announcement
+                db.run("DELETE FROM announcements WHERE id = ?", [id], (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    
+                    updateRoomActivity(item.roomCode);
+                    notifierClients(item.roomCode, 'updateAnnonce');
+                    res.json({ message: "Announcement deleted" });
+                });
+            });
+        });
+    });
+});
+
 
 //cleanup 
 function supprimerTicketsExpires() {
@@ -520,7 +634,7 @@ function supprimerTicketsExpires() {
 
 function supprimerRoomsInactives() {
   const now = Date.now();
-  const inactiveLimit = 30 * 60 * 1000; // 30 mins inactive
+  const inactiveLimit = 30 * 60 * 1000; 
 
   db.all("SELECT * FROM rooms", [], (err, rooms) => {
     if (err) return;
@@ -530,11 +644,10 @@ function supprimerRoomsInactives() {
       const isInactive = (now - lastActivity) > inactiveLimit;
 
       if (isInactive) {
-        // check if tickets exist
         db.get("SELECT count(*) as count FROM tickets WHERE roomCode = ?", [room.code], (err, row) => {
           if (row && row.count === 0) {
             
-            // cleanup files first
+            // cleanup files first (including announcement files)
             db.all("SELECT * FROM files WHERE roomCode = ?", [room.code], (err, files) => {
               if (files) {
                 files.forEach(f => {
@@ -544,11 +657,13 @@ function supprimerRoomsInactives() {
                 db.run("DELETE FROM files WHERE roomCode = ?", [room.code]);
               }
 
+              // cleanup announcements (new)
+              db.run("DELETE FROM announcements WHERE roomCode = ?", [room.code]);
+
               // delete room
               db.run("DELETE FROM rooms WHERE code = ?", room.code, () => {
                 console.log(`Room ${room.code} deleted (inactive)`);
-                // notify dashboard
-                notifierClients(null, 'adminUpdate'); // optional trigger for admin
+                notifierClients(null, 'adminUpdate'); 
               });
             });
           }
