@@ -1385,6 +1385,8 @@ input[type="password"]:focus {
     flex-direction: column;
     gap: 15px;
     transition: all 0.3s ease;
+    /* ensure proper positioning */
+    position: relative; 
 }
 
 .storage-widget {
@@ -1394,6 +1396,7 @@ input[type="password"]:focus {
     cursor: pointer;
     z-index: 5;
     transition: all 0.3s ease;
+    flex-shrink: 0; 
 }
 
 
@@ -1455,14 +1458,14 @@ input[type="password"]:focus {
     box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
 }
 
-/* blue progress bar */
+
 .storage-progress-bar {
     position: absolute;
     left: 0;
     top: 0;
     height: 100%;
-    width: 0%; /* updated by js */
-    background-color: #a6c5ff; /* blue from image */
+    width: 0%; 
+    background-color: #a6c5ff; 
     border-right: 2px solid black;
     transition: width 0.5s ease;
     z-index: 1;
@@ -1524,6 +1527,15 @@ input[type="password"]:focus {
 .announcement-container.open .close-storage {
     display: flex;
 }
+
+.announcement-container.open {
+    max-height: 400px; 
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 5px; 
+}
+
+
 
 .announcement-list {
     display: flex;
