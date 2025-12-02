@@ -206,37 +206,64 @@ function renderPendingFiles() {
 
 function renderAnnouncement() {
   const container = document.getElementById('announcementArea');
+  // get left container to manage gap
+  const leftContainer = document.querySelector('.left-container');
+  
   if (!container) return;
 
   container.innerHTML = '';
 
+  // manage gap based on list length
+  if (leftContainer) {
+    if (announcementList.length === 0) {
+        leftContainer.style.gap = '0px';
+    } else {
+        leftContainer.style.gap = ''; // revert to css default
+    }
+  }
+
   // loop through all announcements
   announcementList.forEach(annonce => {
     const wrapper = document.createElement('div');
-    wrapper.className = 'announcement-wrapper'; // container for grouped items
+    wrapper.className = 'announcement-wrapper';
     wrapper.style.marginBottom = "15px";
 
-    // text
-    if (annonce.content && annonce.content.trim() !== "") {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'announcement-item';
-        
-        // style
-        if (annonce.color && annonce.color.includes('gradient')) {
-            msgDiv.style.backgroundImage = annonce.color;
-        } else {
-            msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
-        }
+    // check if there is text content
+    const hasText = annonce.content && annonce.content.trim() !== "";
+    
+    // main box container
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'announcement-item';
+    
+    // style: apply color to the whole box
+    if (annonce.color && annonce.color.includes('gradient')) {
+        msgDiv.style.backgroundImage = annonce.color;
+    } else {
+        msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
+    }
 
-        // admin delete
+    // layout
+    msgDiv.style.display = 'flex';
+    msgDiv.style.flexDirection = 'column';
+    msgDiv.style.justifyContent = 'center';
+    msgDiv.style.gap = '8px';
+
+    // 1. render text
+    if (hasText) {
+        const textRow = document.createElement('div');
+        textRow.style.display = 'flex';
+        textRow.style.justifyContent = 'space-between';
+        textRow.style.alignItems = 'center';
+        textRow.style.width = '100%';
+
         const deleteBtn = isRoomAdmin ? `
-            <button class="announcement-delete" title="Supprimer l'annonce">
+            <button class="announcement-delete" title="Supprimer">
                 <img src="./assets/icon/delete.png" alt="X">
             </button>
         ` : '';
 
-        msgDiv.innerHTML = `
-            <div class="announcement-content">
+        textRow.innerHTML = `
+            <div class="announcement-content" style="width:100%;">
                 <img src="./assets/icon/icon thin.png" class="announcement-icon" style="opacity:0.6;">
                 <span class="announcement-text">${annonce.content}</span>
             </div>
@@ -246,55 +273,98 @@ function renderAnnouncement() {
         `;
 
         if (isRoomAdmin) {
-            const btn = msgDiv.querySelector('.announcement-delete');
-            btn.addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
+            const btn = textRow.querySelector('.announcement-delete');
+            if(btn) btn.addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
         }
-
-        wrapper.appendChild(msgDiv);
-    } else if (isRoomAdmin && annonce.files && annonce.files.length > 0) {
-      // admin delete
-        const toolsDiv = document.createElement('div');
-        toolsDiv.style.textAlign = 'right';
-        toolsDiv.style.marginBottom = '5px';
-        toolsDiv.innerHTML = `<button class="text-xs text-red-500 hover:underline">Supprimer ce groupe</button>`;
-        toolsDiv.querySelector('button').addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
-        wrapper.appendChild(toolsDiv);
+        
+        msgDiv.appendChild(textRow);
     }
 
-    // files
+    // 2. render files
     if (annonce.files && annonce.files.length > 0) {
+        const fileContainer = document.createElement('div');
+        fileContainer.style.display = 'flex';
+        fileContainer.style.flexDirection = 'column';
+        fileContainer.style.gap = '4px';
+        fileContainer.style.width = '100%';
+
         annonce.files.forEach(file => {
-            const fileDiv = document.createElement('div');
-            fileDiv.className = 'announcement-item';
-            fileDiv.style.backgroundColor = '#ffffff';
-            fileDiv.style.marginTop = '4px'; // small gap between text and file
+            const fileRow = document.createElement('div');
+            fileRow.style.display = 'flex';
+            fileRow.style.alignItems = 'center';
+            fileRow.style.justifyContent = 'space-between';
+            fileRow.style.padding = '4px 0px';
+            fileRow.style.borderRadius = '4px';
+            fileRow.style.fontSize = '0.85em';
 
             const fName = file.originalName || file.name;
-            const ext = fName.split('.').pop();
+            const ext = fName.split('.').pop().toUpperCase();
+            const size = (file.size / 1024 / 1024).toFixed(1);
 
-            fileDiv.innerHTML = `
-                <div class="announcement-content">
-                    <img src="./assets/icon/icon thin.png" class="announcement-icon" style="filter:grayscale(1);">
-                    <span class="announcement-text" title="${fName}">${fName}</span>
-                    <span class="announcement-subtext">${ext.toUpperCase()} • ${(file.size/1024/1024).toFixed(1)} Mo</span>
-                </div>
-                <div class="announcement-actions">
-                    <button class="announcement-action-btn download-trigger">
-                        <img src="./assets/icon/icon thin.png" style="width:16px; transform:rotate(180deg);">
-                    </button>
-                </div>
+            // file info
+            const leftPart = document.createElement('div');
+            leftPart.style.display = 'flex';
+            leftPart.style.alignItems = 'center';
+            leftPart.style.gap = '6px';
+            leftPart.style.overflow = 'hidden';
+            
+            leftPart.innerHTML = `
+                <img src="./assets/icon/icon thin.png" style="width:14px; height:14px; filter:grayscale(1); opacity:0.8;">
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;" title="${fName}">${fName}</span>
+                <span style="opacity:0.7; font-size:0.9em;">(${ext} • ${size} Mo)</span>
             `;
 
-            const dlBtn = fileDiv.querySelector('.download-trigger');
-            dlBtn.addEventListener('click', (e) => {
+            // actions part
+            const actionsPart = document.createElement('div');
+            actionsPart.style.display = 'flex';
+            actionsPart.style.alignItems = 'center';
+            actionsPart.style.gap = '8px';
+
+            // download button
+            const dlBtn = document.createElement('button');
+            dlBtn.className = 'announcement-action-btn';
+            dlBtn.innerHTML = `<img src="./assets/icon/icon thin.png" style="width:14px; transform:rotate(180deg);">`;
+            dlBtn.title = "Télécharger";
+            dlBtn.onclick = (e) => {
                 e.preventDefault();
                 handleFileDownload(file.id, fName);
-            });
+            };
+            actionsPart.appendChild(dlBtn);
 
-            wrapper.appendChild(fileDiv);
+            // single file delete button (admin only)
+            if (isRoomAdmin) {
+                const fileDelBtn = document.createElement('button');
+                fileDelBtn.className = 'announcement-action-btn';
+                // style adjustment for delete action
+                fileDelBtn.style.borderColor = '#ff7070'; 
+                fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
+                fileDelBtn.title = "Supprimer ce fichier";
+                
+                fileDelBtn.onclick = (e) => handleDeleteFile(e, annonce.id, file.id, fileRow);
+                actionsPart.appendChild(fileDelBtn);
+            }
+
+            // delete group button (only if no text and admin) - kept for compatibility
+            if (!hasText && isRoomAdmin) {
+               // if you want to keep the "delete whole group" button when no text exists:
+               const groupDelBtn = document.createElement('button');
+               groupDelBtn.className = 'announcement-delete'; 
+               groupDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
+               groupDelBtn.title = "Supprimer tout le groupe";
+               groupDelBtn.onclick = (e) => handleDeleteAnnouncement(e, annonce.id, wrapper);
+               // append only if we want to allow deleting the whole container from here
+               // actionsPart.appendChild(groupDelBtn); 
+            }
+
+            fileRow.appendChild(leftPart);
+            fileRow.appendChild(actionsPart);
+            fileContainer.appendChild(fileRow);
         });
+
+        msgDiv.appendChild(fileContainer);
     }
 
+    wrapper.appendChild(msgDiv);
     container.appendChild(wrapper);
   });
 }
@@ -317,6 +387,31 @@ async function handleDeleteAnnouncement(e, id, domElement) {
             await syncAnnouncements();
         } else {
             alert("Erreur suppression.");
+            domElement.style.opacity = '1';
+        }
+    } catch (err) {
+        console.error(err);
+        domElement.style.opacity = '1';
+    }
+}
+
+async function handleDeleteFile(e, announcementId, fileId, domElement) {
+    e.preventDefault();
+    if (!confirm("Supprimer ce fichier ?")) return;
+
+    // visual feedback
+    domElement.style.opacity = '0.5';
+
+    try {
+        const res = await fetch(`${API_URL}/api/announcements/${announcementId}/files/${fileId}?userId=${userId}`, {
+            method: 'DELETE'
+        });
+        
+        if (res.ok) {
+            domElement.remove();
+            await syncAnnouncements();
+        } else {
+            alert("Erreur suppression fichier.");
             domElement.style.opacity = '1';
         }
     } catch (err) {
