@@ -185,30 +185,64 @@ function updateStorageUI() {
     }
   });
 
-  // update text
   const sizeText = document.getElementById('storageText');
   const countText = document.getElementById('fileCountText');
   const bar = document.getElementById('storageProgressBar');
   
-  // formatted size
-  const sizeFormatted = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
-  
-  if (sizeText) sizeText.textContent = `${sizeFormatted} Go / 1.5 Go`;
+  if (sizeText) sizeText.textContent = formatBytes(totalBytes) + ' / 1.5 Go';
   if (countText) countText.textContent = `${totalFiles} fichier${totalFiles > 1 ? 's' : ''} partagé${totalFiles > 1 ? 's' : ''}`;
 
-  // update bar width
   let pct = (totalBytes / MAX_STORAGE_BYTES) * 100;
-  if (pct < 5 && totalBytes > 0) pct = 5; // min visual
+  if (pct < 5 && totalBytes > 0) pct = 5;
   if (pct > 100) pct = 100;
-  
   if (bar) bar.style.width = `${pct}%`;
 
-  // update decorative back bars (randomized slightly for visual effect)
-  const stackBars = document.querySelectorAll('.stack-progress');
-  stackBars.forEach((b, i) => {
-    // slightly larger than main bar for visual style
-    b.style.width = `${Math.min(pct + (15 * (i+1)), 100)}%`; 
-  });
+
+  const stack1 = document.getElementById('stackCard1');
+  const stack2 = document.getElementById('stackCard2');
+  
+
+  const setStackCardStyle = (cardElement, annonce) => {
+    if (!cardElement) return;
+    
+    if (!annonce) {
+      cardElement.style.display = 'none';
+      return;
+    }
+
+    cardElement.style.display = 'flex'; 
+    
+
+    if (annonce.color && annonce.color.includes('gradient')) {
+        cardElement.style.backgroundImage = annonce.color;
+        cardElement.style.backgroundColor = '';
+    } else {
+        cardElement.style.backgroundColor = annonce.color || '#cdcdcd';
+        cardElement.style.backgroundImage = '';
+    }
+
+
+    cardElement.innerHTML = `
+        <div style="
+            width: 100%; 
+            padding: 0 25px; 
+            margin-top: 38px; /* Pousse le texte vers le bas pour qu'il soit visible sous la carte principale */
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            opacity: 0.7;
+        ">
+            <img src="./assets/icon/icon thin.png" style="width: 16px; height: 16px; object-fit: contain;">
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; font-size: 0.9rem;">
+                ${annonce.content || (annonce.files.length + ' fichier(s)')}
+            </span>
+        </div>
+    `;
+  };
+
+
+  setStackCardStyle(stack1, announcementList[0]);
+  setStackCardStyle(stack2, announcementList[1]);
 }
 
 // modified sync function

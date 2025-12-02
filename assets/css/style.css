@@ -1345,13 +1345,12 @@ input[type="password"]:focus {
 
 
 .admin-file-item {
-    position: relative; /* needed for absolute child */
-    overflow: hidden;   /* keeps the bar inside the border-radius */
-    z-index: 1;         /* creates a stacking context */
-    background: var(--bg-color); /* ensures background is solid */
+    position: relative; 
+    overflow: hidden;   
+    z-index: 1;     
+    background: var(--bg-color); 
 }
 
-/* ensure text stays on top of the bar */
 .admin-file-info, 
 .admin-file-delete {
     position: relative;
@@ -1370,7 +1369,7 @@ input[type="password"]:focus {
     z-index: 1;
 }
 
-/* percentage text */
+
 .file-progress-pct {
     font-weight: bold;
     font-size: 0.9em;
@@ -1397,7 +1396,7 @@ input[type="password"]:focus {
     transition: all 0.3s ease;
 }
 
-/* stacked cards effect */
+
 .stack-card {
     position: absolute;
     top: 0;
@@ -1410,6 +1409,14 @@ input[type="password"]:focus {
     z-index: 1;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: none; 
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.stack-card * {
+    pointer-events: none; 
+    user-select: none;
 }
 
 .card-1 {
