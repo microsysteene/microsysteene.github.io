@@ -160,12 +160,95 @@ async function decryptFile(blob) {
 
 // sync
 
+// constants
+const MAX_STORAGE_BYTES = 1.5 * 1024 * 1024 * 1024; // 1.5 Go in bytes
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0.00 Go';
+  const sizes = ['o', 'Ko', 'Mo', 'Go', 'To'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const val = (bytes / Math.pow(1024, i)).toFixed(2);
+  // force display in Go if close to it, purely for ui match
+  if (i < 3) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' Go';
+  return `${val} ${sizes[i]}`;
+}
+
+// update storage ui based on files
+function updateStorageUI() {
+  let totalBytes = 0;
+  let totalFiles = 0;
+
+  announcementList.forEach(a => {
+    if (a.files && a.files.length > 0) {
+      totalFiles += a.files.length;
+      a.files.forEach(f => totalBytes += f.size);
+    }
+  });
+
+  // update text
+  const sizeText = document.getElementById('storageText');
+  const countText = document.getElementById('fileCountText');
+  const bar = document.getElementById('storageProgressBar');
+  
+  // formatted size
+  const sizeFormatted = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+  
+  if (sizeText) sizeText.textContent = `${sizeFormatted} Go / 1.5 Go`;
+  if (countText) countText.textContent = `${totalFiles} fichier${totalFiles > 1 ? 's' : ''} partagé${totalFiles > 1 ? 's' : ''}`;
+
+  // update bar width
+  let pct = (totalBytes / MAX_STORAGE_BYTES) * 100;
+  if (pct < 5 && totalBytes > 0) pct = 5; // min visual
+  if (pct > 100) pct = 100;
+  
+  if (bar) bar.style.width = `${pct}%`;
+
+  // update decorative back bars (randomized slightly for visual effect)
+  const stackBars = document.querySelectorAll('.stack-progress');
+  stackBars.forEach((b, i) => {
+    // slightly larger than main bar for visual style
+    b.style.width = `${Math.min(pct + (15 * (i+1)), 100)}%`; 
+  });
+}
+
+// modified sync function
 async function syncAnnouncements() {
   const data = await apiCall(`/api/announcements/${roomCode}`);
 
   if (Array.isArray(data)) {
     announcementList = data;
+    updateStorageUI(); // calc size
     renderAnnouncement();
+  }
+}
+
+// setup interaction
+function setupStorageWidget() {
+  const widget = document.getElementById('storageWidget');
+  const container = document.getElementById('announcementContainer');
+  const closeBtn = document.getElementById('closeStorageBtn');
+  const list = document.getElementById('announcementArea');
+
+  if (!widget || !container) return;
+
+  // open on main click
+  widget.addEventListener('click', (e) => {
+    // ignore if clicking close button
+    if (e.target.closest('.close-storage')) return;
+    
+    if (!container.classList.contains('open')) {
+      container.classList.add('open');
+      list.classList.remove('hidden');
+    }
+  });
+
+  // close on x button
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // prevent reopen
+      container.classList.remove('open');
+      list.classList.add('hidden');
+    });
   }
 }
 
@@ -931,6 +1014,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadFilters();
 
   await syncAnnouncements();
+
+  setupStorageWidget();
 
   renderTickets();
   connectWebSocket();
