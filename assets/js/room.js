@@ -9,6 +9,10 @@ let MAX_DURING_TICKET = 1; // let allows updates
 let cryptoKey = null; // derived from room code
 let currentFilesList = []; // store files list for announcement display
 
+// announcement state
+let currentAnnonce = "";
+let currentAnnonceColor = "#cdcdcd";
+
 // copy features
 function initFeatures() {
   // copy link button
@@ -26,7 +30,7 @@ function initFeatures() {
         textSpan.textContent = "Copié !";
         setTimeout(() => textSpan.textContent = originalText, 2000);
       }).catch(err => {
-        console.error('Erreur copie :', err);
+        console.error('copy error :', err);
         alert("Échec de la copie du lien.");
       });
     });
@@ -65,7 +69,6 @@ if (!roomCode) {
 }
 
 let ws = null;
-let currentAnnonce = "";
 let lastTicketIds = new Set();
 let filterCache = [];
 let isRendering = false;
@@ -164,7 +167,6 @@ async function syncRoomFiles() {
 
   // render announcement with files
   renderAnnouncement();
-  updateDeleteButtonVisibility();
   
   // render list inside admin form
   renderFormFiles();
@@ -267,116 +269,189 @@ function renderRoomFilesList(files) {
   });
 }
 
+// track uploaded file IDs to animate only new files
+let previousFileIds = new Set();
+
 // render files inside admin form
 function renderFormFiles() {
-  const container = document.getElementById('fileUploadContainer');
-  if (!container) return;
-
-  // check if list container exists, create if not
-  let listDiv = document.getElementById('adminFilesList');
-  if (!listDiv) {
-    listDiv = document.createElement('div');
-    listDiv.id = 'adminFilesList';
-    listDiv.className = 'admin-files-list';
-    // basic style for the list
-    listDiv.style.marginTop = "10px";
-    listDiv.style.width = "100%";
-    container.appendChild(listDiv);
-  }
+  const listDiv = document.getElementById('adminFilesList');
+  if (!listDiv) return;
 
   listDiv.innerHTML = '';
+
+  if (currentFilesList.length === 0) {
+    return; // show nothing if no files
+  }
 
   // loop global files list
   currentFilesList.forEach(f => {
     const item = document.createElement('div');
-    // simple styling
-    item.style.display = "flex";
-    item.style.justifyContent = "space-between";
-    item.style.alignItems = "center";
-    item.style.background = "rgba(0,0,0,0.05)";
-    item.style.padding = "5px 10px";
-    item.style.marginBottom = "5px";
-    item.style.borderRadius = "4px";
-    item.style.fontSize = "13px";
+    item.className = 'admin-file-item';
+    
+    // add animation class only if file is new
+    if (!previousFileIds.has(f.id)) {
+      item.classList.add('new-file');
+    }
 
     const fName = f.originalName || f.name;
+    const fileSize = (f.size / (1024 * 1024)).toFixed(1); // convert to MB
 
     item.innerHTML = `
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%;">${fName}</span>
-      <button class="del-btn" style="background:none;border:none;color:red;cursor:pointer;font-weight:bold;">✕</button>
+      <div class="admin-file-info">
+        <span class="admin-file-name">${fName}</span>
+        <span class="admin-file-size">${fileSize} Mo</span>
+      </div>
+      <button class="admin-file-delete" title="Supprimer">×</button>
+      <div class="admin-file-progress"></div>
     `;
 
     // attach delete event
-    item.querySelector('.del-btn').onclick = (e) => {
+    item.querySelector('.admin-file-delete').addEventListener('click', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       deleteFile(f.id);
-    };
+    });
 
     listDiv.appendChild(item);
   });
+  
+  // update tracked files
+  previousFileIds = new Set(currentFilesList.map(f => f.id));
 }
 
-// render announcement combined (text + files)
+// render separate boxes for text and files (updated)
 function renderAnnouncement() {
-  const msgDiv = document.getElementById('message');
-  if (!msgDiv) return;
+  // target the new container
+  const container = document.getElementById('announcementArea');
+  if (!container) return;
 
-  // hide if empty
-  if (!currentAnnonce && currentFilesList.length === 0) {
-    msgDiv.style.display = 'none';
-    return;
-  }
+  container.innerHTML = ''; // clear current list
 
-  msgDiv.style.display = 'block';
-  msgDiv.innerHTML = ''; // clear
-
-  // 1. render text
+  // 1. render text message as a box (if exists)
   if (currentAnnonce) {
-    const textSpan = document.createElement('div');
-    textSpan.className = 'message-content';
-    textSpan.textContent = currentAnnonce;
-
-    // remove margin if no files attached
-    if (currentFilesList.length === 0) {
-      textSpan.style.marginBottom = "0";
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'announcement-item';
+    
+    // apply background color from db
+    if (currentAnnonceColor.includes('gradient')) {
+        msgDiv.style.backgroundImage = currentAnnonceColor;
+    } else {
+        msgDiv.style.backgroundColor = currentAnnonceColor;
     }
 
-    msgDiv.appendChild(textSpan);
+    // delete button (only if admin)
+    const deleteBtn = isRoomAdmin ? `
+        <button class="announcement-delete" title="Supprimer le message">
+            <img src="./assets/icon/delete.png" alt="X">
+        </button>
+    ` : '';
+
+    msgDiv.innerHTML = `
+        <div class="announcement-content">
+            <img src="./assets/icon/icon thin.png" class="announcement-icon" style="opacity:0.6;">
+            <span class="announcement-text" title="${currentAnnonce}">${currentAnnonce}</span>
+        </div>
+        <div class="announcement-actions">
+            ${deleteBtn}
+        </div>
+    `;
+
+    // attach delete event for text
+    if (isRoomAdmin) {
+        const btn = msgDiv.querySelector('.announcement-delete');
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // confirm before animation
+                if(confirm("Supprimer le message ?")) {
+                    // add ticket animation class
+                    msgDiv.classList.add('bounce-reverse');
+                    
+                    // wait for animation end
+                    msgDiv.addEventListener('animationend', async () => {
+                        await updateAnnonceApi("");
+                        msgDiv.remove();
+                    }, { once: true });
+                }
+            });
+        }
+    }
+
+    container.appendChild(msgDiv);
   }
 
-  // 2. render files buttons
-  if (currentFilesList.length > 0) {
-    const filesContainer = document.createElement('div');
-    filesContainer.className = 'message-files';
-
+  // 2. render file boxes
+  if (currentFilesList && currentFilesList.length > 0) {
     currentFilesList.forEach(file => {
-      const btn = document.createElement('button');
-      btn.className = 'message-file-btn';
-      // use originalName if available (from db), else name
-      const fName = file.originalName || file.name; 
-      btn.innerHTML = `<span>📎</span> ${fName}`;
-      
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleFileDownload(file.id, fName);
-      };
-      
-      filesContainer.appendChild(btn);
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'announcement-item';
+        fileDiv.style.backgroundColor = '#ffffff'; // files are white usually
+
+        const fName = file.originalName || file.name;
+        // simple file extension detection
+        const ext = fName.split('.').pop(); 
+
+        // delete button (only if admin)
+        const deleteBtn = isRoomAdmin ? `
+            <button class="announcement-delete" title="Supprimer le fichier">
+                <img src="./assets/icon/delete.png" alt="X">
+            </button>
+        ` : '';
+
+        fileDiv.innerHTML = `
+            <div class="announcement-content">
+                <img src="./assets/icon/icon thin.png" class="announcement-icon" style="filter:grayscale(1);">
+                <span class="announcement-text" title="${fName}">${fName}</span>
+                <span class="announcement-subtext">${ext.toUpperCase()} • ${(file.size/1024/1024).toFixed(1)} Mo</span>
+            </div>
+            <div class="announcement-actions">
+                <button class="announcement-action-btn download-trigger">
+                    <img src="./assets/icon/icon thin.png" style="width:16px; transform:rotate(180deg);">
+                </button>
+                ${deleteBtn}
+            </div>
+        `;
+
+        // attach download event
+        const dlBtn = fileDiv.querySelector('.download-trigger');
+        dlBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleFileDownload(file.id, fName);
+        });
+
+        // attach delete event for file
+        if (isRoomAdmin) {
+            const delBtn = fileDiv.querySelector('.announcement-delete');
+            if (delBtn) {
+                delBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // confirm before animation
+                    if(confirm("Supprimer ce fichier ?")) {
+                        // add ticket animation class
+                        fileDiv.classList.add('bounce-reverse');
+
+                        // wait for animation end then delete
+                        fileDiv.addEventListener('animationend', async () => {
+                            // manual delete call to avoid double confirm from deleteFile()
+                            try {
+                                const res = await fetch(`${API_URL}/api/files/${file.id}?userId=${userId}&roomCode=${roomCode}`, {
+                                    method: 'DELETE'
+                                });
+                                if (res.ok) {
+                                    fileDiv.remove();
+                                    await syncRoomFiles(); // sync list
+                                }
+                            } catch(err) {
+                                console.error(err);
+                            }
+                        }, { once: true });
+                    }
+                });
+            }
+        }
+
+        container.appendChild(fileDiv);
     });
-
-    msgDiv.appendChild(filesContainer);
-  }
-}
-
-// update delete button visibility (admin only)
-function updateDeleteButtonVisibility() {
-  if (isRoomAdmin) {
-    const deleteBtn = document.getElementById('deleteAnnonce');
-    if (deleteBtn) {
-      const hasContent = currentAnnonce || (currentFilesList && currentFilesList.length > 0);
-      deleteBtn.style.display = hasContent ? 'flex' : 'none';
-    }
   }
 }
 
@@ -414,18 +489,12 @@ function connectWebSocket() {
   };
 }
 
-// update announcement ui
+// update announcement ui (updated)
 function handleAnnonceUpdate(data) {
   currentAnnonce = data.texte || "";
-  const color = data.couleur || "#cdcdcd";
+  currentAnnonceColor = data.couleur || "#cdcdcd";
 
-  const msgDiv = document.getElementById('message');
-  if (msgDiv) {
-    msgDiv.style.color = color;
-  }
-  
   renderAnnouncement();
-  updateDeleteButtonVisibility();
 }
 
 // api functions
@@ -696,7 +765,7 @@ function setAdminMode(enable) {
   const createBtnText = document.querySelector('#createbutton .text');
   const nameInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
-  const modalTitle = document.getElementById('lefttitle');
+  const modalTitle = document.querySelector('#formOverlay h1');
   const uploadContainer = document.getElementById('fileUploadContainer');
 
   // get admin settings section
@@ -721,8 +790,6 @@ function setAdminMode(enable) {
     // update files list in admin
     renderFormFiles();
 
-    updateDeleteButtonVisibility();
-
   } else {
     // hide admin settings
     if (adminSettings) adminSettings.style.display = 'none';
@@ -738,33 +805,29 @@ function setAdminMode(enable) {
     
     // hide upload field in user mode
     if (uploadContainer) uploadContainer.style.display = 'none';
-
-    // always hide delete button
-    const deleteBtn = document.getElementById('deleteAnnonce');
-    if (deleteBtn) deleteBtn.style.display = 'none';
   }
+  
+  // refresh announcement list to toggle delete buttons
+  renderAnnouncement();
   renderTickets();
 }
 
-// --- upload logic (new) ---
+// --- upload logic ---
 
 // set ui state during upload
 function setUploadingState(uploading) {
   isUploading = uploading;
   const warning = document.getElementById('uploadWarning');
   const createBtn = document.getElementById('create');
-  const deleteBtn = document.getElementById('deleteAnnonce');
   
   if (uploading) {
     if (warning) warning.style.display = 'block';
     if (createBtn) createBtn.classList.add('button-disabled');
-    if (deleteBtn) deleteBtn.classList.add('button-disabled');
   } else {
     // only hide if no active uploads remaining
     if (activeUploads.length === 0) {
       if (warning) warning.style.display = 'none';
       if (createBtn) createBtn.classList.remove('button-disabled');
-      if (deleteBtn) deleteBtn.classList.remove('button-disabled');
     }
   }
 }
@@ -779,10 +842,14 @@ async function uploadFile(file) {
   const div = document.createElement('div');
   div.className = 'upload-item';
   div.id = uiId;
+  
+  const displayName = file.name.length > 25 ? file.name.substring(0, 22) + '...' : file.name;
+  const fileSize = (file.size / (1024 * 1024)).toFixed(1);
+  
   div.innerHTML = `
     <div class="upload-info">
-      <span>${file.name.length > 25 ? file.name.substring(0,22)+'...' : file.name}</span>
-      <span class="pct">Encrypting...</span>
+      <span>${displayName}</span>
+      <span class="pct">0%</span>
     </div>
     <div class="progress-bar-bg">
       <div class="progress-bar-fill"></div>
@@ -793,7 +860,6 @@ async function uploadFile(file) {
   try {
     // 1. encrypt
     const encryptedBlob = await encryptFile(file);
-    div.querySelector('.pct').textContent = "0%";
 
     // 2. upload with progress via xhr
     const formData = new FormData();
@@ -823,20 +889,22 @@ async function uploadFile(file) {
         
         if (xhr.status === 200 || xhr.status === 201) {
             console.log("upload complete", file.name);
-            div.querySelector('.pct').textContent = "Done";
-            div.querySelector('.progress-bar-fill').style.backgroundColor = "#79e056"; // green
+            div.querySelector('.pct').textContent = "✓";
+            const fillBar = div.querySelector('.progress-bar-fill');
+            fillBar.style.background = "A6C5FF";
             
             // refresh list from server
             await syncRoomFiles();
             
-            // remove ui after small delay
+            // transform upload element to static file element after a delay
             setTimeout(() => {
                 div.remove();
                 if (activeUploads.length === 0) setUploadingState(false);
-            }, 1000);
+            }, 800);
         } else {
-            div.querySelector('.pct').textContent = "Error";
-            div.querySelector('.progress-bar-fill').style.backgroundColor = "#ff7070";
+            div.querySelector('.pct').textContent = "✕";
+            const fillBar = div.querySelector('.progress-bar-fill');
+            fillBar.style.background = "linear-gradient(90deg, #ff7070 0%, #ff5050 100%)";
             alert("Erreur upload: " + xhr.statusText);
             activeUploads = activeUploads.filter(x => x !== xhr);
             if (activeUploads.length === 0) setUploadingState(false);
@@ -844,7 +912,9 @@ async function uploadFile(file) {
     };
 
     xhr.onerror = () => {
-        div.querySelector('.pct').textContent = "Fail";
+        div.querySelector('.pct').textContent = "✕";
+        const fillBar = div.querySelector('.progress-bar-fill');
+        fillBar.style.background = "linear-gradient(90deg, #ff7070 0%, #ff5050 100%)";
         activeUploads = activeUploads.filter(x => x !== xhr);
         if (activeUploads.length === 0) setUploadingState(false);
     };
@@ -853,7 +923,8 @@ async function uploadFile(file) {
 
   } catch (err) {
     console.error(err);
-    div.querySelector('.pct').textContent = "Error Encrypt";
+    div.querySelector('.pct').textContent = "Erreur";
+    div.querySelector('.progress-bar-fill').style.backgroundColor = "#ff7070";
     if (activeUploads.length === 0) setUploadingState(false);
   }
 }
@@ -988,17 +1059,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     handleFormSubmit();
   });
-
-  // delete announcement (admin)
-  document.getElementById('deleteAnnonce')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (!isRoomAdmin) return;
-    if (activeUploads.length > 0) return;
-    if (confirm("Supprimer l'annonce ?")) {
-      await updateAnnonceApi("");
-      closeAllOverlays();
-    }
-  });
   
   // open create menu (updated)
   document.getElementById("createbutton").addEventListener('click', (e) => {
@@ -1086,7 +1146,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       fileInput.value = ''; 
     });
 
-    // Empêcher le comportement par défaut
+    // prevent default
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
       dropArea.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -1108,7 +1168,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Gestion du Drop
+    // drop handle
     dropArea.addEventListener('drop', (e) => {
       dragCounter = 0;
       dropArea.classList.remove('drag-over');

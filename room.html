@@ -35,7 +35,7 @@
         </div>
       </div>
 
-      <p class="div" id="message"> a finir avant 11h30 !</p>
+      <div id="announcementArea" class="announcement-list"></div>
 
       <div class="menu-overlay" id="formOverlay" style="display: none;">
           <div class="menu-box">
@@ -50,9 +50,12 @@
                   <div class="file-upload-container" id="fileUploadContainer" style="margin: 15px 0;">
                       <input type="file" id="fileInput" multiple>
                       <div class="file-drop-area" id="dropArea">
-                          <span class="file-placeholder">+ Ajouter un fichier</span>
+                          <div class="drop-area-content">
+                              <span class="file-placeholder">+ Ajouter un fichier</span>
+                              <div id="adminFilesList" class="admin-files-list"></div>
+                              <div id="uploadProgressContainer" class="upload-status-container"></div>
+                          </div>
                       </div>
-                      <div id="uploadProgressContainer" class="upload-status-container"></div>
                       <p id="uploadWarning" class="upload-warning">Exportation...</p>
                   </div>
 
