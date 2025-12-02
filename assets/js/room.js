@@ -13,6 +13,33 @@ let cryptoKey = null;
 let announcementList = [];
 let pendingFiles = [];
 
+// upload state
+let isSending = false;
+window.currentXhr = null; // store xhr to allow abort
+let lastDotInterval = null;
+
+function startTraitementDots(idx) {
+  // Clear any existing interval
+  if (lastDotInterval) clearInterval(lastDotInterval);
+  const txt = document.getElementById(`prog-txt-${idx}`);
+  if (!txt) return;
+  const states = ['traitement.', 'traitement..', 'traitement...'];
+  let i = 0;
+  txt.textContent = states[i];
+  txt.style.fontSize = '0.8em';
+  lastDotInterval = setInterval(() => {
+    i = (i + 1) % states.length;
+    txt.textContent = states[i];
+  }, 500);
+}
+
+function stopTraitementDots() {
+  if (lastDotInterval) {
+    clearInterval(lastDotInterval);
+    lastDotInterval = null;
+  }
+}
+
 function initFeatures() {
   // copy link
   const copyBtn = document.getElementById('copyLink');
@@ -62,7 +89,6 @@ let lastTicketIds = new Set();
 let filterCache = [];
 let isRendering = false;
 let isRoomAdmin = false;
-let isSending = false; // replaces isUploading for form submit
 
 let userId = localStorage.getItem('userId');
 if (!userId) {
@@ -91,7 +117,7 @@ async function initCrypto() {
   cryptoKey = await window.crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
-      salt: enc.encode("ticket-static-salt"), 
+      salt: enc.encode("ticket-static-salt"),
       iterations: 100000,
       hash: "SHA-256"
     },
@@ -107,7 +133,7 @@ async function initCrypto() {
 async function encryptFile(file) {
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   const buffer = await file.arrayBuffer();
-  
+
   const encryptedContent = await window.crypto.subtle.encrypt(
     { name: "AES-GCM", iv: iv },
     cryptoKey,
@@ -134,12 +160,95 @@ async function decryptFile(blob) {
 
 // sync
 
+// constants
+const MAX_STORAGE_BYTES = 1.5 * 1024 * 1024 * 1024; // 1.5 Go in bytes
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0.00 Go';
+  const sizes = ['o', 'Ko', 'Mo', 'Go', 'To'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const val = (bytes / Math.pow(1024, i)).toFixed(2);
+  // force display in Go if close to it, purely for ui match
+  if (i < 3) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' Go';
+  return `${val} ${sizes[i]}`;
+}
+
+// update storage ui based on files
+function updateStorageUI() {
+  let totalBytes = 0;
+  let totalFiles = 0;
+
+  announcementList.forEach(a => {
+    if (a.files && a.files.length > 0) {
+      totalFiles += a.files.length;
+      a.files.forEach(f => totalBytes += f.size);
+    }
+  });
+
+  // update text
+  const sizeText = document.getElementById('storageText');
+  const countText = document.getElementById('fileCountText');
+  const bar = document.getElementById('storageProgressBar');
+  
+  // formatted size
+  const sizeFormatted = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+  
+  if (sizeText) sizeText.textContent = `${sizeFormatted} Go / 1.5 Go`;
+  if (countText) countText.textContent = `${totalFiles} fichier${totalFiles > 1 ? 's' : ''} partagé${totalFiles > 1 ? 's' : ''}`;
+
+  // update bar width
+  let pct = (totalBytes / MAX_STORAGE_BYTES) * 100;
+  if (pct < 5 && totalBytes > 0) pct = 5; // min visual
+  if (pct > 100) pct = 100;
+  
+  if (bar) bar.style.width = `${pct}%`;
+
+  // update decorative back bars (randomized slightly for visual effect)
+  const stackBars = document.querySelectorAll('.stack-progress');
+  stackBars.forEach((b, i) => {
+    // slightly larger than main bar for visual style
+    b.style.width = `${Math.min(pct + (15 * (i+1)), 100)}%`; 
+  });
+}
+
+// modified sync function
 async function syncAnnouncements() {
   const data = await apiCall(`/api/announcements/${roomCode}`);
-  
+
   if (Array.isArray(data)) {
     announcementList = data;
+    updateStorageUI(); // calc size
     renderAnnouncement();
+  }
+}
+
+// setup interaction
+function setupStorageWidget() {
+  const widget = document.getElementById('storageWidget');
+  const container = document.getElementById('announcementContainer');
+  const closeBtn = document.getElementById('closeStorageBtn');
+  const list = document.getElementById('announcementArea');
+
+  if (!widget || !container) return;
+
+  // open on main click
+  widget.addEventListener('click', (e) => {
+    // ignore if clicking close button
+    if (e.target.closest('.close-storage')) return;
+    
+    if (!container.classList.contains('open')) {
+      container.classList.add('open');
+      list.classList.remove('hidden');
+    }
+  });
+
+  // close on x button
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // prevent reopen
+      container.classList.remove('open');
+      list.classList.add('hidden');
+    });
   }
 }
 
@@ -155,7 +264,7 @@ async function handleFileDownload(fileId, fileName) {
   try {
     const blobToDecrypt = await fetchFileContent(fileId);
     const clearBlob = await decryptFile(blobToDecrypt);
-    
+
     const url = URL.createObjectURL(clearBlob);
     const a = document.createElement('a');
     a.href = url;
@@ -164,7 +273,7 @@ async function handleFileDownload(fileId, fileName) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
   } catch (e) {
     console.error('download/decrypt error', e);
     alert("Erreur lors du téléchargement.");
@@ -182,20 +291,25 @@ function renderPendingFiles() {
   pendingFiles.forEach((file, index) => {
     const item = document.createElement('div');
     item.className = 'admin-file-item';
-    
+
     const fileSize = (file.size / (1024 * 1024)).toFixed(1);
 
+    // render with progress bar structure
     item.innerHTML = `
+      <div class="file-progress-bar" id="prog-bar-${index}"></div>
       <div class="admin-file-info">
         <span class="admin-file-name">${file.name}</span>
         <span class="admin-file-size">${fileSize} Mo</span>
+        <span class="file-progress-pct" id="prog-txt-${index}"></span>
       </div>
       <button class="admin-file-delete" data-idx="${index}" title="Retirer">×</button>
     `;
 
-    // remove from pending list
+    // remove from pending list with check
     item.querySelector('.admin-file-delete').addEventListener('click', (e) => {
       e.preventDefault();
+      if (isSending) return alert("Upload en cours, impossible de retirer.");
+
       pendingFiles.splice(index, 1);
       renderPendingFiles();
     });
@@ -206,63 +320,55 @@ function renderPendingFiles() {
 
 function renderAnnouncement() {
   const container = document.getElementById('announcementArea');
-  // get left container to manage gap
   const leftContainer = document.querySelector('.left-container');
-  
+
   if (!container) return;
 
   container.innerHTML = '';
 
-  // manage gap based on list length
   if (leftContainer) {
     if (announcementList.length === 0) {
-        leftContainer.style.gap = '0px';
+      leftContainer.style.gap = '0px';
     } else {
-        leftContainer.style.gap = ''; // revert to css default
+      leftContainer.style.gap = '';
     }
   }
 
-  // loop through all announcements
   announcementList.forEach(annonce => {
     const wrapper = document.createElement('div');
     wrapper.className = 'announcement-wrapper';
     wrapper.style.marginBottom = "15px";
 
-    // check if there is text content
     const hasText = annonce.content && annonce.content.trim() !== "";
-    
-    // main box container
+
     const msgDiv = document.createElement('div');
     msgDiv.className = 'announcement-item';
-    
-    // style: apply color to the whole box
+
     if (annonce.color && annonce.color.includes('gradient')) {
-        msgDiv.style.backgroundImage = annonce.color;
+      msgDiv.style.backgroundImage = annonce.color;
     } else {
-        msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
+      msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
     }
 
-    // layout
     msgDiv.style.display = 'flex';
     msgDiv.style.flexDirection = 'column';
     msgDiv.style.justifyContent = 'center';
     msgDiv.style.gap = '8px';
 
-    // 1. render text
     if (hasText) {
-        const textRow = document.createElement('div');
-        textRow.style.display = 'flex';
-        textRow.style.justifyContent = 'space-between';
-        textRow.style.alignItems = 'center';
-        textRow.style.width = '100%';
+      const textRow = document.createElement('div');
+      textRow.style.display = 'flex';
+      textRow.style.justifyContent = 'space-between';
+      textRow.style.alignItems = 'center';
+      textRow.style.width = '100%';
 
-        const deleteBtn = isRoomAdmin ? `
+      const deleteBtn = isRoomAdmin ? `
             <button class="announcement-delete" title="Supprimer">
                 <img src="./assets/icon/delete.png" alt="X">
             </button>
         ` : '';
 
-        textRow.innerHTML = `
+      textRow.innerHTML = `
             <div class="announcement-content" style="width:100%;">
                 <img src="./assets/icon/icon thin.png" class="announcement-icon" style="opacity:0.6;">
                 <span class="announcement-text">${annonce.content}</span>
@@ -272,96 +378,78 @@ function renderAnnouncement() {
             </div>
         `;
 
-        if (isRoomAdmin) {
-            const btn = textRow.querySelector('.announcement-delete');
-            if(btn) btn.addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
-        }
-        
-        msgDiv.appendChild(textRow);
+      if (isRoomAdmin) {
+        const btn = textRow.querySelector('.announcement-delete');
+        if (btn) btn.addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
+      }
+
+      msgDiv.appendChild(textRow);
     }
 
-    // 2. render files
     if (annonce.files && annonce.files.length > 0) {
-        const fileContainer = document.createElement('div');
-        fileContainer.style.display = 'flex';
-        fileContainer.style.flexDirection = 'column';
-        fileContainer.style.gap = '4px';
-        fileContainer.style.width = '100%';
+      const fileContainer = document.createElement('div');
+      fileContainer.style.display = 'flex';
+      fileContainer.style.flexDirection = 'column';
+      fileContainer.style.gap = '4px';
+      fileContainer.style.width = '100%';
 
-        annonce.files.forEach(file => {
-            const fileRow = document.createElement('div');
-            fileRow.style.display = 'flex';
-            fileRow.style.alignItems = 'center';
-            fileRow.style.justifyContent = 'space-between';
-            fileRow.style.padding = '4px 0px';
-            fileRow.style.borderRadius = '4px';
-            fileRow.style.fontSize = '0.85em';
+      annonce.files.forEach(file => {
+        const fileRow = document.createElement('div');
+        fileRow.style.display = 'flex';
+        fileRow.style.alignItems = 'center';
+        fileRow.style.justifyContent = 'space-between';
+        fileRow.style.padding = '4px 0px';
+        fileRow.style.borderRadius = '4px';
+        fileRow.style.fontSize = '0.85em';
 
-            const fName = file.originalName || file.name;
-            const ext = fName.split('.').pop().toUpperCase();
-            const size = (file.size / 1024 / 1024).toFixed(1);
+        const fName = file.originalName || file.name;
+        const ext = fName.split('.').pop().toUpperCase();
+        const size = (file.size / 1024 / 1024).toFixed(1);
 
-            // file info
-            const leftPart = document.createElement('div');
-            leftPart.style.display = 'flex';
-            leftPart.style.alignItems = 'center';
-            leftPart.style.gap = '6px';
-            leftPart.style.overflow = 'hidden';
-            
-            leftPart.innerHTML = `
+        const leftPart = document.createElement('div');
+        leftPart.style.display = 'flex';
+        leftPart.style.alignItems = 'center';
+        leftPart.style.gap = '6px';
+        leftPart.style.overflow = 'hidden';
+
+        leftPart.innerHTML = `
                 <img src="./assets/icon/icon thin.png" style="width:14px; height:14px; filter:grayscale(1); opacity:0.8;">
                 <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;" title="${fName}">${fName}</span>
                 <span style="opacity:0.7; font-size:0.9em;">(${ext} • ${size} Mo)</span>
             `;
 
-            // actions part
-            const actionsPart = document.createElement('div');
-            actionsPart.style.display = 'flex';
-            actionsPart.style.alignItems = 'center';
-            actionsPart.style.gap = '8px';
+        const actionsPart = document.createElement('div');
+        actionsPart.style.display = 'flex';
+        actionsPart.style.alignItems = 'center';
+        actionsPart.style.gap = '8px';
 
-            // download button
-            const dlBtn = document.createElement('button');
-            dlBtn.className = 'announcement-action-btn';
-            dlBtn.innerHTML = `<img src="./assets/icon/icon thin.png" style="width:14px; transform:rotate(180deg);">`;
-            dlBtn.title = "Télécharger";
-            dlBtn.onclick = (e) => {
-                e.preventDefault();
-                handleFileDownload(file.id, fName);
-            };
-            actionsPart.appendChild(dlBtn);
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'announcement-action-btn';
+        dlBtn.innerHTML = `<img src="./assets/icon/icon thin.png" style="width:14px; transform:rotate(180deg);">`;
+        dlBtn.title = "Télécharger";
+        dlBtn.onclick = (e) => {
+          e.preventDefault();
+          handleFileDownload(file.id, fName);
+        };
+        actionsPart.appendChild(dlBtn);
 
-            // single file delete button (admin only)
-            if (isRoomAdmin) {
-                const fileDelBtn = document.createElement('button');
-                fileDelBtn.className = 'announcement-action-btn';
-                // style adjustment for delete action
-                fileDelBtn.style.borderColor = '#ff7070'; 
-                fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
-                fileDelBtn.title = "Supprimer ce fichier";
-                
-                fileDelBtn.onclick = (e) => handleDeleteFile(e, annonce.id, file.id, fileRow);
-                actionsPart.appendChild(fileDelBtn);
-            }
+        if (isRoomAdmin) {
+          const fileDelBtn = document.createElement('button');
+          fileDelBtn.className = 'announcement-action-btn';
+          fileDelBtn.style.borderColor = '#ff7070';
+          fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
+          fileDelBtn.title = "Supprimer ce fichier";
 
-            // delete group button (only if no text and admin) - kept for compatibility
-            if (!hasText && isRoomAdmin) {
-               // if you want to keep the "delete whole group" button when no text exists:
-               const groupDelBtn = document.createElement('button');
-               groupDelBtn.className = 'announcement-delete'; 
-               groupDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
-               groupDelBtn.title = "Supprimer tout le groupe";
-               groupDelBtn.onclick = (e) => handleDeleteAnnouncement(e, annonce.id, wrapper);
-               // append only if we want to allow deleting the whole container from here
-               // actionsPart.appendChild(groupDelBtn); 
-            }
+          fileDelBtn.onclick = (e) => handleDeleteFile(e, annonce.id, file.id, fileRow);
+          actionsPart.appendChild(fileDelBtn);
+        }
 
-            fileRow.appendChild(leftPart);
-            fileRow.appendChild(actionsPart);
-            fileContainer.appendChild(fileRow);
-        });
+        fileRow.appendChild(leftPart);
+        fileRow.appendChild(actionsPart);
+        fileContainer.appendChild(fileRow);
+      });
 
-        msgDiv.appendChild(fileContainer);
+      msgDiv.appendChild(fileContainer);
     }
 
     wrapper.appendChild(msgDiv);
@@ -370,54 +458,51 @@ function renderAnnouncement() {
 }
 
 async function handleDeleteAnnouncement(e, id, domElement) {
-    e.preventDefault();
-    if (!confirm("Supprimer cette annonce et ses fichiers ?")) return;
+  e.preventDefault();
+  if (!confirm("Supprimer cette annonce et ses fichiers ?")) return;
 
-    // visual feedback
-    domElement.style.opacity = '0.5';
+  domElement.style.opacity = '0.5';
 
-    try {
-        const res = await fetch(`${API_URL}/api/announcements/${id}?userId=${userId}`, {
-            method: 'DELETE'
-        });
-        
-        if (res.ok) {
-            domElement.remove();
-            // sync to be sure
-            await syncAnnouncements();
-        } else {
-            alert("Erreur suppression.");
-            domElement.style.opacity = '1';
-        }
-    } catch (err) {
-        console.error(err);
-        domElement.style.opacity = '1';
+  try {
+    const res = await fetch(`${API_URL}/api/announcements/${id}?userId=${userId}`, {
+      method: 'DELETE'
+    });
+
+    if (res.ok) {
+      domElement.remove();
+      await syncAnnouncements();
+    } else {
+      alert("Erreur suppression.");
+      domElement.style.opacity = '1';
     }
+  } catch (err) {
+    console.error(err);
+    domElement.style.opacity = '1';
+  }
 }
 
 async function handleDeleteFile(e, announcementId, fileId, domElement) {
-    e.preventDefault();
-    if (!confirm("Supprimer ce fichier ?")) return;
+  e.preventDefault();
+  if (!confirm("Supprimer ce fichier ?")) return;
 
-    // visual feedback
-    domElement.style.opacity = '0.5';
+  domElement.style.opacity = '0.5';
 
-    try {
-        const res = await fetch(`${API_URL}/api/announcements/${announcementId}/files/${fileId}?userId=${userId}`, {
-            method: 'DELETE'
-        });
-        
-        if (res.ok) {
-            domElement.remove();
-            await syncAnnouncements();
-        } else {
-            alert("Erreur suppression fichier.");
-            domElement.style.opacity = '1';
-        }
-    } catch (err) {
-        console.error(err);
-        domElement.style.opacity = '1';
+  try {
+    const res = await fetch(`${API_URL}/api/announcements/${announcementId}/files/${fileId}?userId=${userId}`, {
+      method: 'DELETE'
+    });
+
+    if (res.ok) {
+      domElement.remove();
+      await syncAnnouncements();
+    } else {
+      alert("Erreur suppression fichier.");
+      domElement.style.opacity = '1';
     }
+  } catch (err) {
+    console.error(err);
+    domElement.style.opacity = '1';
+  }
 }
 
 // websocket
@@ -437,7 +522,6 @@ function connectWebSocket() {
         renderTickets(true);
         checkRoomPermissions();
       }
-      // refresh announcements on specific event
       if (msg.type === 'updateAnnonce') {
         syncAnnouncements();
       }
@@ -678,10 +762,8 @@ function setAdminMode(enable) {
   const adminSettings = document.getElementById('adminSettingsSection');
 
   if (enable) {
-    // admin settings
     if (adminSettings) adminSettings.style.display = 'block';
 
-    // announcement mode
     if (createBtnText) createBtnText.textContent = "Nouveau message";
     if (nameInput) {
       nameInput.placeholder = "Message";
@@ -689,19 +771,15 @@ function setAdminMode(enable) {
     }
     if (infosInput) infosInput.style.display = 'none';
     if (modalTitle) modalTitle.textContent = "Nouveau message";
-    
-    // show upload
+
     if (uploadContainer) uploadContainer.style.display = 'flex';
-    
-    // clear pending
+
     pendingFiles = [];
     renderPendingFiles();
 
   } else {
-    // hide admin settings
     if (adminSettings) adminSettings.style.display = 'none';
 
-    // ticket mode
     if (createBtnText) createBtnText.textContent = "Nouveau tickets";
     if (nameInput) {
       nameInput.placeholder = "Nom";
@@ -709,23 +787,24 @@ function setAdminMode(enable) {
     }
     if (infosInput) infosInput.style.display = 'block';
     if (modalTitle) modalTitle.textContent = "Nouveau ticket";
-    
+
     if (uploadContainer) uploadContainer.style.display = 'none';
   }
-  
-  // refresh
+
   syncAnnouncements();
   renderTickets();
 }
 
 // submission
 
+// global var to handle abort
+window.currentXhr = null;
+
 async function handleFormSubmit() {
   if (isSending) return;
 
   const nameInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
-  
   const name = nameInput.value.trim();
   const description = infosInput.value.trim();
 
@@ -734,11 +813,10 @@ async function handleFormSubmit() {
   const forbidden = filterCache.find(term => content.includes(term.toLowerCase()));
   if (forbidden) return alert("Mot interdit détecté.");
 
-  // admin create
+  // --- ADMIN LOGIC ---
   if (isRoomAdmin) {
-    // validate
     if (!name && pendingFiles.length === 0) {
-        return alert("Veuillez entrer un message ou ajouter un fichier.");
+      return alert("Message ou fichier requis.");
     }
 
     isSending = true;
@@ -746,85 +824,175 @@ async function handleFormSubmit() {
     if (createBtn) createBtn.classList.add('button-disabled');
 
     try {
-        const formData = new FormData();
-        formData.append('roomCode', roomCode);
-        formData.append('userId', userId);
-        formData.append('content', name);
+      const formData = new FormData();
+      formData.append('roomCode', roomCode);
+      formData.append('userId', userId);
+      formData.append('content', name);
 
-        // color
-        const selectedColor = document.querySelector('.color.selected');
-        let hexColor = '#d40000';
-        if (selectedColor) {
-            const bg = selectedColor.style.backgroundImage || selectedColor.style.backgroundColor;
-            if (bg) hexColor = rgbToHex(bg) || bg;
-        }
-        formData.append('color', hexColor);
+      // color
+      const selectedColor = document.querySelector('.color.selected');
+      let hexColor = '#d40000';
+      if (selectedColor) {
+        const bg = selectedColor.style.backgroundImage || selectedColor.style.backgroundColor;
+        if (bg) hexColor = rgbToHex(bg) || bg;
+      }
+      formData.append('color', hexColor);
 
-        // encrypt files
-        if (pendingFiles.length > 0) {
-            for (const file of pendingFiles) {
-                const encryptedBlob = await encryptFile(file);
-            // append original name
-            formData.append('files', encryptedBlob, file.name);
-            }
-        }
+      // Store encrypted blobs separately to calculate individual progress
+      const encryptedFilesList = [];
 
-        // send
-        const res = await fetch(`${API_URL}/api/announcements`, {
-            method: 'POST',
-            body: formData 
+      // encrypt files
+      if (pendingFiles.length > 0) {
+        // visual feedback: encrypting
+        pendingFiles.forEach((_, idx) => {
+          const txt = document.getElementById(`prog-txt-${idx}`);
+          if (txt) txt.textContent = "Crypto...";
         });
 
-        if (res.ok) {
-            closeAllOverlays();
-            nameInput.value = "";
-            pendingFiles = [];
-            renderPendingFiles();
-            await syncAnnouncements();
-        } else {
-            const json = await res.json();
-            alert("Erreur: " + (json.error || "Inconnue"));
+        for (const file of pendingFiles) {
+          const encryptedBlob = await encryptFile(file);
+          // add to list for size calculation
+          encryptedFilesList.push(encryptedBlob);
+          // add to form data
+          formData.append('files', encryptedBlob, file.name);
         }
+      }
+
+      // upload with XHR for progress
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        window.currentXhr = xhr; // save reference
+
+        xhr.open('POST', `${API_URL}/api/announcements`, true);
+
+        // clear any previous animation
+        stopTraitementDots();
+
+        // tracking upload progress individually
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            let remainingLoaded = e.loaded;
+
+            encryptedFilesList.forEach((blob, idx) => {
+              const bar = document.getElementById(`prog-bar-${idx}`);
+              const txt = document.getElementById(`prog-txt-${idx}`);
+              const fileSize = blob.size;
+
+              let percent = 0;
+
+              if (remainingLoaded >= fileSize) {
+                percent = 100;
+                remainingLoaded -= fileSize;
+              } else if (remainingLoaded > 0) {
+                percent = Math.round((remainingLoaded / fileSize) * 100);
+                remainingLoaded = 0;
+              } else {
+                percent = 0;
+              }
+
+              if (bar) bar.style.width = `${percent}%`;
+              if (txt) {
+                if (percent === 100) {
+                  // If this is the last file, show animated "traitement...", otherwise show "terminé"
+                  if (idx === encryptedFilesList.length - 1) {
+                    startTraitementDots(idx);
+                  } else {
+                    // stop any dot animation (ensure only last animates)
+                    txt.textContent = 'terminé';
+                    txt.style.fontSize = '';
+                  }
+                } else {
+                  txt.textContent = `${percent}%`;
+                }
+              }
+            });
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            // Force all bars to 100% and set final texts:
+            encryptedFilesList.forEach((_, idx) => {
+              const bar = document.getElementById(`prog-bar-${idx}`);
+              const txt = document.getElementById(`prog-txt-${idx}`);
+              if (bar) bar.style.width = '100%';
+              if (txt) {
+                if (idx === encryptedFilesList.length - 1) {
+                  startTraitementDots(idx);
+                } else {
+                  txt.textContent = 'terminé';
+                  txt.style.fontSize = '';
+                }
+              }
+            });
+            resolve(xhr.response);
+          } else reject(new Error("Upload failed"));
+        };
+
+        xhr.onerror = () => { stopTraitementDots(); reject(new Error("Network error")); };
+        xhr.onabort = () => { stopTraitementDots(); reject(new Error("Aborted")); };
+
+        xhr.send(formData);
+      });
+
+      // success: keep the last-file animation visible briefly, then clear it and UI
+      await new Promise(res => setTimeout(res, 1200));
+      stopTraitementDots();
+
+      closeAllOverlays();
+      nameInput.value = "";
+      pendingFiles = []; // clear list
+      renderPendingFiles();
+      await syncAnnouncements();
 
     } catch (e) {
+      if (e.message !== "Aborted") {
         console.error(e);
-        alert("Erreur d'envoi.");
+        alert("Erreur: " + e.message);
+        // reset bars on error
+        renderPendingFiles();
+      }
     } finally {
-        isSending = false;
-        if (createBtn) createBtn.classList.remove('button-disabled');
+      isSending = false;
+      window.currentXhr = null;
+      if (createBtn) createBtn.classList.remove('button-disabled');
     }
     return;
   }
 
-  // user create
-  
-  // check limits
+  // --- USER LOGIC (inchangé) ---
   const tickets = await getTickets();
   const myActiveTickets = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
-  if (myActiveTickets.length >= MAX_DURING_TICKET) {
-    return alert("Limite de tickets atteinte.");
-  }
+  if (myActiveTickets.length >= MAX_DURING_TICKET) return alert("Limite atteinte.");
+  if (!name) return alert("Nom requis.");
 
-  if (!name) return alert("Le nom est requis.");
-  
   const selectedColor = document.querySelector('.color.selected');
-  const color = selectedColor
-    ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor)
-    : '#cdcdcd';
-  
-  await createTicket({
-    nom: name,
-    description,
-    couleur: color,
-    etat: "en cours",
-    userId
-  });
-  
+  const color = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
+
+  await createTicket({ nom: name, description, couleur: color, etat: "en cours", userId });
   nameInput.value = "";
   infosInput.value = "";
   closeAllOverlays();
 }
 
+// safe close
+function tryCloseOverlay() {
+  if (isSending) {
+    if (!confirm("Envoi en cours. Annuler l'envoi ?")) return;
+
+    if (window.currentXhr) {
+      window.currentXhr.abort();
+    }
+    isSending = false;
+    renderPendingFiles();
+  } else if (pendingFiles.length > 0) {
+    if (!confirm("Fichiers non envoyés. Fermer et supprimer les fichiers ?")) return;
+    pendingFiles = [];
+    renderPendingFiles();
+  }
+
+  closeAllOverlays();
+}
 
 // ui init
 
@@ -844,26 +1012,26 @@ window.addEventListener('DOMContentLoaded', async () => {
   await checkRoomPermissions();
   await initCrypto();
   await loadFilters();
-  
-  // load announcements
+
   await syncAnnouncements();
+
+  setupStorageWidget();
 
   renderTickets();
   connectWebSocket();
-  
+
   document.querySelector('#codebutton .text').textContent = roomCode;
-  
-  // click events
+
   document.getElementById('create').addEventListener('click', (e) => {
     e.preventDefault();
     handleFormSubmit();
   });
-  
+
   document.getElementById("createbutton").addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("formOverlay");
   });
-  
+
   document.getElementById("setting").addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("settingsOverlay");
@@ -873,11 +1041,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelectorAll('input[name="SliderCount"]').forEach(radio => {
     radio.addEventListener('change', async (e) => {
-        const val = parseInt(e.target.value);
-        MAX_DURING_TICKET = val;
-        if (isRoomAdmin) {
-          await apiCall(`/api/rooms/${roomCode}`, "PUT", { maxTickets: val });
-        }
+      const val = parseInt(e.target.value);
+      MAX_DURING_TICKET = val;
+      if (isRoomAdmin) {
+        await apiCall(`/api/rooms/${roomCode}`, "PUT", { maxTickets: val });
+      }
     });
   });
 
@@ -886,9 +1054,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     closeAllOverlays();
   });
 
-  document.querySelectorAll('.menu-overlay').forEach(overlay => overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAllOverlays(); }));
+  // safe overlay close logic
+  document.querySelectorAll('.menu-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        if (overlay.id === 'formOverlay') {
+          tryCloseOverlay();
+        } else {
+          closeAllOverlays();
+        }
+      }
+    });
+  });
 
-  // logout
   document.getElementById("logout")?.addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("logoutOverlay");
@@ -908,13 +1086,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   const fileInput = document.getElementById('fileInput');
 
   if (dropArea && fileInput) {
-    // open system dialog
     dropArea.addEventListener('click', () => {
-        if (pendingFiles.length >= MAX_FILES) return alert("Limite atteinte.");
-        fileInput.click();
+      if (pendingFiles.length >= MAX_FILES) return alert("Limite atteinte.");
+      fileInput.click();
     });
 
-    // handle files added via button
     fileInput.addEventListener('change', () => {
       const files = Array.from(fileInput.files);
       if (files.length === 0) return;
@@ -925,13 +1101,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // add to pending and render
       pendingFiles = [...pendingFiles, ...files];
       renderPendingFiles();
-      fileInput.value = ''; 
+      fileInput.value = '';
     });
 
-    // drag & drop
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
       dropArea.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -948,8 +1122,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       const files = Array.from(dt.files);
 
       if (pendingFiles.length + files.length > MAX_FILES) {
-          alert(`Trop de fichiers (max ${MAX_FILES}).`);
-          return;
+        alert(`Trop de fichiers (max ${MAX_FILES}).`);
+        return;
       }
 
       pendingFiles = [...pendingFiles, ...files];

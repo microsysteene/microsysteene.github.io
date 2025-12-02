@@ -1342,3 +1342,189 @@ input[type="password"]:focus {
     height: 18px;
     filter: invert(1); 
 }
+
+
+.admin-file-item {
+    position: relative; /* needed for absolute child */
+    overflow: hidden;   /* keeps the bar inside the border-radius */
+    z-index: 1;         /* creates a stacking context */
+    background: var(--bg-color); /* ensures background is solid */
+}
+
+/* ensure text stays on top of the bar */
+.admin-file-info, 
+.admin-file-delete {
+    position: relative;
+    z-index: 10; 
+}
+
+/* the moving bar */
+.file-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%; 
+    background-color: #A6C5FF; 
+    transition: width 0.1s linear;
+    z-index: 1;
+}
+
+/* percentage text */
+.file-progress-pct {
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-left: 10px;
+    min-width: 40px;
+    text-align: right;
+}
+
+.announcement-container {
+    width: 100%;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transition: all 0.3s ease;
+}
+
+.storage-widget {
+    position: relative;
+    width: 100%;
+    height: 60px;
+    cursor: pointer;
+    z-index: 5;
+    transition: all 0.3s ease;
+}
+
+/* stacked cards effect */
+.stack-card {
+    position: absolute;
+    top: 0;
+    left: 20px; 
+    right: 20px;
+    height: 100%;
+    background: #fff;
+    border: 2px solid black;
+    border-radius: 50px;
+    z-index: 1;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-1 {
+    transform: translateY(8px) scale(0.98);
+    z-index: 2;
+}
+.card-2 {
+    transform: translateY(16px) scale(0.96);
+    z-index: 1;
+}
+
+.stack-progress {
+    height: 100%;
+    background-color: #ffccb0; /* orange/peach from image */
+    border-right: 2px solid black;
+}
+
+/* main front card */
+.main-card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    border: 2px solid black;
+    border-radius: 50px;
+    z-index: 10;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    box-shadow: 0px 3px 0px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.main-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+/* blue progress bar */
+.storage-progress-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0%; /* updated by js */
+    background-color: #a6c5ff; /* blue from image */
+    border-right: 2px solid black;
+    transition: width 0.5s ease;
+    z-index: 1;
+}
+
+.storage-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 25px;
+    font-family: 'Inconsolata', monospace;
+    font-weight: 600;
+    font-size: 1.1rem;
+    pointer-events: none; 
+}
+
+.file-count-text {
+    opacity: 0.5;
+    font-size: 0.95rem;
+}
+
+.close-storage {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background: white;
+    border: 2px solid black;
+    border-radius: 50%;
+    display: none; 
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.close-storage:hover {
+    background: #eee;
+}
+
+
+.announcement-container.open .storage-widget {
+    cursor: default;
+}
+.announcement-container.open .main-card:hover {
+    transform: none;
+    box-shadow: 0px 3px 0px rgba(0, 0, 0, 0.2);
+}
+
+.announcement-container.open .stack-card {
+    opacity: 0;
+    transform: translateY(0) scale(1);
+}
+
+.announcement-container.open .close-storage {
+    display: flex;
+}
+
+.announcement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    animation: bounce-in 0.4s ease forwards;
+}
+
+.announcement-list.hidden {
+    display: none;
+}
