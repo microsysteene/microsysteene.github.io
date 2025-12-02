@@ -1342,3 +1342,39 @@ input[type="password"]:focus {
     height: 18px;
     filter: invert(1); 
 }
+
+
+.admin-file-item {
+    position: relative; /* needed for absolute child */
+    overflow: hidden;   /* keeps the bar inside the border-radius */
+    z-index: 1;         /* creates a stacking context */
+    background: var(--bg-color); /* ensures background is solid */
+}
+
+/* ensure text stays on top of the bar */
+.admin-file-info, 
+.admin-file-delete {
+    position: relative;
+    z-index: 10; 
+}
+
+/* the moving bar */
+.file-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%; 
+    background-color: #A6C5FF; 
+    transition: width 0.1s linear;
+    z-index: 1;
+}
+
+/* percentage text */
+.file-progress-pct {
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-left: 10px;
+    min-width: 40px;
+    text-align: right;
+}

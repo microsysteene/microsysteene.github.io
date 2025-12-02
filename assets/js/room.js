@@ -13,6 +13,10 @@ let cryptoKey = null;
 let announcementList = [];
 let pendingFiles = [];
 
+// upload state
+let isSending = false;
+window.currentXhr = null; // store xhr to allow abort
+
 function initFeatures() {
   // copy link
   const copyBtn = document.getElementById('copyLink');
@@ -62,7 +66,6 @@ let lastTicketIds = new Set();
 let filterCache = [];
 let isRendering = false;
 let isRoomAdmin = false;
-let isSending = false; // replaces isUploading for form submit
 
 let userId = localStorage.getItem('userId');
 if (!userId) {
@@ -185,17 +188,22 @@ function renderPendingFiles() {
     
     const fileSize = (file.size / (1024 * 1024)).toFixed(1);
 
+    // render with progress bar structure
     item.innerHTML = `
+      <div class="file-progress-bar" id="prog-bar-${index}"></div>
       <div class="admin-file-info">
         <span class="admin-file-name">${file.name}</span>
         <span class="admin-file-size">${fileSize} Mo</span>
+        <span class="file-progress-pct" id="prog-txt-${index}"></span>
       </div>
       <button class="admin-file-delete" data-idx="${index}" title="Retirer">×</button>
     `;
 
-    // remove from pending list
+    // remove from pending list with check
     item.querySelector('.admin-file-delete').addEventListener('click', (e) => {
       e.preventDefault();
+      if (isSending) return alert("Upload en cours, impossible de retirer.");
+      
       pendingFiles.splice(index, 1);
       renderPendingFiles();
     });
@@ -206,49 +214,41 @@ function renderPendingFiles() {
 
 function renderAnnouncement() {
   const container = document.getElementById('announcementArea');
-  // get left container to manage gap
   const leftContainer = document.querySelector('.left-container');
   
   if (!container) return;
 
   container.innerHTML = '';
 
-  // manage gap based on list length
   if (leftContainer) {
     if (announcementList.length === 0) {
         leftContainer.style.gap = '0px';
     } else {
-        leftContainer.style.gap = ''; // revert to css default
+        leftContainer.style.gap = ''; 
     }
   }
 
-  // loop through all announcements
   announcementList.forEach(annonce => {
     const wrapper = document.createElement('div');
     wrapper.className = 'announcement-wrapper';
     wrapper.style.marginBottom = "15px";
 
-    // check if there is text content
     const hasText = annonce.content && annonce.content.trim() !== "";
     
-    // main box container
     const msgDiv = document.createElement('div');
     msgDiv.className = 'announcement-item';
     
-    // style: apply color to the whole box
     if (annonce.color && annonce.color.includes('gradient')) {
         msgDiv.style.backgroundImage = annonce.color;
     } else {
         msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
     }
 
-    // layout
     msgDiv.style.display = 'flex';
     msgDiv.style.flexDirection = 'column';
     msgDiv.style.justifyContent = 'center';
     msgDiv.style.gap = '8px';
 
-    // 1. render text
     if (hasText) {
         const textRow = document.createElement('div');
         textRow.style.display = 'flex';
@@ -280,7 +280,6 @@ function renderAnnouncement() {
         msgDiv.appendChild(textRow);
     }
 
-    // 2. render files
     if (annonce.files && annonce.files.length > 0) {
         const fileContainer = document.createElement('div');
         fileContainer.style.display = 'flex';
@@ -301,7 +300,6 @@ function renderAnnouncement() {
             const ext = fName.split('.').pop().toUpperCase();
             const size = (file.size / 1024 / 1024).toFixed(1);
 
-            // file info
             const leftPart = document.createElement('div');
             leftPart.style.display = 'flex';
             leftPart.style.alignItems = 'center';
@@ -314,13 +312,11 @@ function renderAnnouncement() {
                 <span style="opacity:0.7; font-size:0.9em;">(${ext} • ${size} Mo)</span>
             `;
 
-            // actions part
             const actionsPart = document.createElement('div');
             actionsPart.style.display = 'flex';
             actionsPart.style.alignItems = 'center';
             actionsPart.style.gap = '8px';
 
-            // download button
             const dlBtn = document.createElement('button');
             dlBtn.className = 'announcement-action-btn';
             dlBtn.innerHTML = `<img src="./assets/icon/icon thin.png" style="width:14px; transform:rotate(180deg);">`;
@@ -331,29 +327,15 @@ function renderAnnouncement() {
             };
             actionsPart.appendChild(dlBtn);
 
-            // single file delete button (admin only)
             if (isRoomAdmin) {
                 const fileDelBtn = document.createElement('button');
                 fileDelBtn.className = 'announcement-action-btn';
-                // style adjustment for delete action
                 fileDelBtn.style.borderColor = '#ff7070'; 
                 fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
                 fileDelBtn.title = "Supprimer ce fichier";
                 
                 fileDelBtn.onclick = (e) => handleDeleteFile(e, annonce.id, file.id, fileRow);
                 actionsPart.appendChild(fileDelBtn);
-            }
-
-            // delete group button (only if no text and admin) - kept for compatibility
-            if (!hasText && isRoomAdmin) {
-               // if you want to keep the "delete whole group" button when no text exists:
-               const groupDelBtn = document.createElement('button');
-               groupDelBtn.className = 'announcement-delete'; 
-               groupDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:14px;">`;
-               groupDelBtn.title = "Supprimer tout le groupe";
-               groupDelBtn.onclick = (e) => handleDeleteAnnouncement(e, annonce.id, wrapper);
-               // append only if we want to allow deleting the whole container from here
-               // actionsPart.appendChild(groupDelBtn); 
             }
 
             fileRow.appendChild(leftPart);
@@ -373,7 +355,6 @@ async function handleDeleteAnnouncement(e, id, domElement) {
     e.preventDefault();
     if (!confirm("Supprimer cette annonce et ses fichiers ?")) return;
 
-    // visual feedback
     domElement.style.opacity = '0.5';
 
     try {
@@ -383,7 +364,6 @@ async function handleDeleteAnnouncement(e, id, domElement) {
         
         if (res.ok) {
             domElement.remove();
-            // sync to be sure
             await syncAnnouncements();
         } else {
             alert("Erreur suppression.");
@@ -399,7 +379,6 @@ async function handleDeleteFile(e, announcementId, fileId, domElement) {
     e.preventDefault();
     if (!confirm("Supprimer ce fichier ?")) return;
 
-    // visual feedback
     domElement.style.opacity = '0.5';
 
     try {
@@ -437,7 +416,6 @@ function connectWebSocket() {
         renderTickets(true);
         checkRoomPermissions();
       }
-      // refresh announcements on specific event
       if (msg.type === 'updateAnnonce') {
         syncAnnouncements();
       }
@@ -678,10 +656,8 @@ function setAdminMode(enable) {
   const adminSettings = document.getElementById('adminSettingsSection');
 
   if (enable) {
-    // admin settings
     if (adminSettings) adminSettings.style.display = 'block';
 
-    // announcement mode
     if (createBtnText) createBtnText.textContent = "Nouveau message";
     if (nameInput) {
       nameInput.placeholder = "Message";
@@ -690,18 +666,14 @@ function setAdminMode(enable) {
     if (infosInput) infosInput.style.display = 'none';
     if (modalTitle) modalTitle.textContent = "Nouveau message";
     
-    // show upload
     if (uploadContainer) uploadContainer.style.display = 'flex';
     
-    // clear pending
     pendingFiles = [];
     renderPendingFiles();
 
   } else {
-    // hide admin settings
     if (adminSettings) adminSettings.style.display = 'none';
 
-    // ticket mode
     if (createBtnText) createBtnText.textContent = "Nouveau tickets";
     if (nameInput) {
       nameInput.placeholder = "Nom";
@@ -713,19 +685,20 @@ function setAdminMode(enable) {
     if (uploadContainer) uploadContainer.style.display = 'none';
   }
   
-  // refresh
   syncAnnouncements();
   renderTickets();
 }
 
 // submission
 
+// global var to handle abort
+window.currentXhr = null;
+
 async function handleFormSubmit() {
   if (isSending) return;
 
   const nameInput = document.getElementById('name');
   const infosInput = document.getElementById('infos');
-  
   const name = nameInput.value.trim();
   const description = infosInput.value.trim();
 
@@ -734,11 +707,10 @@ async function handleFormSubmit() {
   const forbidden = filterCache.find(term => content.includes(term.toLowerCase()));
   if (forbidden) return alert("Mot interdit détecté.");
 
-  // admin create
+  // --- ADMIN LOGIC ---
   if (isRoomAdmin) {
-    // validate
     if (!name && pendingFiles.length === 0) {
-        return alert("Veuillez entrer un message ou ajouter un fichier.");
+        return alert("Message ou fichier requis.");
     }
 
     isSending = true;
@@ -760,71 +732,140 @@ async function handleFormSubmit() {
         }
         formData.append('color', hexColor);
 
+        // Store encrypted blobs separately to calculate individual progress
+        const encryptedFilesList = [];
+
         // encrypt files
         if (pendingFiles.length > 0) {
+            // visual feedback: encrypting
+            pendingFiles.forEach((_, idx) => {
+                const txt = document.getElementById(`prog-txt-${idx}`);
+                if(txt) txt.textContent = "Crypto...";
+            });
+
             for (const file of pendingFiles) {
                 const encryptedBlob = await encryptFile(file);
-            // append original name
-            formData.append('files', encryptedBlob, file.name);
+                // add to list for size calculation
+                encryptedFilesList.push(encryptedBlob);
+                // add to form data
+                formData.append('files', encryptedBlob, file.name);
             }
         }
 
-        // send
-        const res = await fetch(`${API_URL}/api/announcements`, {
-            method: 'POST',
-            body: formData 
+        // upload with XHR for progress
+        await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            window.currentXhr = xhr; // save reference
+
+            xhr.open('POST', `${API_URL}/api/announcements`, true);
+
+            // tracking upload progress individually
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    // e.loaded = total bytes sent so far including headers
+                    let remainingLoaded = e.loaded;
+                    
+                    encryptedFilesList.forEach((blob, idx) => {
+                        const bar = document.getElementById(`prog-bar-${idx}`);
+                        const txt = document.getElementById(`prog-txt-${idx}`);
+                        const fileSize = blob.size;
+
+                        let percent = 0;
+
+                        if (remainingLoaded >= fileSize) {
+                            // This file is fully uploaded
+                            percent = 100;
+                            remainingLoaded -= fileSize; // subtract for next file calculation
+                        } else if (remainingLoaded > 0) {
+                            // We are currently uploading this file
+                            percent = Math.round((remainingLoaded / fileSize) * 100);
+                            remainingLoaded = 0; // consumed all loaded bytes
+                        } else {
+                            // Not started yet
+                            percent = 0;
+                        }
+
+                        if (bar) bar.style.width = `${percent}%`;
+                        if (txt) txt.textContent = `${percent}%`;
+                    });
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Force all to 100% on success (fixes minor calculation drifts due to headers)
+                    encryptedFilesList.forEach((_, idx) => {
+                        const bar = document.getElementById(`prog-bar-${idx}`);
+                        const txt = document.getElementById(`prog-txt-${idx}`);
+                        if(bar) bar.style.width = '100%';
+                        if(txt) txt.textContent = '100%';
+                    });
+                    resolve(xhr.response);
+                }
+                else reject(new Error("Upload failed"));
+            };
+
+            xhr.onerror = () => reject(new Error("Network error"));
+            xhr.onabort = () => reject(new Error("Aborted"));
+
+            xhr.send(formData);
         });
 
-        if (res.ok) {
-            closeAllOverlays();
-            nameInput.value = "";
-            pendingFiles = [];
-            renderPendingFiles();
-            await syncAnnouncements();
-        } else {
-            const json = await res.json();
-            alert("Erreur: " + (json.error || "Inconnue"));
-        }
+        // success
+        closeAllOverlays();
+        nameInput.value = "";
+        pendingFiles = []; // clear list
+        renderPendingFiles();
+        await syncAnnouncements();
 
     } catch (e) {
-        console.error(e);
-        alert("Erreur d'envoi.");
+        if (e.message !== "Aborted") {
+            console.error(e);
+            alert("Erreur: " + e.message);
+            // reset bars on error
+            renderPendingFiles();
+        }
     } finally {
         isSending = false;
+        window.currentXhr = null;
         if (createBtn) createBtn.classList.remove('button-disabled');
     }
     return;
   }
 
-  // user create
-  
-  // check limits
+  // --- USER LOGIC (inchangé) ---
   const tickets = await getTickets();
   const myActiveTickets = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
-  if (myActiveTickets.length >= MAX_DURING_TICKET) {
-    return alert("Limite de tickets atteinte.");
-  }
-
-  if (!name) return alert("Le nom est requis.");
+  if (myActiveTickets.length >= MAX_DURING_TICKET) return alert("Limite atteinte.");
+  if (!name) return alert("Nom requis.");
   
   const selectedColor = document.querySelector('.color.selected');
-  const color = selectedColor
-    ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor)
-    : '#cdcdcd';
+  const color = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
   
-  await createTicket({
-    nom: name,
-    description,
-    couleur: color,
-    etat: "en cours",
-    userId
-  });
-  
+  await createTicket({ nom: name, description, couleur: color, etat: "en cours", userId });
   nameInput.value = "";
   infosInput.value = "";
   closeAllOverlays();
 }
 
+// safe close
+function tryCloseOverlay() {
+  if (isSending) {
+    if (!confirm("Envoi en cours. Annuler l'envoi ?")) return;
+    
+    if (window.currentXhr) {
+        window.currentXhr.abort();
+    }
+    isSending = false;
+    renderPendingFiles(); 
+  } else if (pendingFiles.length > 0) {
+    if (!confirm("Fichiers non envoyés. Fermer et supprimer les fichiers ?")) return;
+    pendingFiles = [];
+    renderPendingFiles();
+  }
+
+  closeAllOverlays();
+}
 
 // ui init
 
@@ -845,7 +886,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   await initCrypto();
   await loadFilters();
   
-  // load announcements
   await syncAnnouncements();
 
   renderTickets();
@@ -853,7 +893,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   
   document.querySelector('#codebutton .text').textContent = roomCode;
   
-  // click events
   document.getElementById('create').addEventListener('click', (e) => {
     e.preventDefault();
     handleFormSubmit();
@@ -886,9 +925,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     closeAllOverlays();
   });
 
-  document.querySelectorAll('.menu-overlay').forEach(overlay => overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAllOverlays(); }));
+  // safe overlay close logic
+  document.querySelectorAll('.menu-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            if (overlay.id === 'formOverlay') {
+                tryCloseOverlay();
+            } else {
+                closeAllOverlays();
+            }
+        }
+    });
+  });
 
-  // logout
   document.getElementById("logout")?.addEventListener('click', (e) => {
     e.preventDefault();
     openOverlay("logoutOverlay");
@@ -908,13 +957,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   const fileInput = document.getElementById('fileInput');
 
   if (dropArea && fileInput) {
-    // open system dialog
     dropArea.addEventListener('click', () => {
         if (pendingFiles.length >= MAX_FILES) return alert("Limite atteinte.");
         fileInput.click();
     });
 
-    // handle files added via button
     fileInput.addEventListener('change', () => {
       const files = Array.from(fileInput.files);
       if (files.length === 0) return;
@@ -925,13 +972,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // add to pending and render
       pendingFiles = [...pendingFiles, ...files];
       renderPendingFiles();
       fileInput.value = ''; 
     });
 
-    // drag & drop
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
       dropArea.addEventListener(eventName, (e) => {
         e.preventDefault();
