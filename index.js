@@ -7,7 +7,7 @@ const url = require('url');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config(); // load .env variables
+require('dotenv').config(); // load env
 
 const app = express();
 const server = http.createServer(app);
@@ -15,33 +15,30 @@ const wss = new WebSocket.Server({ server });
 
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // to parse form data (password)
+app.use(express.urlencoded({ extended: true })); // parse form data
 
 // serve public assets (css, js, images) normally
 app.use(express.static('public')); 
 
-// global settings (dynamic defaults)
+// global settings
 let globalSettings = {
     maxRooms: 50,
     maxPeoplePerRoom: 30, 
-    maxRoomSize: 1.25 * 1024 * 1024 * 1024 // 1.25 gb
+    maxRoomSize: 1.25 * 1024 * 1024 * 1024
 };
 
-// constants for hard limits
 const UPLOAD_DIR = './uploads';
 
-// ensure upload directory exists
+// ensure dir
 if (!fs.existsSync(UPLOAD_DIR)){
     fs.mkdirSync(UPLOAD_DIR);
 }
 
-// configure multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
-    // generate unique name
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, 'file-' + uniqueSuffix);
   }
@@ -49,7 +46,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// helper: generate 5 char code
+// generate room code
 function generateRoomCode() {
   const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ0123456789';
   let result = '';
@@ -59,13 +56,12 @@ function generateRoomCode() {
   return result;
 }
 
-// helper: update room activity
+// update activity
 function updateRoomActivity(roomCode) {
   const now = new Date().toISOString();
   db.run("UPDATE rooms SET lastActivity = ? WHERE code = ?", [now, roomCode]);
 }
 
-// websocket setup
 const clientRooms = new Map();
 
 wss.on('connection', (ws, req) => {
@@ -73,13 +69,13 @@ wss.on('connection', (ws, req) => {
   const roomCode = parameters.query.room;
   const type = parameters.query.type;
 
-  // admin dashboard connection
+  // admin
   if (!roomCode && type === 'admin') {
       ws.isAdmin = true;
       return;
   }
 
-  // standard client connection
+  // client
   if (!roomCode) {
     ws.close();
     return;
@@ -109,7 +105,7 @@ setInterval(() => {
   });
 }, 30000);
 
-// notify clients in a room
+// notify clients
 function notifierClients(roomCode, type = 'update', payload = {}) {
   const message = JSON.stringify({ type, timestamp: Date.now(), ...payload });
   
@@ -120,9 +116,6 @@ function notifierClients(roomCode, type = 'update', payload = {}) {
   });
 }
 
-// auth
-
-
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
@@ -131,38 +124,25 @@ app.get('/', (req, res) => {
 app.post('/access', (req, res) => {
     const password = req.body.password;
     
-    // check  env variable
     if (password === process.env.ADMIN_PASSWORD) {
-        // password ok
         const dashboardPath = path.join(__dirname, 'private', 'index.html');
         fs.readFile(dashboardPath, 'utf8', (err, data) => {
             if (err) return res.status(500).send('Error loading dashboard');
             res.send(data);
         });
     } else {
-        // wrong password
         res.redirect('/');
     }
 });
 
-
-
-// admin dashboard api routes
-
-// get global stats and settings for dashboard
 app.get('/api/admin/dashboard', (req, res) => {
-    // 1. get all rooms
     db.all("SELECT code, createdAt, lastActivity FROM rooms", [], (err, rooms) => {
         if (err) return res.status(500).json({ error: err.message });
-
-        // 2. get file sizes per room
         db.all("SELECT roomCode, SUM(size) as totalSize FROM files GROUP BY roomCode", [], (err, filesRows) => {
             if (err) return res.status(500).json({ error: err.message });
 
             const sizeMap = {};
             filesRows.forEach(row => sizeMap[row.roomCode] = row.totalSize);
-
-            // 3. count online users per room via websockets
             const onlineMap = {};
             let totalOnline = 0;
             wss.clients.forEach(client => {
@@ -172,7 +152,6 @@ app.get('/api/admin/dashboard', (req, res) => {
                 }
             });
 
-            // 4. build response list
             const enrichedRooms = rooms.map(room => ({
                 code: room.code,
                 createdAt: room.createdAt,
@@ -192,7 +171,6 @@ app.get('/api/admin/dashboard', (req, res) => {
     });
 });
 
-// update global settings from dashboard
 app.put('/api/admin/settings', (req, res) => {
     const { maxRooms, maxPeoplePerRoom, maxStorageGB } = req.body;
     
@@ -203,15 +181,10 @@ app.put('/api/admin/settings', (req, res) => {
     res.json(globalSettings);
 });
 
-
-// api routes for app
-
-// create a new room
 app.post('/api/rooms', (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: 'UserId required' });
 
-  // check max rooms limit
   db.get("SELECT count(*) as count FROM rooms", [], (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       
@@ -234,7 +207,6 @@ app.post('/api/rooms', (req, res) => {
   });
 });
 
-// get room details
 app.get('/api/rooms/:code', (req, res) => {
   db.get("SELECT code, adminId, announcementMessage, announcementColor, maxTickets FROM rooms WHERE code = ?", 
     [req.params.code], 
@@ -249,7 +221,6 @@ app.get('/api/rooms/:code', (req, res) => {
   );
 });
 
-// update room settings (max tickets)
 app.put('/api/rooms/:code', (req, res) => {
   const roomCode = req.params.code;
   const { maxTickets } = req.body;
@@ -261,7 +232,6 @@ app.put('/api/rooms/:code', (req, res) => {
   });
 });
 
-// get announcement
 app.get('/api/announcement/:roomCode', (req, res) => {
   db.get("SELECT announcementMessage as texte, announcementColor as couleur FROM rooms WHERE code = ?", 
     [req.params.roomCode],
@@ -273,7 +243,6 @@ app.get('/api/announcement/:roomCode', (req, res) => {
   );
 });
 
-// update announcement
 app.put('/api/announcement/:roomCode', (req, res) => {
   const { texte, couleur, userId } = req.body;
   const roomCode = req.params.roomCode;
@@ -297,7 +266,6 @@ app.put('/api/announcement/:roomCode', (req, res) => {
   });
 });
 
-// get tickets
 app.get('/api/tickets/:roomCode', (req, res) => {
   const roomCode = req.params.roomCode;
   db.all("SELECT * FROM tickets WHERE roomCode = ? ORDER BY dateCreation DESC", [roomCode], (err, rows) => {
@@ -306,12 +274,10 @@ app.get('/api/tickets/:roomCode', (req, res) => {
   });
 });
 
-// create ticket
 app.post('/api/tickets', (req, res) => {
   const { nom, description, couleur, etat, userId, roomCode } = req.body;
   if (!nom || !userId || !roomCode) return res.status(400).json({ error: 'Missing fields' });
 
-  // check room specific limit
   db.get("SELECT maxTickets FROM rooms WHERE code = ?", [roomCode], (err, room) => {
     if (!room) return res.status(404).json({ error: "Room not found" });
 
@@ -345,7 +311,6 @@ app.post('/api/tickets', (req, res) => {
   });
 });
 
-// update ticket
 app.put('/api/tickets/:id', (req, res) => {
   const { nom, description, couleur, etat, roomCode } = req.body;
   const id = req.params.id;
@@ -369,7 +334,6 @@ app.put('/api/tickets/:id', (req, res) => {
   });
 });
 
-// delete ticket
 app.delete('/api/tickets/:id', (req, res) => {
   const { userId } = req.query;
   const id = req.params.id;
@@ -393,7 +357,6 @@ app.delete('/api/tickets/:id', (req, res) => {
   });
 });
 
-// get files list
 app.get('/api/files/:roomCode', (req, res) => {
   const roomCode = req.params.roomCode;
   db.all("SELECT * FROM files WHERE roomCode = ?", [roomCode], (err, rows) => {
@@ -407,7 +370,6 @@ app.get('/api/files/:roomCode', (req, res) => {
   });
 });
 
-// upload file
 app.post('/api/files', upload.single('file'), (req, res) => {
   const { roomCode, userId } = req.body;
   const file = req.file;
@@ -417,7 +379,6 @@ app.post('/api/files', upload.single('file'), (req, res) => {
     return res.status(400).json({ error: 'Missing file or data' });
   }
 
-  // check total room usage against global setting
   db.get("SELECT SUM(size) as total FROM files WHERE roomCode = ?", [roomCode], (err, row) => {
     if (err) {
       fs.unlinkSync(file.path);
@@ -453,7 +414,6 @@ app.post('/api/files', upload.single('file'), (req, res) => {
   });
 });
 
-// download file
 app.get('/api/files/download/:fileId', (req, res) => {
   db.get("SELECT * FROM files WHERE id = ?", [req.params.fileId], (err, file) => {
     if (err || !file) return res.status(404).json({ error: 'File not found' });
@@ -466,7 +426,6 @@ app.get('/api/files/download/:fileId', (req, res) => {
   });
 });
 
-// delete file
 app.delete('/api/files/:fileId', (req, res) => {
   const { userId } = req.query;
   const fileId = req.params.fileId;
@@ -497,21 +456,15 @@ app.delete('/api/files/:fileId', (req, res) => {
   });
 });
 
-// announcements api
-
-// get announcements for a room
 app.get('/api/announcements/:roomCode', (req, res) => {
     const roomCode = req.params.roomCode;
 
-    // get announcements
     db.all("SELECT * FROM announcements WHERE roomCode = ? ORDER BY createdAt DESC", [roomCode], (err, annonces) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        // get files linked to announcements for this room
         db.all("SELECT * FROM files WHERE roomCode = ? AND announcementId IS NOT NULL", [roomCode], (err, files) => {
             if (err) return res.status(500).json({ error: err.message });
 
-            // attach files to their announcement
             const result = annonces.map(a => {
                 return {
                     ...a,
@@ -524,19 +477,15 @@ app.get('/api/announcements/:roomCode', (req, res) => {
     });
 });
 
-// create announcement (text + optional files)
 app.post('/api/announcements', upload.array('files'), (req, res) => {
     const { roomCode, userId, content, color } = req.body;
     const files = req.files || [];
 
-    // validation: must have content OR files
     if ((!content || content.trim() === "") && files.length === 0) {
-        // delete uploaded files if validation fails
         files.forEach(f => fs.unlinkSync(f.path));
         return res.status(400).json({ error: "Announcement cannot be empty (text or file required)" });
     }
 
-    // check admin rights
     db.get("SELECT adminId FROM rooms WHERE code = ?", [roomCode], (err, room) => {
         if (!room) return res.status(404).json({ error: "Room not found" });
         if (room.adminId !== userId) {
@@ -547,7 +496,6 @@ app.post('/api/announcements', upload.array('files'), (req, res) => {
         const id = Date.now().toString();
         const now = new Date().toISOString();
 
-        // insert announcement
         db.run(`INSERT INTO announcements (id, roomCode, userId, content, color, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
             [id, roomCode, userId, content || "", color || "#cdcdcd", now],
             (err) => {
@@ -556,7 +504,6 @@ app.post('/api/announcements', upload.array('files'), (req, res) => {
                     return res.status(500).json({ error: err.message });
                 }
 
-                // process files if any
                 if (files.length > 0) {
                     const stmt = db.prepare(`INSERT INTO files (id, originalName, encryptedName, mimeType, size, roomCode, userId, announcementId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
                     
@@ -568,14 +515,48 @@ app.post('/api/announcements', upload.array('files'), (req, res) => {
                 }
 
                 updateRoomActivity(roomCode);
-                notifierClients(roomCode, 'updateAnnonce'); // notify frontend to refresh
+                notifierClients(roomCode, 'updateAnnonce');
                 res.status(201).json({ message: "Announcement created" });
             }
         );
     });
 });
 
-// delete announcement
+app.delete('/api/announcements/:id/files/:fileId', (req, res) => {
+  const { userId } = req.query;
+  const { id, fileId } = req.params;
+
+  const query = `
+    SELECT f.*, r.adminId, r.code as roomCode 
+    FROM files f 
+    JOIN announcements a ON f.announcementId = a.id 
+    JOIN rooms r ON a.roomCode = r.code 
+    WHERE f.id = ? AND a.id = ?
+  `;
+
+  db.get(query, [fileId, id], (err, data) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!data) return res.status(404).json({ error: "File or Announcement not found" });
+
+    if (data.adminId !== userId) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    const filePath = path.join(UPLOAD_DIR, data.encryptedName);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    db.run("DELETE FROM files WHERE id = ?", [fileId], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      updateRoomActivity(data.roomCode);
+      notifierClients(data.roomCode, 'updateAnnonce');
+      res.json({ message: "File deleted from announcement" });
+    });
+  });
+});
+
 app.delete('/api/announcements/:id', (req, res) => {
     const { userId } = req.query;
     const id = req.params.id;
@@ -583,10 +564,7 @@ app.delete('/api/announcements/:id', (req, res) => {
     db.get("SELECT a.*, r.adminId as roomAdminId FROM announcements a JOIN rooms r ON a.roomCode = r.code WHERE a.id = ?", [id], (err, item) => {
         if (!item) return res.status(404).json({ error: "Announcement not found" });
         
-        // verify admin
         if (item.roomAdminId !== userId) return res.status(403).json({ error: "Not authorized" });
-
-        // 1. delete associated files from disk
         db.all("SELECT * FROM files WHERE announcementId = ?", [id], (err, files) => {
             if (files) {
                 files.forEach(f => {
@@ -595,10 +573,7 @@ app.delete('/api/announcements/:id', (req, res) => {
                 });
             }
 
-            // 2. delete files from db
             db.run("DELETE FROM files WHERE announcementId = ?", [id], (err) => {
-                
-                // 3. delete announcement
                 db.run("DELETE FROM announcements WHERE id = ?", [id], (err) => {
                     if (err) return res.status(500).json({ error: err.message });
                     
@@ -611,8 +586,6 @@ app.delete('/api/announcements/:id', (req, res) => {
     });
 });
 
-
-//cleanup 
 function supprimerTicketsExpires() {
   const now = Date.now();
   const limitEnCours = 3 * 60 * 60 * 1000 + 10 * 60 * 1000;
@@ -634,7 +607,7 @@ function supprimerTicketsExpires() {
 
 function supprimerRoomsInactives() {
   const now = Date.now();
-  const inactiveLimit = 30 * 60 * 1000; 
+  const inactiveLimit = 30 * 60 * 1000;
 
   db.all("SELECT * FROM rooms", [], (err, rooms) => {
     if (err) return;
@@ -646,8 +619,6 @@ function supprimerRoomsInactives() {
       if (isInactive) {
         db.get("SELECT count(*) as count FROM tickets WHERE roomCode = ?", [room.code], (err, row) => {
           if (row && row.count === 0) {
-            
-            // cleanup files first (including announcement files)
             db.all("SELECT * FROM files WHERE roomCode = ?", [room.code], (err, files) => {
               if (files) {
                 files.forEach(f => {
@@ -657,10 +628,7 @@ function supprimerRoomsInactives() {
                 db.run("DELETE FROM files WHERE roomCode = ?", [room.code]);
               }
 
-              // cleanup announcements (new)
               db.run("DELETE FROM announcements WHERE roomCode = ?", [room.code]);
-
-              // delete room
               db.run("DELETE FROM rooms WHERE code = ?", room.code, () => {
                 console.log(`Room ${room.code} deleted (inactive)`);
                 notifierClients(null, 'adminUpdate'); 
@@ -673,12 +641,10 @@ function supprimerRoomsInactives() {
   });
 }
 
-// run cleanup
 setInterval(() => {
   supprimerTicketsExpires();
   supprimerRoomsInactives();
 }, 60000);
 
-// start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`API OK sur port ${PORT}`));
