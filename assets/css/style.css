@@ -1463,7 +1463,9 @@ input[type="password"]:focus {
     font-family: 'Inconsolata', monospace;
     font-weight: 600;
     font-size: 1.1rem;
-    pointer-events: none; 
+    pointer-events: none;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable both-edges;
 }
 
 .file-count-text {

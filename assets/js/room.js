@@ -257,32 +257,20 @@ async function syncAnnouncements() {
 
 // setup interaction
 function setupStorageWidget() {
-  const widget = document.getElementById('storageWidget');
   const container = document.getElementById('announcementContainer');
-  const closeBtn = document.getElementById('closeStorageBtn');
   const list = document.getElementById('announcementArea');
 
-  if (!widget || !container) return;
+  if (!container || !list) return;
 
-  // open on main click
-  widget.addEventListener('click', (e) => {
-    // ignore if clicking close button
-    if (e.target.closest('.close-storage')) return;
-    
-    if (!container.classList.contains('open')) {
-      container.classList.add('open');
-      list.classList.remove('hidden');
-    }
+  container.addEventListener('mouseenter', () => {
+    container.classList.add('open');
+    list.classList.remove('hidden');
   });
 
-  // close on x button
-  if (closeBtn) {
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation(); // prevent reopen
-      container.classList.remove('open');
-      list.classList.add('hidden');
-    });
-  }
+  container.addEventListener('mouseleave', () => {
+    container.classList.remove('open');
+    list.classList.add('hidden');
+  });
 }
 
 async function fetchFileContent(fileId) {
