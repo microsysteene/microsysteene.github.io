@@ -200,32 +200,31 @@ function updateStorageUI() {
   if (pct > 100) pct = 100;
   if (bar) bar.style.width = `${pct}%`;
 
-
-  const stack1 = document.getElementById('stackCard1');
-  const stack2 = document.getElementById('stackCard2');
+  const widget = document.getElementById('storageWidget');
+  const mainCard = widget.querySelector('.main-card');
   
-
-  const setStackCardStyle = (cardElement, annonce) => {
-    if (!cardElement) return;
+  widget.querySelectorAll('.stack-card').forEach(el => el.remove());
+  const maxStack = 4;
+  const stacksToDisplay = announcementList.slice(0, maxStack);
+  
+  stacksToDisplay.forEach((annonce, index) => {
+    const card = document.createElement('div');
+    card.className = 'stack-card';
+    const offset = (index + 1) * 12;
+    const scale = 1 - ((index + 1) * 0.04);
+    const zIndex = 9 - index;
     
-    if (!annonce) {
-      cardElement.style.display = 'none';
-      return;
-    }
-
-    cardElement.style.display = 'flex'; 
+    card.style.transform = `translateY(${offset}px) scale(${scale})`;
+    card.style.zIndex = zIndex;
+    card.style.display = 'flex'; // Force l'affichage
     
-
     if (annonce.color && annonce.color.includes('gradient')) {
-        cardElement.style.backgroundImage = annonce.color;
-        cardElement.style.backgroundColor = '';
+        card.style.backgroundImage = annonce.color;
     } else {
-        cardElement.style.backgroundColor = annonce.color || '#cdcdcd';
-        cardElement.style.backgroundImage = '';
+        card.style.backgroundColor = annonce.color || '#ffccb0';
     }
 
-
-    cardElement.innerHTML = `
+    card.innerHTML = `
         <div style="
             width: 100%; 
             padding: 0 25px; 
@@ -240,11 +239,9 @@ function updateStorageUI() {
             </span>
         </div>
     `;
-  };
 
-
-  setStackCardStyle(stack1, announcementList[0]);
-  setStackCardStyle(stack2, announcementList[1]);
+    widget.insertBefore(card, mainCard);
+  });
 }
 
 // modified sync function

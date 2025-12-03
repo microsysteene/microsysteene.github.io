@@ -1389,39 +1389,31 @@ input[type="password"]:focus {
     cursor: pointer;
     z-index: 5;
     transition: all 0.3s ease;
-    flex-shrink: 0; 
+    flex-shrink: 0;
+    margin-bottom: 30px; 
 }
 
 
 .stack-card {
     position: absolute;
     top: 0;
-    left: 20px; 
-    right: 20px;
+    left: 0; 
+    width: 100%;
     height: 100%;
-    background: #fff;
+    background: var(--card-bg);
     border: 2px solid black;
     border-radius: 50px;
-    z-index: 1;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    display: none; 
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     align-items: flex-start;
     justify-content: flex-start;
+    transform-origin: center top;
+    box-shadow: 0px 4px 0px rgba(0,0,0,0.15);
 }
 
 .stack-card * {
     pointer-events: none; 
     user-select: none;
-}
-
-.card-1 {
-    transform: translateY(8px) scale(0.98);
-    z-index: 2;
-}
-.card-2 {
-    transform: translateY(16px) scale(0.96);
-    z-index: 1;
 }
 
 .stack-progress {
@@ -1442,7 +1434,7 @@ input[type="password"]:focus {
     overflow: hidden;
     display: flex;
     align-items: center;
-    box-shadow: 0px 3px 0px rgba(0, 0, 0, 0.2);
+    box-shadow: 0px 4px 0px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease;
     animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     animation-delay: 200ms;
