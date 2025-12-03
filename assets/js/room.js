@@ -177,6 +177,7 @@ function formatBytes(bytes) {
 }
 
 // update storage ui based on files
+// MODIFICATION: Simplification pour ne gérer que le texte et la classe 'is-empty'
 function updateStorageUI() {
   let totalBytes = 0;
   let totalFiles = 0;
@@ -191,7 +192,8 @@ function updateStorageUI() {
   const sizeText = document.getElementById('storageText');
   const countText = document.getElementById('fileCountText');
   const bar = document.getElementById('storageProgressBar');
-  
+  const container = document.getElementById('announcementContainer');
+
   if (sizeText) sizeText.textContent = formatBytes(totalBytes) + ' / 1.5 Go';
   if (countText) countText.textContent = `${totalFiles} fichier${totalFiles > 1 ? 's' : ''} partagé${totalFiles > 1 ? 's' : ''}`;
 
@@ -200,69 +202,12 @@ function updateStorageUI() {
   if (pct > 100) pct = 100;
   if (bar) bar.style.width = `${pct}%`;
 
-  const widget = document.getElementById('storageWidget');
-  const mainCard = widget.querySelector('.main-card');
-  
-  // Nettoyage des anciennes cartes
-  widget.querySelectorAll('.stack-card').forEach(el => el.remove());
-
-  const maxStack = 4;
-  const stacksToDisplay = announcementList.slice(0, maxStack);
-  
-  // Création des cartes empilées (effet 3D)
-  stacksToDisplay.forEach((annonce, index) => {
-    const card = document.createElement('div');
-    card.className = 'stack-card';
-    const offset = (index + 1) * 12;
-    const scale = 1 - ((index + 1) * 0.04);
-    const zIndex = 9 - index;
-    
-    card.style.transform = `translateY(${offset}px) scale(${scale})`;
-    card.style.zIndex = zIndex;
-    card.style.display = 'flex'; // Force l'affichage
-    
-    if (annonce.color && annonce.color.includes('gradient')) {
-        card.style.backgroundImage = annonce.color;
-    } else {
-        card.style.backgroundColor = annonce.color || '#ffccb0';
-    }
-
-    card.innerHTML = `
-        <div style="
-            width: 100%; 
-            padding: 0 25px; 
-            margin-top: 38px; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            opacity: 0.7;
-        ">
-            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; font-size: 0.9rem;">
-                ${annonce.content || (annonce.files.length + ' fichier(s)')}
-            </span>
-        </div>
-    `;
-
-    widget.insertBefore(card, mainCard);
-  });
-
-  const container = document.getElementById('announcementContainer');
-  
+  // Gestion de la classe vide/plein pour l'affichage CSS
   if (container) {
     if (announcementList.length === 0) {
-      container.classList.add('is-empty');
-      // Pas de marge si vide
-      widget.style.marginBottom = '0px'; 
+        container.classList.add('is-empty');
     } else {
-      container.classList.remove('is-empty');
-      
-      // On calcule juste la marge nécessaire pour l'effet 3D
-      // 1 carte = 12px, 2 cartes = 24px, etc.
-      const count = Math.min(announcementList.length, 4);
-      const marginBottom = count * 12; // 12px par carte
-      
-      // On applique la marge directement au widget
-      widget.style.marginBottom = `${marginBottom}px`;
+        container.classList.remove('is-empty');
     }
   }
 }
@@ -279,20 +224,20 @@ async function syncAnnouncements() {
 }
 
 // setup interaction
+// MODIFICATION: Gestion simple de la classe .open pour l'effet accordéon CSS
 function setupStorageWidget() {
   const container = document.getElementById('announcementContainer');
-  const list = document.getElementById('announcementArea');
-
-  if (!container || !list) return;
+  if (!container) return;
 
   container.addEventListener('mouseenter', () => {
-    container.classList.add('open');
-    list.classList.remove('hidden');
+    // On n'ouvre que s'il y a des messages
+    if (announcementList.length > 0) {
+        container.classList.add('open');
+    }
   });
 
   container.addEventListener('mouseleave', () => {
     container.classList.remove('open');
-    list.classList.add('hidden');
   });
 }
 
@@ -369,6 +314,7 @@ function renderAnnouncement() {
   if (!container) return;
 
   container.innerHTML = '';
+  container.classList.remove('hidden');
 
   if (leftContainer) {
     if (announcementList.length === 0) {
@@ -424,6 +370,7 @@ function renderAnnouncement() {
 
       if (isRoomAdmin) {
         const btn = textRow.querySelector('.announcement-delete');
+        // Note: on passe 'wrapper' pour supprimer tout le bloc wrapper
         if (btn) btn.addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
       }
 
