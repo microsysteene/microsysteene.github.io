@@ -378,7 +378,7 @@ function renderAnnouncement() {
     }
   }
 
-  announcementList.forEach(annonce => {
+  announcementList.forEach((annonce, index) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'announcement-wrapper';
     
