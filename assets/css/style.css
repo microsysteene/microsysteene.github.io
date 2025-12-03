@@ -908,11 +908,6 @@ input[type="password"]:focus {
     scrollbar-color: rgba(129, 129, 129, 0.5) transparent;
 }
 
-#subdiv::-webkit-scrollbar,
-#right::-webkit-scrollbar {
-    width: 8px;
-}
-
 #subdiv::-webkit-scrollbar-track,
 #right::-webkit-scrollbar-track {
     background: transparent;
@@ -1223,7 +1218,10 @@ input[type="password"]:focus {
     flex-direction: column;
     gap: 15px;
     width: 100%;
-    margin-bottom: 20px;
+    padding: 0 5px; 
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 
@@ -1237,7 +1235,7 @@ input[type="password"]:focus {
     background-color: var(--card-bg);
     box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
-    animation: bounce-in 0.4s ease-out forwards;
+    animation: ease-in 0.3s ease;
     min-height: 60px;
     gap: 15px;
 }
@@ -1336,6 +1334,18 @@ input[type="password"]:focus {
     filter: invert(1); 
 }
 
+.announcement-wrapper {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition-delay: 0s;
+}
+
+.announcement-container.open .announcement-wrapper {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition-delay: calc(var(--i) * 0.1s);
+}
 
 .admin-file-item {
     position: relative; 
@@ -1373,24 +1383,33 @@ input[type="password"]:focus {
 
 .announcement-container {
     width: 100%;
+    margin-top: 15px;
     margin-bottom: 20px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    transition: all 0.3s ease;
-    /* ensure proper positioning */
-    position: relative; 
+    height: auto; 
+    max-height: 140px;
+    transition: max-height 0.4s ease, background-color 0.3s ease;
+    position: relative;
+    padding: 5px 10px 15px 10px;
+    box-sizing: border-box;
+    
+    overflow: hidden;
+}
+
+.announcement-container::-webkit-scrollbar {
+    display: none;
 }
 
 .storage-widget {
     position: relative;
     width: 100%;
     height: 60px;
-    cursor: pointer;
-    z-index: 5;
-    transition: all 0.3s ease;
+    z-index: 100;
     flex-shrink: 0;
-    margin-bottom: 30px; 
+    margin-bottom: 0; 
+    margin-top: 0;
+    transition: margin-bottom 0.3s ease;
 }
 
 
@@ -1422,6 +1441,12 @@ input[type="password"]:focus {
     border-right: 2px solid black;
 }
 
+.storage-widget,
+.main-card,
+.stack-card,
+.announcement-container {
+    box-sizing: border-box;
+}
 /* main front card */
 .main-card {
     position: relative;
@@ -1513,13 +1538,16 @@ input[type="password"]:focus {
 }
 
 .announcement-container.open {
-    max-height: 400px; 
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 5px; 
+    max-height: 800px; 
+    overflow-y: visible;
 }
 
-
+.announcement-container.open .announcement-list {
+    opacity: 1;
+    display: flex;
+    position: relative;
+    z-index: 200;
+}
 
 .announcement-list {
     display: flex;
@@ -1530,4 +1558,25 @@ input[type="password"]:focus {
 
 .announcement-list.hidden {
     display: none;
+}
+
+.announcement-container::-webkit-scrollbar {
+    width: 6px;
+}
+.announcement-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.announcement-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}
+
+.announcement-container.is-empty .storage-widget {
+    margin-bottom: 0 !important;
+}
+
+.announcement-container.is-empty {
+    max-height: 80px; 
+    cursor: default;
+    pointer-events: none;
 }

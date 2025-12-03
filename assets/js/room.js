@@ -203,10 +203,13 @@ function updateStorageUI() {
   const widget = document.getElementById('storageWidget');
   const mainCard = widget.querySelector('.main-card');
   
+  // Nettoyage des anciennes cartes
   widget.querySelectorAll('.stack-card').forEach(el => el.remove());
+
   const maxStack = 4;
   const stacksToDisplay = announcementList.slice(0, maxStack);
   
+  // Création des cartes empilées (effet 3D)
   stacksToDisplay.forEach((annonce, index) => {
     const card = document.createElement('div');
     card.className = 'stack-card';
@@ -242,6 +245,26 @@ function updateStorageUI() {
 
     widget.insertBefore(card, mainCard);
   });
+
+  const container = document.getElementById('announcementContainer');
+  
+  if (container) {
+    if (announcementList.length === 0) {
+      container.classList.add('is-empty');
+      // Pas de marge si vide
+      widget.style.marginBottom = '0px'; 
+    } else {
+      container.classList.remove('is-empty');
+      
+      // On calcule juste la marge nécessaire pour l'effet 3D
+      // 1 carte = 12px, 2 cartes = 24px, etc.
+      const count = Math.min(announcementList.length, 4);
+      const marginBottom = count * 12; // 12px par carte
+      
+      // On applique la marge directement au widget
+      widget.style.marginBottom = `${marginBottom}px`;
+    }
+  }
 }
 
 // modified sync function
@@ -358,7 +381,8 @@ function renderAnnouncement() {
   announcementList.forEach(annonce => {
     const wrapper = document.createElement('div');
     wrapper.className = 'announcement-wrapper';
-
+    
+    wrapper.style.setProperty('--i', index);
 
     const hasText = annonce.content && annonce.content.trim() !== "";
 
