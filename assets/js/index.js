@@ -1,5 +1,19 @@
 const API_URL = "https://ticketapi.juhdd.me";
 
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const targetRoomFile = isMobile ? "room phone.html" : "room.html";
+const targetIndexFile = "index phone.html";
+
+// Logique de redirection immédiate (seulement si on est sur l'index)
+if (isMobile) {
+    if (!window.location.href.includes("phone")) {
+        const currentParams = window.location.search;
+        window.location.href = targetIndexFile + currentParams;
+        throw new Error("Redirection vers la version mobile...");
+    }
+}
+
+
 // get user id
 let userId = localStorage.getItem('userId');
 if (!userId) {
@@ -18,8 +32,8 @@ async function tryAutoJoin() {
       const data = await res.json();
 
       if (data && !data.error) {
-        // room valid, redirect
-        window.location.href = `room.html?room=${lastRoom}`;
+        // room valid, redirect -> UTILISATION DE LA VARIABLE DYNAMIQUE
+        window.location.href = `${targetRoomFile}?room=${lastRoom}`;
       } else {
         // room invalid, clear storage
         localStorage.removeItem('last_room');
@@ -53,11 +67,8 @@ const cancelJoinBtn = document.getElementById('cancelJoin');
 if (joinBtn) {
   joinBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    // Afficher l'overlay (flex pour centrer le contenu)
     joinOverlay.style.display = 'flex';
-    // Vider l'input précédent
     joinCodeInput.value = '';
-    // Mettre le focus dans l'input pour taper directement
     setTimeout(() => joinCodeInput.focus(), 50);
   });
 }
@@ -75,10 +86,9 @@ if (cancelJoinBtn) {
   });
 }
 
-// 3. Fermer le menu au clic à l'extérieur (sur le fond gris)
+// 3. Fermer le menu au clic à l'extérieur
 if (joinOverlay) {
   joinOverlay.addEventListener('click', (e) => {
-    // Si l'élément cliqué est exactement l'overlay (et pas la boîte blanche à l'intérieur)
     if (e.target === joinOverlay) {
       closeOverlay();
     }
@@ -89,7 +99,8 @@ if (joinOverlay) {
 function submitJoin() {
   const code = joinCodeInput.value;
   if (code && code.trim() !== "") {
-    window.location.href = `room.html?room=${code.trim()}`;
+    // Redirection vers le bon fichier room (mobile ou desktop)
+    window.location.href = `${targetRoomFile}?room=${code.trim()}`;
   }
 }
 
@@ -100,7 +111,6 @@ if (confirmJoinBtn) {
   });
 }
 
-// Bonus : Valider avec la touche Entrée dans l'input
 if (joinCodeInput) {
   joinCodeInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -112,25 +122,22 @@ if (joinCodeInput) {
 
 /* --- LOGIQUE DE CRÉATION DE GROUPE --- */
 
-// handle create click
 if (createBtn) {
   createBtn.addEventListener('click', async (e) => {
     e.preventDefault();
 
     try {
-      // create room api call
       const res = await fetch(`${API_URL}/api/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // change adminId to userId to match server expectation
         body: JSON.stringify({ userId: userId })
       });
 
       const data = await res.json();
 
-      // redirect to new room
       if (data && data.code) {
-        window.location.href = `room.html?room=${data.code}`;
+        // Redirection vers le bon fichier room (mobile ou desktop)
+        window.location.href = `${targetRoomFile}?room=${data.code}`;
       } else {
         alert("Erreur lors de la création du groupe");
       }
