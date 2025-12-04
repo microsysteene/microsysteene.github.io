@@ -2,7 +2,7 @@ const API_URL = "https://ticketapi.juhdd.me";
 
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 const targetRoomFile = isMobile ? "room phone.html" : "room.html";
-const targetIndexFile = "index phone.html";
+const targetIndexFile = "index-phone.html";
 
 // Logique de redirection immédiate (seulement si on est sur l'index)
 if (isMobile) {
