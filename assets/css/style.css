@@ -258,28 +258,29 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
 .toggle-slider {
     position: relative;
     display: inline-block;
-    width: 70px;
-    height: 34px;
+    width: 80px;
+    height: 41px;
     background-color: var(--bg-card);
     border-radius: 100px;
     border: 2px solid black;
     box-shadow: 0px 2px 0px #000000; 
     cursor: pointer;
-    transition: all 0.3s ease; 
+    transition: all 0.3s ease;
+    align-items: center;
 }
 .toggle-slider::before {
     content: '';
     position: absolute;
-    height: 24px;
-    width: 24px;
+    height: 26px;
+    width: 26px;
     border-radius: 50%;
     background-color: var(--bg-card);
     border: 2px solid black;
-    top: 2px;
-    left: 3px;
+    top: 5px;
+    left: 6px;
     transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55), background-color 0.3s;
 }
-.toggle-checkbox:checked + .toggle-slider::before { transform: translateX(34px); background-color: #9ecaff; }
+.toggle-checkbox:checked + .toggle-slider::before { transform: translateX(38px); background-color: #9ecaff; }
 .toggle-slider:hover { transform: translateY(-3px); box-shadow: 0px 5px 0px #000000; }
 
 /* Sliders (Radio Buttons) */
@@ -291,7 +292,7 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
     border-radius: 50px;
     width: auto;
     padding: 0 8px;
-    height: 45px;
+    height: 41px;
     background: var(--card-bg);
     box-shadow: 0px 2px 0px #000000;
     transition: all 0.3s ease;
@@ -329,6 +330,55 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
 }
 .color:hover:not(.selected) { transform: translateY(-3px); box-shadow: 0px 5px 0px rgb(0, 0, 0,0.2); }
 .color.selected { box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 1); animation: bounce-color 0.4s ease-out; transform: scale(1); }
+
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 130px;
+    height: 45px;
+    padding: 8px;
+    background: var(--card-bg);
+    border: 2px solid black;
+    border-radius: 100px;
+    box-sizing: border-box;
+    box-shadow: 0px 2px 0px #000000;
+    transition: all 0.3s ease;
+}
+
+.qty-val {
+    font-size: 16px;
+    font-weight: 600;
+    user-select: none;
+}
+
+.qty-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #9ecaff;
+    border: 2px solid black;
+    font-family: 'Inconsolata', monospace;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-bottom: 4px;
+    transition: all 0.3s ease;
+}
+
+.quantity-selector:hover {
+    transform: translateY(-3px);
+    box-shadow: 0px 5px 0px #000000;
+}
+
+.qty-btn:active {
+    transform: translateY(0px);
+    box-shadow: 0px 0px 0px #000000;
+    transition: all 0.2s ease;
+}
 
 /* ==========================================================================
    OVERLAYS & MODALS
