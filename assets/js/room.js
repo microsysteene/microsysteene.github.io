@@ -1,1125 +1,832 @@
-const API_URL = "https://ticketapi.juhdd.me";
-const WS_URL = "wss://ticketapi.juhdd.me";
 
-// state
-let activeUploads = [];
-const MAX_FILES = 10;
-let MAX_DURING_TICKET = 1;
+'use strict';
 
-// crypto
-let cryptoKey = null;
+/* ==========================================================================
+   1. CONFIGURATION & CONSTANTS
+   ========================================================================== */
+const CONFIG = {
+    API_URL: "https://ticketapi.juhdd.me",
+    WS_URL: "wss://ticketapi.juhdd.me",
+    MAX_FILES: 10,
+    MAX_STORAGE_BYTES: 1.5 * 1024 * 1024 * 1024, // 1.5 Go
+    ANIMATION_DELAY: 600,
+    RETRY_DELAY: 3000
+};
 
-// data
-let announcementList = [];
-let pendingFiles = [];
-
-// upload state
-let isSending = false;
-window.currentXhr = null; // store xhr to allow abort
-let lastDotInterval = null;
-
-function startTraitementDots(idx) {
-  // Clear any existing interval
-  if (lastDotInterval) clearInterval(lastDotInterval);
-  const txt = document.getElementById(`prog-txt-${idx}`);
-  if (!txt) return;
-  const states = ['traitement.', 'traitement..', 'traitement...'];
-  let i = 0;
-  txt.textContent = states[i];
-  txt.style.fontSize = '0.8em';
-  lastDotInterval = setInterval(() => {
-    i = (i + 1) % states.length;
-    txt.textContent = states[i];
-  }, 500);
-}
-
-function stopTraitementDots() {
-  if (lastDotInterval) {
-    clearInterval(lastDotInterval);
-    lastDotInterval = null;
-  }
-}
-
-function initFeatures() {
-  // copy link
-  const copyBtn = document.getElementById('copyLink');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const link = window.location.href;
-      navigator.clipboard.writeText(link).then(() => {
-        const textSpan = document.getElementById('copyText');
-        const originalText = textSpan.textContent;
-        textSpan.textContent = "Copié !";
-        setTimeout(() => textSpan.textContent = originalText, 2000);
-      }).catch(err => {
-        console.error('copy error :', err);
-        alert("Échec de la copie du lien.");
-      });
-    });
-  }
-}
-
-const codeButton = document.getElementById('codebutton');
-if (codeButton) {
-  codeButton.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigator.clipboard.writeText(roomCode).then(() => {
-      const textSpan = codeButton.querySelector('.text');
-      const originalText = textSpan.textContent;
-      textSpan.textContent = "Copié";
-      setTimeout(() => textSpan.textContent = originalText, 2000);
-    })
-  })
-}
-
-// url params
-const urlParams = new URLSearchParams(window.location.search);
-const roomCode = urlParams.get('room');
-
-if (roomCode) {
-  localStorage.setItem('last_room', roomCode);
-}
-if (!roomCode) {
-  window.location.href = "/";
-}
-
-let ws = null;
-let lastTicketIds = new Set();
-let filterCache = [];
-let isRendering = false;
-let isRoomAdmin = false;
-
-// cache recent tickets to avoid an extra GET when submitting
-let cachedTickets = [];
-
-let userId = localStorage.getItem('userId');
-if (!userId) {
-  userId = crypto.randomUUID();
-  localStorage.setItem('userId', userId);
-}
-
-if (document.readyState === 'complete') {
-  document.body.classList.add('loaded');
-} else {
-  window.addEventListener('load', () => document.body.classList.add('loaded'));
-}
-
-// crypto
-
-async function initCrypto() {
-  const enc = new TextEncoder();
-  const keyMaterial = await window.crypto.subtle.importKey(
-    "raw",
-    enc.encode(roomCode),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
-
-  cryptoKey = await window.crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: enc.encode("ticket-static-salt"),
-      iterations: 100000,
-      hash: "SHA-256"
+/* ==========================================================================
+   2. UTILITIES (Helpers)
+   ========================================================================== */
+const Utils = {
+    formatBytes: (bytes) => {
+        if (bytes === 0) return '0.00 Go';
+        const sizes = ['o', 'Ko', 'Mo', 'Go', 'To'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        if (i < 3) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' Go';
+        return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
     },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
-  console.log('crypto key ready');
-}
 
-// encrypt file
-async function encryptFile(file) {
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  const buffer = await file.arrayBuffer();
+    formatTimeElapsed: (dateString) => {
+        if (!dateString) return '';
+        const diff = Date.now() - new Date(dateString).getTime();
+        const mins = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        if (days > 0) return `(${days}j)`;
+        if (hours > 0) return `(${hours}h)`;
+        return `(${mins}mins)`;
+    },
 
-  const encryptedContent = await window.crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: iv },
-    cryptoKey,
-    buffer
-  );
+    rgbToHex: (rgbStr) => {
+        const match = rgbStr.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/);
+        if (!match) return '#d40000';
+        return "#" + ((1 << 24) + (+match[1] << 16) + (+match[2] << 8) + (+match[3])).toString(16).slice(1);
+    },
 
-  return new Blob([iv, encryptedContent], { type: 'application/octet-stream' });
-}
-
-// decrypt file
-async function decryptFile(blob) {
-  const buffer = await blob.arrayBuffer();
-  const iv = buffer.slice(0, 12);
-  const data = buffer.slice(12);
-
-  const decryptedContent = await window.crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: iv },
-    cryptoKey,
-    data
-  );
-
-  return new Blob([decryptedContent]);
-}
-
-// sync
-
-// constants
-const MAX_STORAGE_BYTES = 1.5 * 1024 * 1024 * 1024; // 1.5 Go in bytes
-
-function formatBytes(bytes) {
-  if (bytes === 0) return '0.00 Go';
-  const sizes = ['o', 'Ko', 'Mo', 'Go', 'To'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const val = (bytes / Math.pow(1024, i)).toFixed(2);
-  // force display in Go if close to it, purely for ui match
-  if (i < 3) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' Go';
-  return `${val} ${sizes[i]}`;
-}
-
-// update storage ui based on files
-// MODIFICATION: Simplification pour ne gérer que le texte et la classe 'is-empty'
-function updateStorageUI() {
-  let totalBytes = 0;
-  let totalFiles = 0;
-
-  announcementList.forEach(a => {
-    if (a.files && a.files.length > 0) {
-      totalFiles += a.files.length;
-      a.files.forEach(f => totalBytes += f.size);
+    getColorFromElement: (el) => {
+        if (!el) return '#cdcdcd';
+        return el.style.backgroundImage || el.style.backgroundColor || '#cdcdcd';
     }
-  });
+};
 
-  const sizeText = document.getElementById('storageText');
-  const countText = document.getElementById('fileCountText');
-  const bar = document.getElementById('storageProgressBar');
-  const container = document.getElementById('announcementContainer');
+/* ==========================================================================
+   3. SERVICES (Crypto, API, Socket)
+   ========================================================================== */
+const CryptoService = {
+    key: null,
 
-  if (sizeText) sizeText.textContent = formatBytes(totalBytes) + ' / 1.5 Go';
-  if (countText) countText.textContent = `${totalFiles} fichier${totalFiles > 1 ? 's' : ''} partagé${totalFiles > 1 ? 's' : ''}`;
+    async init(roomCode) {
+        const enc = new TextEncoder();
+        const keyMaterial = await window.crypto.subtle.importKey(
+            "raw", enc.encode(roomCode), "PBKDF2", false, ["deriveKey"]
+        );
+        this.key = await window.crypto.subtle.deriveKey(
+            { name: "PBKDF2", salt: enc.encode("ticket-static-salt"), iterations: 100000, hash: "SHA-256" },
+            keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+        );
+        console.log('🔒 Crypto key ready');
+    },
 
-  let pct = (totalBytes / MAX_STORAGE_BYTES) * 100;
-  if (pct < 5 && totalBytes > 0) pct = 5;
-  if (pct > 100) pct = 100;
-  if (bar) bar.style.width = `${pct}%`;
+    async encrypt(file) {
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const buffer = await file.arrayBuffer();
+        const encryptedContent = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv }, this.key, buffer
+        );
+        return new Blob([iv, encryptedContent], { type: 'application/octet-stream' });
+    },
 
-  // Gestion de la classe vide/plein pour l'affichage CSS
-  if (container) {
-    if (announcementList.length === 0) {
-        container.classList.add('is-empty');
-    } else {
-        container.classList.remove('is-empty');
+    async decrypt(blob) {
+        const buffer = await blob.arrayBuffer();
+        const iv = buffer.slice(0, 12);
+        const data = buffer.slice(12);
+        const decryptedContent = await window.crypto.subtle.decrypt(
+            { name: "AES-GCM", iv }, this.key, data
+        );
+        return new Blob([decryptedContent]);
     }
-  }
-}
+};
 
-// modified sync function
-async function syncAnnouncements() {
-  const data = await apiCall(`/api/announcements/${roomCode}`);
+const ApiService = {
+    async call(endpoint, method = "GET", body = null) {
+        try {
+            const options = {
+                method,
+                headers: { "Content-Type": "application/json" }
+            };
+            if (body) options.body = JSON.stringify(body);
+            const res = await fetch(`${CONFIG.API_URL}${endpoint}`, options);
+            if (method === "DELETE") return res.ok;
+            return await res.json();
+        } catch (e) {
+            console.error(`API Error ${method} ${endpoint}:`, e);
+            return method === "GET" ? [] : null;
+        }
+    },
 
-  if (Array.isArray(data)) {
-    announcementList = data;
-    updateStorageUI(); // calc size
-    renderAnnouncement();
-  }
-}
-
-// setup interaction
-// MODIFICATION: Gestion simple de la classe .open pour l'effet accordéon CSS
-function setupStorageWidget() {
-  const container = document.getElementById('announcementContainer');
-  if (!container) return;
-
-  container.addEventListener('mouseenter', () => {
-    // On n'ouvre que s'il y a des messages
-    if (announcementList.length > 0) {
-        container.classList.add('open');
+    async download(fileId) {
+        const res = await fetch(`${CONFIG.API_URL}/api/files/download/${fileId}`);
+        if (!res.ok) throw new Error('Download failed');
+        return await res.blob();
     }
-  });
+};
 
-  container.addEventListener('mouseleave', () => {
-    container.classList.remove('open');
-  });
-}
+/* ==========================================================================
+   4. UI MANAGER (DOM & Animations)
+   ========================================================================== */
+const UIManager = {
+    elements: {},
+    dotInterval: null,
 
-async function fetchFileContent(fileId) {
-  const res = await fetch(`${API_URL}/api/files/download/${fileId}`);
-  if (!res.ok) throw new Error('download error');
-  return await res.blob();
-}
+    init() {
+        // Cache DOM elements
+        const ids = [
+            'copyLink', 'copyText', 'codebutton', 'storageText', 'fileCountText',
+            'storageProgressBar', 'announcementContainer', 'announcementArea',
+            'adminFilesList', 'right', 'subdiv', 'create', 'createbutton',
+            'formOverlay', 'settingsOverlay', 'logoutOverlay', 'name', 'infos',
+            'fileUploadContainer', 'adminSettingsSection', 'dropArea', 'fileInput'
+        ];
+        ids.forEach(id => this.elements[id] = document.getElementById(id));
+    },
 
-async function handleFileDownload(fileId, fileName) {
-  console.log(`[LOG] download started: ${fileName} (id: ${fileId})`);
+    // --- Animations Dots ---
+    startDots(idx) {
+        if (this.dotInterval) clearInterval(this.dotInterval);
+        const txt = document.getElementById(`prog-txt-${idx}`);
+        if (!txt) return;
+        const states = ['traitement.', 'traitement..', 'traitement...'];
+        let i = 0;
+        txt.textContent = states[0];
+        txt.style.fontSize = '0.8em';
+        this.dotInterval = setInterval(() => {
+            i = (i + 1) % states.length;
+            txt.textContent = states[i];
+        }, 500);
+    },
 
-  try {
-    const blobToDecrypt = await fetchFileContent(fileId);
-    const clearBlob = await decryptFile(blobToDecrypt);
+    stopDots() {
+        if (this.dotInterval) {
+            clearInterval(this.dotInterval);
+            this.dotInterval = null;
+        }
+    },
 
-    const url = URL.createObjectURL(clearBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // --- Copy Feedback ---
+    showCopyFeedback(element, originalText, successText = "Copié !") {
+        element.textContent = successText;
+        setTimeout(() => element.textContent = originalText, 2000);
+    },
 
-  } catch (e) {
-    console.error('download/decrypt error', e);
-    alert("Erreur lors du téléchargement.");
-  }
-}
+    // --- Overlays ---
+    toggleOverlay(id, show) {
+        const el = this.elements[id] || document.getElementById(id);
+        if (el) el.style.display = show ? "flex" : "none";
+    },
 
-// ui
+    closeAllOverlays() {
+        document.querySelectorAll('.menu-overlay').forEach(el => el.style.display = "none");
+    },
 
-function renderPendingFiles() {
-  const listDiv = document.getElementById('adminFilesList');
-  if (!listDiv) return;
-
-  listDiv.innerHTML = '';
-
-  pendingFiles.forEach((file, index) => {
-    const item = document.createElement('div');
-    item.className = 'admin-file-item';
-
-    const fileSize = (file.size / (1024 * 1024)).toFixed(1);
-
-    // render with progress bar structure
-    item.innerHTML = `
-      <div class="file-progress-bar" id="prog-bar-${index}"></div>
-      <div class="admin-file-info">
-        <span class="admin-file-name">${file.name}</span>
-        <span class="admin-file-size">${fileSize} Mo</span>
-        <span class="file-progress-pct" id="prog-txt-${index}"></span>
-      </div>
-      <button class="admin-file-delete" data-idx="${index}" title="Retirer">×</button>
-    `;
-
-    // remove from pending list with check
-    item.querySelector('.admin-file-delete').addEventListener('click', (e) => {
-      e.preventDefault();
-      if (isSending) return alert("Upload en cours, impossible de retirer.");
-
-      pendingFiles.splice(index, 1);
-      renderPendingFiles();
-    });
-
-    listDiv.appendChild(item);
-  });
-}
-
-function renderAnnouncement() {
-  const container = document.getElementById('announcementArea');
-  const leftContainer = document.querySelector('.left-container');
-
-  if (!container) return;
-
-  container.innerHTML = '';
-  container.classList.remove('hidden');
-
-  if (leftContainer) {
-    if (announcementList.length === 0) {
-      leftContainer.style.gap = '0px';
-    } else {
-      leftContainer.style.gap = '';
+    // --- Rendering Helpers ---
+    createTag(tag, className, content = '', style = {}) {
+        const el = document.createElement(tag);
+        if (className) el.className = className;
+        if (content) el.innerHTML = content;
+        Object.assign(el.style, style);
+        return el;
     }
-  }
+};
 
-  announcementList.forEach((annonce, index) => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'announcement-wrapper';
-    
-    wrapper.style.setProperty('--i', index);
+/* ==========================================================================
+   5. MAIN APPLICATION LOGIC
+   ========================================================================== */
+class RoomApp {
+    constructor() {
+        this.state = {
+            roomCode: new URLSearchParams(window.location.search).get('room'),
+            userId: localStorage.getItem('userId') || crypto.randomUUID(),
+            isAdmin: false,
+            isSending: false,
+            maxTickets: 1,
+            tickets: [],
+            lastTicketIds: new Set(),
+            announcements: [],
+            pendingFiles: [],
+            filterList: [],
+            currentXhr: null
+        };
 
-    const hasText = annonce.content && annonce.content.trim() !== "";
+        if (!this.state.roomCode) {
+            window.location.href = "/";
+            return;
+        }
 
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'announcement-item';
+        localStorage.setItem('userId', this.state.userId);
+        localStorage.setItem('last_room', this.state.roomCode);
 
-    if (annonce.color && annonce.color.includes('gradient')) {
-      msgDiv.style.backgroundImage = annonce.color;
-    } else {
-      msgDiv.style.backgroundColor = annonce.color || '#cdcdcd';
+        this.init();
     }
 
-    msgDiv.style.display = 'flex';
-    msgDiv.style.flexDirection = 'column';
-    msgDiv.style.justifyContent = 'center';
-    msgDiv.style.gap = '8px';
-
-    if (hasText) {
-      const textRow = document.createElement('div');
-      textRow.style.display = 'flex';
-      textRow.style.justifyContent = 'space-between';
-      textRow.style.alignItems = 'center';
-      textRow.style.width = '100%';
-
-      const deleteBtn = isRoomAdmin ? `
-            <button class="announcement-delete" title="Supprimer">
-                <img src="./assets/icon/delete.png" alt="X">
-            </button>
-        ` : '';
-
-      textRow.innerHTML = `
-            <div class="announcement-content" style="width:100%;">
-                <span class="announcement-text">${annonce.content}</span>
-            </div>
-            <div class="announcement-actions">
-                ${deleteBtn}
-            </div>
-        `;
-
-      if (isRoomAdmin) {
-        const btn = textRow.querySelector('.announcement-delete');
-        // Note: on passe 'wrapper' pour supprimer tout le bloc wrapper
-        if (btn) btn.addEventListener('click', (e) => handleDeleteAnnouncement(e, annonce.id, wrapper));
-      }
-
-      msgDiv.appendChild(textRow);
+    async init() {
+        UIManager.init();
+        await this.loadResources();
+        this.setupEventListeners();
+        this.setupWebSocket();
+        document.body.classList.add('loaded');
+        
+        // Initial Render
+        const codeSpan = document.querySelector('#codebutton .text');
+        if (codeSpan) codeSpan.textContent = this.state.roomCode;
     }
 
-    if (annonce.files && annonce.files.length > 0) {
-      const fileContainer = document.createElement('div');
-      fileContainer.style.display = 'flex';
-      fileContainer.style.flexDirection = 'column';
-      fileContainer.style.gap = '4px';
-      fileContainer.style.width = '100%';
+    async loadResources() {
+        await CryptoService.init(this.state.roomCode);
+        await this.checkPermissions();
+        
+        // Load filters
+        try {
+            const res = await fetch(`./assets/filter.json?cb=${Date.now()}`);
+            const data = await res.json();
+            this.state.filterList = data.banned_terms || [];
+        } catch (e) { console.error("Filter load error", e); }
 
-      annonce.files.forEach(file => {
-        const fileRow = document.createElement('div');
-        fileRow.style.display = 'flex';
-        fileRow.style.alignItems = 'center';
-        fileRow.style.justifyContent = 'space-between';
-        fileRow.style.padding = '4px 0px';
-        fileRow.style.borderRadius = '4px';
-        fileRow.style.fontSize = '0.85em';
+        await this.syncAnnouncements();
+        await this.renderTickets();
+    }
 
+    /* --- Permissions & Admin Mode --- */
+    async checkPermissions() {
+        const data = await ApiService.call(`/api/rooms/${this.state.roomCode}`);
+        if (!data || data.error) {
+            alert("Salle introuvable.");
+            window.location.href = "/";
+            return;
+        }
+
+        if (data.maxTickets) {
+            this.state.maxTickets = data.maxTickets;
+            const radio = document.querySelector(`input[name="SliderCount"][value="${data.maxTickets}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        this.setAdminMode(data.adminId === this.state.userId);
+    }
+
+    setAdminMode(isAdmin) {
+        this.state.isAdmin = isAdmin;
+        const { createbutton, name, infos, formOverlay, fileUploadContainer, adminSettingsSection } = UIManager.elements;
+
+        if (adminSettingsSection) adminSettingsSection.style.display = isAdmin ? 'block' : 'none';
+        if (fileUploadContainer) fileUploadContainer.style.display = isAdmin ? 'flex' : 'none';
+
+        const title = formOverlay.querySelector('h1');
+        const btnText = createbutton.querySelector('.text');
+
+        if (isAdmin) {
+            if (btnText) btnText.textContent = "Nouveau message";
+            if (name) { name.placeholder = "Message"; name.value = ""; }
+            if (infos) infos.style.display = 'none';
+            if (title) title.textContent = "Nouveau message";
+            this.state.pendingFiles = [];
+            this.renderPendingFiles();
+        } else {
+            if (btnText) btnText.textContent = "Nouveau ticket";
+            if (name) { name.placeholder = "Nom"; name.value = ""; }
+            if (infos) infos.style.display = 'block';
+            if (title) title.textContent = "Nouveau ticket";
+        }
+        
+        this.syncAnnouncements(); // Update delete buttons
+        this.renderTickets(); // Update delete buttons
+    }
+
+    /* --- Tickets Logic --- */
+    async renderTickets(externalUpdate = false) {
+        const tickets = await ApiService.call(`/api/tickets/${this.state.roomCode}`);
+        this.state.tickets = Array.isArray(tickets) ? tickets : [];
+        
+        const currentIds = new Set(this.state.tickets.map(t => t.id));
+        let newId = null;
+
+        // Detect new ticket for animation
+        if (externalUpdate) {
+            for (const id of currentIds) {
+                if (!this.state.lastTicketIds.has(id)) {
+                    newId = id;
+                    break;
+                }
+            }
+        }
+        this.state.lastTicketIds = currentIds;
+
+        const active = this.state.tickets.filter(t => t.etat === "en cours");
+        const history = this.state.tickets.filter(t => t.etat !== "en cours");
+
+        this.updateTicketContainer('right', active, newId, true);
+        this.updateTicketContainer('subdiv', history, newId, false);
+    }
+
+    updateTicketContainer(containerId, list, newId, isActive) {
+        const container = UIManager.elements[containerId];
+        if (!container) return;
+
+        // Clean existing
+        container.querySelectorAll(isActive ? '.during' : '.history').forEach(el => el.remove());
+        container.querySelector('.empty-message')?.remove();
+
+        if (list.length === 0) {
+            const msg = UIManager.createTag('div', 'empty-message', isActive ? "<Aucun ticket en cours>" : "<Aucun ticket terminé>");
+            container.appendChild(msg);
+            return;
+        }
+
+        list.forEach(t => {
+            const div = UIManager.createTag('div', isActive ? "during" : "history");
+            div.id = t.id;
+            
+            // Background
+            if (t.couleur?.includes('gradient')) div.style.backgroundImage = t.couleur;
+            else div.style.backgroundColor = t.couleur || "#cdcdcd";
+
+            // Animation Class
+            if (t.id === newId) {
+                div.classList.add('add');
+                setTimeout(() => div.classList.remove('add'), CONFIG.ANIMATION_DELAY);
+            }
+
+            const timeStr = t.dateCreation ? new Date(t.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            const canDelete = this.state.isAdmin || (isActive && t.userId === this.state.userId);
+            const deleteBtn = canDelete ? `<a class="delete" data-id="${t.id}">—</a>` : "";
+
+            if (isActive) {
+                let info = `<p id="name">${t.nom}</p>`;
+                if (t.description?.trim()) info += `<p id="desc">${t.description}</p>`;
+                div.innerHTML = `
+                    <div class="checkbox" data-id="${t.id}"></div>
+                    <div class="info">${info}</div>
+                    <div class="time"><p id="created">${timeStr}</p><p id="remaining">${Utils.formatTimeElapsed(t.dateCreation)}</p></div>
+                    ${deleteBtn}
+                `;
+            } else {
+                div.innerHTML = `
+                    <p class="name">${t.nom}</p>
+                    <div class="time"><p class="created">${timeStr}</p><p class="etat">${t.etat}</p></div>
+                    ${deleteBtn}
+                `;
+            }
+            
+            // Delete Event
+            const btn = div.querySelector('.delete');
+            if (btn) btn.onclick = (e) => this.handleTicketDelete(e, t.id);
+
+            container.appendChild(div);
+        });
+    }
+
+    async handleTicketDelete(e, id) {
+        e.stopPropagation();
+        const el = e.target.closest('.during, .history');
+        if (!el) return;
+        
+        el.classList.add('bounce-reverse');
+        el.addEventListener('animationend', async () => {
+            await fetch(`${CONFIG.API_URL}/api/tickets/${id}?userId=${this.state.userId}&admin=${this.state.isAdmin}&roomCode=${this.state.roomCode}`, { method: "DELETE" });
+            el.remove();
+            this.renderTickets();
+        }, { once: true });
+    }
+
+    /* --- Announcements & Files Logic --- */
+    async syncAnnouncements() {
+        const data = await ApiService.call(`/api/announcements/${this.state.roomCode}`);
+        if (Array.isArray(data)) {
+            this.state.announcements = data;
+            this.updateStorageUI();
+            this.renderAnnouncements();
+        }
+    }
+
+    updateStorageUI() {
+        let totalBytes = 0;
+        let totalFiles = 0;
+        
+        this.state.announcements.forEach(a => {
+            if (a.files) {
+                totalFiles += a.files.length;
+                a.files.forEach(f => totalBytes += f.size);
+            }
+        });
+
+        const { storageText, fileCountText, storageProgressBar, announcementContainer } = UIManager.elements;
+        if (storageText) storageText.textContent = Utils.formatBytes(totalBytes) + ' / 1.5 Go';
+        if (fileCountText) fileCountText.textContent = `${totalFiles} fichier${totalFiles > 1 ? 's' : ''} partagé${totalFiles > 1 ? 's' : ''}`;
+        
+        let pct = (totalBytes / CONFIG.MAX_STORAGE_BYTES) * 100;
+        if (pct < 5 && totalBytes > 0) pct = 5;
+        if (pct > 100) pct = 100;
+        if (storageProgressBar) storageProgressBar.style.width = `${pct}%`;
+
+        // CSS Classes logic
+        if (announcementContainer) {
+            if (this.state.announcements.length === 0) announcementContainer.classList.add('is-empty');
+            else announcementContainer.classList.remove('is-empty');
+        }
+    }
+
+    renderAnnouncements() {
+        const container = UIManager.elements.announcementArea;
+        const leftContainer = document.querySelector('.left-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+        container.classList.remove('hidden');
+
+        if (leftContainer) leftContainer.style.gap = this.state.announcements.length === 0 ? '0px' : '';
+
+        this.state.announcements.forEach((annonce, index) => {
+            const wrapper = UIManager.createTag('div', 'announcement-wrapper');
+            wrapper.style.setProperty('--i', index);
+
+            const bg = annonce.color || '#cdcdcd';
+            const style = { display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' };
+            if (bg.includes('gradient')) style.backgroundImage = bg;
+            else style.backgroundColor = bg;
+
+            const msgDiv = UIManager.createTag('div', 'announcement-item', '', style);
+            
+            // Text Content
+            if (annonce.content?.trim()) {
+                const deleteBtn = this.state.isAdmin ? 
+                    `<button class="announcement-delete" title="Supprimer"><img src="./assets/icon/delete.png" alt="X"></button>` : '';
+                
+                const textRow = UIManager.createTag('div', '', `
+                    <div class="announcement-content" style="width:100%;"><span class="announcement-text">${annonce.content}</span></div>
+                    <div class="announcement-actions">${deleteBtn}</div>
+                `, { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' });
+
+                if (this.state.isAdmin) {
+                    textRow.querySelector('.announcement-delete').addEventListener('click', (e) => this.deleteItem(e, `/api/announcements/${annonce.id}`, wrapper));
+                }
+                msgDiv.appendChild(textRow);
+            }
+
+            // Files Content
+            if (annonce.files?.length > 0) {
+                const fileContainer = UIManager.createTag('div', '', '', { display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' });
+                annonce.files.forEach(file => {
+                    this.renderFileItem(file, annonce.id, fileContainer);
+                });
+                msgDiv.appendChild(fileContainer);
+            }
+
+            wrapper.appendChild(msgDiv);
+            container.appendChild(wrapper);
+        });
+    }
+
+    renderFileItem(file, announcementId, container) {
         const fName = file.originalName || file.name;
         const ext = fName.split('.').pop().toUpperCase();
         const size = (file.size / 1024 / 1024).toFixed(1);
 
-        const leftPart = document.createElement('div');
-        leftPart.style.display = 'flex';
-        leftPart.style.alignItems = 'center';
-        leftPart.style.gap = '6px';
-        leftPart.style.overflow = 'hidden';
-
-        leftPart.innerHTML = `
-                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;" title="${fName}">${fName}</span>
-                <span style="opacity:0.7; font-size:0.9em;">(${ext} • ${size} Mo)</span>
-            `;
-
-        const actionsPart = document.createElement('div');
-        actionsPart.style.display = 'flex';
-        actionsPart.style.alignItems = 'center';
-        actionsPart.style.gap = '8px';
-        const dlBtn = document.createElement('button');
-        dlBtn.className = 'announcement-action-btn';
-        dlBtn.innerHTML = `<img src="./assets/icon/download.png" style="width:18px; height:18px;">`;
-        dlBtn.title = "Télécharger";
-        dlBtn.onclick = (e) => {
-          e.preventDefault();
-          handleFileDownload(file.id, fName);
-        };
-        actionsPart.appendChild(dlBtn);
-
-        if (isRoomAdmin) {
-          const fileDelBtn = document.createElement('button');
-          fileDelBtn.className = 'announcement-action-btn';
-          fileDelBtn.style.borderColor = '#000000';
-          fileDelBtn.innerHTML = `<img src="./assets/icon/delete.png" style="width:18px; height:18px;">`;
-          fileDelBtn.title = "Supprimer ce fichier";
-
-          fileDelBtn.onclick = (e) => handleDeleteFile(e, annonce.id, file.id, fileRow);
-          actionsPart.appendChild(fileDelBtn);
-        }
-
-        fileRow.appendChild(leftPart);
-        fileRow.appendChild(actionsPart);
-        fileContainer.appendChild(fileRow);
-      });
-
-      msgDiv.appendChild(fileContainer);
-    }
-
-    wrapper.appendChild(msgDiv);
-    container.appendChild(wrapper);
-  });
-}
-
-async function handleDeleteAnnouncement(e, id, domElement) {
-  e.preventDefault();
-  if (!confirm("Supprimer cette annonce et ses fichiers ?")) return;
-
-  domElement.style.opacity = '0.5';
-
-  try {
-    const res = await fetch(`${API_URL}/api/announcements/${id}?userId=${userId}`, {
-      method: 'DELETE'
-    });
-
-    if (res.ok) {
-      domElement.remove();
-      await syncAnnouncements();
-    } else {
-      alert("Erreur suppression.");
-      domElement.style.opacity = '1';
-    }
-  } catch (err) {
-    console.error(err);
-    domElement.style.opacity = '1';
-  }
-}
-
-async function handleDeleteFile(e, announcementId, fileId, domElement) {
-  e.preventDefault();
-  if (!confirm("Supprimer ce fichier ?")) return;
-
-  domElement.style.opacity = '0.5';
-
-  try {
-    const res = await fetch(`${API_URL}/api/announcements/${announcementId}/files/${fileId}?userId=${userId}`, {
-      method: 'DELETE'
-    });
-
-    if (res.ok) {
-      domElement.remove();
-      await syncAnnouncements();
-    } else {
-      alert("Erreur suppression fichier.");
-      domElement.style.opacity = '1';
-    }
-  } catch (err) {
-    console.error(err);
-    domElement.style.opacity = '1';
-  }
-}
-
-// websocket
-
-function connectWebSocket() {
-  ws = new WebSocket(`${WS_URL}?room=${roomCode}`);
-
-  ws.onopen = () => console.log('ws connected', roomCode);
-  ws.onmessage = (event) => {
-    if (event.data === 'ping') {
-      ws.send('pong');
-      return;
-    }
-    try {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'update') {
-        renderTickets(true);
-        checkRoomPermissions();
-      }
-      if (msg.type === 'updateAnnonce') {
-        syncAnnouncements();
-      }
-    } catch (e) {
-      console.error('ws error', e);
-    }
-  };
-  ws.onerror = (err) => console.error('ws error', err);
-
-  ws.onclose = () => {
-    console.log('ws closed, retry in 3s');
-    setTimeout(connectWebSocket, 3000);
-  };
-}
-
-// api
-
-async function apiCall(endpoint, method = "GET", body = null) {
-  try {
-    const options = {
-      method,
-      headers: { "Content-Type": "application/json" }
-    };
-    if (body) options.body = JSON.stringify(body);
-
-    const res = await fetch(`${API_URL}${endpoint}`, options);
-    if (method === "DELETE") return true;
-    return await res.json();
-  } catch (e) {
-    console.error(`api error ${method}`, e);
-    return method === "GET" ? [] : null;
-  }
-}
-
-async function checkRoomPermissions() {
-  const roomData = await apiCall(`/api/rooms/${roomCode}`);
-
-  if (!roomData || roomData.error) {
-    localStorage.removeItem('last_room');
-    alert("Salle introuvable.");
-    window.location.href = "/";
-    return;
-  }
-
-  if (roomData.maxTickets) {
-    MAX_DURING_TICKET = roomData.maxTickets;
-    const radio = document.querySelector(`input[name="SliderCount"][value="${MAX_DURING_TICKET}"]`);
-    if (radio) radio.checked = true;
-  }
-
-  if (roomData.adminId === userId) setAdminMode(true);
-  else setAdminMode(false);
-}
-
-async function getTickets() {
-  const data = await apiCall(`/api/tickets/${roomCode}`);
-  return Array.isArray(data) ? data : [];
-}
-
-async function createTicket(ticket) {
-  ticket.roomCode = roomCode;
-  return await apiCall('/api/tickets', "POST", ticket);
-}
-
-async function deleteTicket(id) {
-  const endpoint = `/api/tickets/${id}?userId=${userId}&admin=${isRoomAdmin}&roomCode=${roomCode}`;
-  await fetch(`${API_URL}${endpoint}`, { method: "DELETE" });
-}
-
-async function updateTicket(id, modifications) {
-  modifications.roomCode = roomCode;
-  await apiCall(`/api/tickets/${id}`, "PUT", modifications);
-}
-
-async function loadFilters() {
-  try {
-    const res = await fetch("./assets/filter.json?cb=" + Date.now());
-    if (!res.ok) throw new Error("Erreur filter.json");
-    const data = await res.json();
-    filterCache = data.banned_terms || [];
-  } catch (error) {
-    console.error("Erreur filtre:", error);
-    filterCache = [];
-  }
-}
-
-// utils
-
-function formatTimeElapsed(dateString) {
-  if (!dateString) return '';
-  const diff = new Date() - new Date(dateString);
-  const mins = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (days > 0) return `(${days}j)`;
-  if (hours > 0) return `(${hours}h)`;
-  return `(${mins}mins)`;
-}
-
-function rgbToHex(rgbStr) {
-  const match = rgbStr.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/);
-  if (!match) return '#d40000';
-  const r = parseInt(match[1]);
-  const g = parseInt(match[2]);
-  const b = parseInt(match[3]);
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-}
-
-// tickets
-
-async function renderTickets(isExternalUpdate = false) {
-  if (isRendering) return;
-  isRendering = true;
-  const tickets = await getTickets();
-  // keep a local cache of the last fetched tickets to avoid refetching
-  cachedTickets = tickets;
-  const currentIds = new Set(tickets.map(t => t.id));
-
-  let newTicketId = null;
-  if (isExternalUpdate) {
-    for (const id of currentIds) {
-      if (!lastTicketIds.has(id)) {
-        newTicketId = id;
-        break;
-      }
-    }
-  }
-  lastTicketIds = currentIds;
-  const listActive = tickets.filter(t => t.etat === "en cours");
-  const listHistory = tickets.filter(t => t.etat !== "en cours");
-  updateContainer("right", listActive, newTicketId, true);
-  updateContainer("subdiv", listHistory, newTicketId, false);
-  isRendering = false;
-}
-
-function updateContainer(containerId, tickets, newId, isActiveList) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  const oldItems = container.querySelectorAll(isActiveList ? '.during' : '.history');
-  oldItems.forEach(el => el.remove());
-
-  const oldMsg = container.querySelector('.empty-message');
-  if (oldMsg) oldMsg.remove();
-
-  if (tickets.length === 0) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'empty-message';
-    msgDiv.textContent = isActiveList ? "<Aucun ticket en cours>" : "<Aucun ticket terminé>";
-    container.appendChild(msgDiv);
-    return;
-  }
-
-  tickets.forEach(t => {
-    const div = document.createElement('div');
-    div.className = isActiveList ? "during" : "history";
-    div.id = t.id;
-    if (t.id === newId) {
-      div.classList.add('add');
-      setTimeout(() => div.classList.remove('add'), 600);
-    }
-
-    if (t.couleur?.includes('gradient')) div.style.backgroundImage = t.couleur;
-    else div.style.backgroundColor = t.couleur || "#cdcdcd";
-
-    const timeStr = t.dateCreation
-      ? new Date(t.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : '';
-
-    const canDelete = isRoomAdmin || (isActiveList && t.userId === userId);
-    const deleteBtn = canDelete ? `<a class="delete" data-id="${t.id}">—</a>` : "";
-
-    if (isActiveList) {
-      let info = `<p id="name">${t.nom}</p>`;
-      if (t.description?.trim()) info += `<p id="desc">${t.description}</p>`;
-
-      div.innerHTML = `
-        <div class="checkbox" data-id="${t.id}"></div>
-        <div class="info">${info}</div>
-        <div class="time">
-          <p id="created">${timeStr}</p>
-          <p id="remaining">${formatTimeElapsed(t.dateCreation)}</p>
-        </div>
-        ${deleteBtn}
-      `;
-    } else {
-      div.innerHTML = `
-        <p class="name">${t.nom}</p>
-        <div class="time">
-          <p class="created">${timeStr}</p>
-          <p class="etat">${t.etat}</p>
-        </div>
-        ${deleteBtn}
-      `;
-    }
-    container.appendChild(div);
-  });
-
-  container.querySelectorAll('.delete').forEach(btn => btn.onclick = (e) => handleDeleteClick(e, btn.dataset.id));
-}
-
-async function handleDeleteClick(e, id) {
-  e.stopPropagation();
-  const el = e.target.closest('.during, .history');
-  if (!el) return;
-  el.classList.add('bounce-reverse');
-  el.addEventListener('animationend', async () => {
-    await deleteTicket(id);
-    el.remove();
-    renderTickets();
-  }, { once: true });
-}
-
-document.getElementById("right").addEventListener("click", async (e) => {
-  const checkbox = e.target.closest(".checkbox");
-  if (!checkbox) return;
-  const id = checkbox.dataset.id;
-  const el = document.getElementById(id);
-
-  if (!isRoomAdmin) {
-    alert("Permission refusée.");
-    return;
-  }
-  el.classList.add("moving");
-  el.addEventListener("animationend", async () => {
-    await updateTicket(id, { etat: "terminé" });
-    renderTickets();
-  }, { once: true });
-});
-
-// admin
-
-function setAdminMode(enable) {
-  isRoomAdmin = enable;
-  const createBtnText = document.querySelector('#createbutton .text');
-  const nameInput = document.getElementById('name');
-  const infosInput = document.getElementById('infos');
-  const modalTitle = document.querySelector('#formOverlay h1');
-  const uploadContainer = document.getElementById('fileUploadContainer');
-  const adminSettings = document.getElementById('adminSettingsSection');
-
-  if (enable) {
-    if (adminSettings) adminSettings.style.display = 'block';
-
-    if (createBtnText) createBtnText.textContent = "Nouveau message";
-    if (nameInput) {
-      nameInput.placeholder = "Message";
-      nameInput.value = "";
-    }
-    if (infosInput) infosInput.style.display = 'none';
-    if (modalTitle) modalTitle.textContent = "Nouveau message";
-
-    if (uploadContainer) uploadContainer.style.display = 'flex';
-
-    pendingFiles = [];
-    renderPendingFiles();
-
-  } else {
-    if (adminSettings) adminSettings.style.display = 'none';
-
-    if (createBtnText) createBtnText.textContent = "Nouveau tickets";
-    if (nameInput) {
-      nameInput.placeholder = "Nom";
-      nameInput.value = "";
-    }
-    if (infosInput) infosInput.style.display = 'block';
-    if (modalTitle) modalTitle.textContent = "Nouveau ticket";
-
-    if (uploadContainer) uploadContainer.style.display = 'none';
-  }
-
-  syncAnnouncements();
-  renderTickets();
-}
-
-// submission
-
-// global var to handle abort
-window.currentXhr = null;
-
-async function handleFormSubmit() {
-  if (isSending) return;
-
-  const nameInput = document.getElementById('name');
-  const infosInput = document.getElementById('infos');
-  const name = nameInput.value.trim();
-  const description = infosInput.value.trim();
-
-  // bad words check
-  const content = (name + " " + description).toLowerCase();
-  const forbidden = filterCache.find(term => content.includes(term.toLowerCase()));
-  if (forbidden) return alert("Mot interdit détecté.");
-
-  // --- ADMIN LOGIC ---
-  if (isRoomAdmin) {
-    if (!name && pendingFiles.length === 0) {
-      return alert("Message ou fichier requis.");
-    }
-
-    isSending = true;
-    const createBtn = document.getElementById('create');
-    if (createBtn) createBtn.classList.add('button-disabled');
-
-    try {
-      const formData = new FormData();
-      formData.append('roomCode', roomCode);
-      formData.append('userId', userId);
-      formData.append('content', name);
-
-      // color
-      const selectedColor = document.querySelector('.color.selected');
-      let hexColor = '#d40000';
-      if (selectedColor) {
-        const bg = selectedColor.style.backgroundImage || selectedColor.style.backgroundColor;
-        if (bg) hexColor = rgbToHex(bg) || bg;
-      }
-      formData.append('color', hexColor);
-
-      // Store encrypted blobs separately to calculate individual progress
-      const encryptedFilesList = [];
-
-      // encrypt files
-      if (pendingFiles.length > 0) {
-        // visual feedback: encrypting
-        pendingFiles.forEach((_, idx) => {
-          const txt = document.getElementById(`prog-txt-${idx}`);
-          if (txt) txt.textContent = "Crypto...";
+        const row = UIManager.createTag('div', '', '', {
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderRadius: '4px', fontSize: '0.85em'
         });
 
-        for (const file of pendingFiles) {
-          const encryptedBlob = await encryptFile(file);
-          // add to list for size calculation
-          encryptedFilesList.push(encryptedBlob);
-          // add to form data
-          formData.append('files', encryptedBlob, file.name);
+        const left = UIManager.createTag('div', '', `
+            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;" title="${fName}">${fName}</span>
+            <span style="opacity:0.7; font-size:0.9em;">(${ext} • ${size} Mo)</span>
+        `, { display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' });
+
+        const actions = UIManager.createTag('div', '', '', { display: 'flex', alignItems: 'center', gap: '8px' });
+        
+        // Download Btn
+        const dlBtn = UIManager.createTag('button', 'announcement-action-btn', `<img src="./assets/icon/download.png" style="width:18px; height:18px;">`);
+        dlBtn.onclick = (e) => { e.preventDefault(); this.handleFileDownload(file.id, fName); };
+        actions.appendChild(dlBtn);
+
+        // Delete Btn (Admin)
+        if (this.state.isAdmin) {
+            const delBtn = UIManager.createTag('button', 'announcement-action-btn', `<img src="./assets/icon/delete.png" style="width:18px; height:18px;">`);
+            delBtn.style.borderColor = '#000000';
+            delBtn.onclick = (e) => this.deleteItem(e, `/api/announcements/${announcementId}/files/${file.id}`, row);
+            actions.appendChild(delBtn);
         }
-      }
 
-      // upload with XHR for progress
-      await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        window.currentXhr = xhr; // save reference
-
-        xhr.open('POST', `${API_URL}/api/announcements`, true);
-
-        // clear any previous animation
-        stopTraitementDots();
-
-        // tracking upload progress individually
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            let remainingLoaded = e.loaded;
-
-            encryptedFilesList.forEach((blob, idx) => {
-              const bar = document.getElementById(`prog-bar-${idx}`);
-              const txt = document.getElementById(`prog-txt-${idx}`);
-              const fileSize = blob.size;
-
-              let percent = 0;
-
-              if (remainingLoaded >= fileSize) {
-                percent = 100;
-                remainingLoaded -= fileSize;
-              } else if (remainingLoaded > 0) {
-                percent = Math.round((remainingLoaded / fileSize) * 100);
-                remainingLoaded = 0;
-              } else {
-                percent = 0;
-              }
-
-              if (bar) bar.style.width = `${percent}%`;
-              if (txt) {
-                if (percent === 100) {
-                  // If this is the last file, show animated "traitement...", otherwise show "terminé"
-                  if (idx === encryptedFilesList.length - 1) {
-                    startTraitementDots(idx);
-                  } else {
-                    // stop any dot animation (ensure only last animates)
-                    txt.textContent = 'terminé';
-                    txt.style.fontSize = '';
-                  }
-                } else {
-                  txt.textContent = `${percent}%`;
-                }
-              }
-            });
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            // Force all bars to 100% and set final texts:
-            encryptedFilesList.forEach((_, idx) => {
-              const bar = document.getElementById(`prog-bar-${idx}`);
-              const txt = document.getElementById(`prog-txt-${idx}`);
-              if (bar) bar.style.width = '100%';
-              if (txt) {
-                if (idx === encryptedFilesList.length - 1) {
-                  startTraitementDots(idx);
-                } else {
-                  txt.textContent = 'terminé';
-                  txt.style.fontSize = '';
-                }
-              }
-            });
-            resolve(xhr.response);
-          } else reject(new Error("Upload failed"));
-        };
-
-        xhr.onerror = () => { stopTraitementDots(); reject(new Error("Network error")); };
-        xhr.onabort = () => { stopTraitementDots(); reject(new Error("Aborted")); };
-
-        xhr.send(formData);
-      });
-
-      // success: keep the last-file animation visible briefly, then clear it and UI
-      await new Promise(res => setTimeout(res, 1200));
-      stopTraitementDots();
-
-      closeAllOverlays();
-      nameInput.value = "";
-      pendingFiles = []; // clear list
-      renderPendingFiles();
-      await syncAnnouncements();
-
-    } catch (e) {
-      if (e.message !== "Aborted") {
-        console.error(e);
-        alert("Erreur: " + e.message);
-        // reset bars on error
-        renderPendingFiles();
-      }
-    } finally {
-      isSending = false;
-      window.currentXhr = null;
-      if (createBtn) createBtn.classList.remove('button-disabled');
+        row.appendChild(left);
+        row.appendChild(actions);
+        container.appendChild(row);
     }
-    return;
-  }
 
-  // --- USER LOGIC (inchangé) ---
-  // use cached tickets if available to avoid an extra network roundtrip
-  const tickets = cachedTickets.length ? cachedTickets : await getTickets();
-  const myActiveTickets = tickets.filter(t => t.etat === "en cours" && t.userId === userId);
-  if (myActiveTickets.length >= MAX_DURING_TICKET) return alert("Limite atteinte.");
-  if (!name) return alert("Nom requis.");
-
-  const selectedColor = document.querySelector('.color.selected');
-  const color = selectedColor ? (selectedColor.style.backgroundImage || selectedColor.style.backgroundColor) : '#cdcdcd';
-
-  await createTicket({ nom: name, description, couleur: color, etat: "en cours", userId });
-  nameInput.value = "";
-  infosInput.value = "";
-  closeAllOverlays();
-}
-
-// safe close
-function tryCloseOverlay() {
-  if (isSending) {
-    if (!confirm("Envoi en cours. Annuler l'envoi ?")) return;
-
-    if (window.currentXhr) {
-      window.currentXhr.abort();
-    }
-    isSending = false;
-    renderPendingFiles();
-  } else if (pendingFiles.length > 0) {
-    if (!confirm("Fichiers non envoyés. Fermer et supprimer les fichiers ?")) return;
-    pendingFiles = [];
-    renderPendingFiles();
-  }
-
-  closeAllOverlays();
-}
-
-// ui init
-
-function openOverlay(id) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.style.display = "flex";
-  }
-}
-
-function closeAllOverlays() {
-  document.querySelectorAll('.menu-overlay').forEach(el => el.style.display = "none");
-}
-
-window.addEventListener('DOMContentLoaded', async () => {
-  initFeatures();
-  await checkRoomPermissions();
-  await initCrypto();
-  await loadFilters();
-
-  await syncAnnouncements();
-
-  setupStorageWidget();
-
-  renderTickets();
-  connectWebSocket();
-
-  document.querySelector('#codebutton .text').textContent = roomCode;
-
-  document.getElementById('create').addEventListener('click', (e) => {
-    e.preventDefault();
-    handleFormSubmit();
-  });
-
-  document.getElementById("createbutton").addEventListener('click', (e) => {
-    e.preventDefault();
-    openOverlay("formOverlay");
-  });
-
-  document.getElementById("setting").addEventListener('click', (e) => {
-    e.preventDefault();
-    openOverlay("settingsOverlay");
-    const radio = document.querySelector(`input[name="SliderCount"][value="${MAX_DURING_TICKET}"]`);
-    if (radio) radio.checked = true;
-  });
-
-  document.querySelectorAll('input[name="SliderCount"]').forEach(radio => {
-    radio.addEventListener('change', async (e) => {
-      const val = parseInt(e.target.value);
-      MAX_DURING_TICKET = val;
-      if (isRoomAdmin) {
-        await apiCall(`/api/rooms/${roomCode}`, "PUT", { maxTickets: val });
-      }
-    });
-  });
-
-  document.getElementById("closeSettings")?.addEventListener('click', (e) => {
-    e.preventDefault();
-    closeAllOverlays();
-  });
-
-  // safe overlay close logic
-  document.querySelectorAll('.menu-overlay').forEach(overlay => {
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        if (overlay.id === 'formOverlay') {
-          tryCloseOverlay();
-        } else {
-          closeAllOverlays();
-        }
-      }
-    });
-  });
-
-  document.getElementById("logout")?.addEventListener('click', (e) => {
-    e.preventDefault();
-    openOverlay("logoutOverlay");
-  });
-  document.getElementById("cancelLogout")?.addEventListener('click', (e) => {
-    e.preventDefault();
-    closeAllOverlays();
-  });
-  document.getElementById("confirmLogout")?.addEventListener('click', (e) => {
-    e.preventDefault();
-    localStorage.removeItem('last_room');
-    window.location.href = '/';
-  });
-
-  // file input
-  const dropArea = document.getElementById('dropArea');
-  const fileInput = document.getElementById('fileInput');
-
-  if (dropArea && fileInput) {
-    dropArea.addEventListener('click', () => {
-      if (pendingFiles.length >= MAX_FILES) return alert("Limite atteinte.");
-      fileInput.click();
-    });
-
-    fileInput.addEventListener('change', () => {
-      const files = Array.from(fileInput.files);
-      if (files.length === 0) return;
-
-      if (pendingFiles.length + files.length > MAX_FILES) {
-        alert(`Trop de fichiers (max ${MAX_FILES}).`);
-        fileInput.value = '';
-        return;
-      }
-
-      pendingFiles = [...pendingFiles, ...files];
-      renderPendingFiles();
-      fileInput.value = '';
-    });
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      dropArea.addEventListener(eventName, (e) => {
+    async deleteItem(e, endpoint, domElement) {
         e.preventDefault();
-        e.stopPropagation();
-      }, false);
-    });
+        if (!confirm("Supprimer ?")) return;
+        domElement.style.opacity = '0.5';
+        try {
+            const success = await ApiService.call(`${endpoint}?userId=${this.state.userId}`, "DELETE");
+            if (success) {
+                domElement.remove();
+                await this.syncAnnouncements();
+            } else {
+                throw new Error("Delete failed");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Erreur suppression.");
+            domElement.style.opacity = '1';
+        }
+    }
 
-    dropArea.addEventListener('dragenter', () => dropArea.classList.add('drag-over'));
-    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+    async handleFileDownload(fileId, fileName) {
+        try {
+            const blobEnc = await ApiService.download(fileId);
+            const blobClear = await CryptoService.decrypt(blobEnc);
+            const url = URL.createObjectURL(blobClear);
+            const a = document.createElement('a');
+            a.href = url; a.download = fileName;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error("Download error", e);
+            alert("Erreur lors du téléchargement.");
+        }
+    }
 
-    dropArea.addEventListener('drop', (e) => {
-      dropArea.classList.remove('drag-over');
-      const dt = e.dataTransfer;
-      const files = Array.from(dt.files);
+    /* --- Form Submission & Upload --- */
+    renderPendingFiles() {
+        const listDiv = UIManager.elements.adminFilesList;
+        if (!listDiv) return;
+        listDiv.innerHTML = '';
 
-      if (pendingFiles.length + files.length > MAX_FILES) {
-        alert(`Trop de fichiers (max ${MAX_FILES}).`);
-        return;
-      }
+        this.state.pendingFiles.forEach((file, index) => {
+            const fileSize = (file.size / (1024 * 1024)).toFixed(1);
+            const item = UIManager.createTag('div', 'admin-file-item', `
+                <div class="file-progress-bar" id="prog-bar-${index}"></div>
+                <div class="admin-file-info">
+                    <span class="admin-file-name">${file.name}</span>
+                    <span class="admin-file-size">${fileSize} Mo</span>
+                    <span class="file-progress-pct" id="prog-txt-${index}"></span>
+                </div>
+                <button class="admin-file-delete" data-idx="${index}" title="Retirer">×</button>
+            `);
+            
+            item.querySelector('.admin-file-delete').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (this.state.isSending) return alert("Upload en cours...");
+                this.state.pendingFiles.splice(index, 1);
+                this.renderPendingFiles();
+            });
+            listDiv.appendChild(item);
+        });
+    }
 
-      pendingFiles = [...pendingFiles, ...files];
-      renderPendingFiles();
-    });
-  }
-});
+    async handleFormSubmit() {
+        if (this.state.isSending) return;
+
+        const nameInput = UIManager.elements.name;
+        const infosInput = UIManager.elements.infos;
+        const name = nameInput.value.trim();
+        const description = infosInput.value.trim();
+
+        // Security Filter
+        if (this.state.filterList.some(term => (name + " " + description).toLowerCase().includes(term.toLowerCase()))) {
+            return alert("Mot interdit détecté.");
+        }
+
+        const selectedColorEl = document.querySelector('.color.selected');
+        const color = selectedColorEl ? Utils.getColorFromElement(selectedColorEl) : '#cdcdcd';
+
+        // --- ADMIN SUBMIT ---
+        if (this.state.isAdmin) {
+            if (!name && this.state.pendingFiles.length === 0) return alert("Message ou fichier requis.");
+            await this.processAdminUpload(name, color);
+            return;
+        }
+
+        // --- USER SUBMIT ---
+        const activeTickets = this.state.tickets.filter(t => t.etat === "en cours" && t.userId === this.state.userId);
+        if (activeTickets.length >= this.state.maxTickets) return alert("Limite atteinte.");
+        if (!name) return alert("Nom requis.");
+
+        await ApiService.call('/api/tickets', "POST", {
+            nom: name, description, couleur: color, etat: "en cours", userId: this.state.userId, roomCode: this.state.roomCode
+        });
+
+        nameInput.value = "";
+        infosInput.value = "";
+        UIManager.closeAllOverlays();
+    }
+
+    async processAdminUpload(content, color) {
+        this.state.isSending = true;
+        const createBtn = UIManager.elements.create;
+        if (createBtn) createBtn.classList.add('button-disabled');
+
+        try {
+            const formData = new FormData();
+            formData.append('roomCode', this.state.roomCode);
+            formData.append('userId', this.state.userId);
+            formData.append('content', content);
+            formData.append('color', color.includes('gradient') ? Utils.rgbToHex(color) || color : color);
+
+            // Encryption
+            const encryptedList = [];
+            if (this.state.pendingFiles.length > 0) {
+                this.state.pendingFiles.forEach((_, i) => {
+                    const txt = document.getElementById(`prog-txt-${i}`);
+                    if (txt) txt.textContent = "Crypto...";
+                });
+
+                for (const file of this.state.pendingFiles) {
+                    const encBlob = await CryptoService.encrypt(file);
+                    encryptedList.push(encBlob);
+                    formData.append('files', encBlob, file.name);
+                }
+            }
+
+            // XHR Upload
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                this.state.currentXhr = xhr;
+                xhr.open('POST', `${CONFIG.API_URL}/api/announcements`, true);
+                UIManager.stopDots();
+
+                xhr.upload.onprogress = (e) => {
+                    if (!e.lengthComputable) return;
+                    let remaining = e.loaded;
+                    encryptedList.forEach((blob, idx) => {
+                        const bar = document.getElementById(`prog-bar-${idx}`);
+                        const txt = document.getElementById(`prog-txt-${idx}`);
+                        const size = blob.size;
+                        let pct = 0;
+
+                        if (remaining >= size) { pct = 100; remaining -= size; }
+                        else if (remaining > 0) { pct = Math.round((remaining / size) * 100); remaining = 0; }
+
+                        if (bar) bar.style.width = `${pct}%`;
+                        if (txt) {
+                            if (pct === 100) {
+                                if (idx === encryptedList.length - 1) UIManager.startDots(idx);
+                                else { txt.textContent = 'terminé'; txt.style.fontSize = ''; }
+                            } else txt.textContent = `${pct}%`;
+                        }
+                    });
+                };
+
+                xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error("Upload failed"));
+                xhr.onerror = () => reject(new Error("Network error"));
+                xhr.onabort = () => reject(new Error("Aborted"));
+                xhr.send(formData);
+            });
+
+            // Cleanup
+            await new Promise(r => setTimeout(r, 1200)); // Finish animation
+            UIManager.stopDots();
+            UIManager.closeAllOverlays();
+            UIManager.elements.name.value = "";
+            this.state.pendingFiles = [];
+            this.renderPendingFiles();
+            await this.syncAnnouncements();
+
+        } catch (e) {
+            if (e.message !== "Aborted") {
+                console.error(e);
+                alert("Erreur: " + e.message);
+                this.renderPendingFiles(); // Reset UI
+            }
+        } finally {
+            this.state.isSending = false;
+            this.state.currentXhr = null;
+            if (createBtn) createBtn.classList.remove('button-disabled');
+        }
+    }
+
+    /* --- WebSockets --- */
+    setupWebSocket() {
+        this.ws = new WebSocket(`${CONFIG.WS_URL}?room=${this.state.roomCode}`);
+        this.ws.onopen = () => console.log('WS connected', this.state.roomCode);
+        this.ws.onmessage = (event) => {
+            if (event.data === 'ping') return this.ws.send('pong');
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'update') {
+                    this.renderTickets(true);
+                    this.checkPermissions();
+                }
+                if (msg.type === 'updateAnnonce') this.syncAnnouncements();
+            } catch (e) { console.error('WS parse error', e); }
+        };
+        this.ws.onclose = () => setTimeout(() => this.setupWebSocket(), CONFIG.RETRY_DELAY);
+    }
+
+    /* --- Event Listeners --- */
+    setupEventListeners() {
+        const els = UIManager.elements;
+
+        // Overlay Triggers
+        if (els.createbutton) els.createbutton.onclick = (e) => { e.preventDefault(); UIManager.toggleOverlay("formOverlay", true); };
+        if (els.create) els.create.onclick = (e) => { e.preventDefault(); this.handleFormSubmit(); };
+        
+        // Settings
+        const settingBtn = document.getElementById("setting");
+        if (settingBtn) settingBtn.onclick = (e) => {
+            e.preventDefault();
+            UIManager.toggleOverlay("settingsOverlay", true);
+            const radio = document.querySelector(`input[name="SliderCount"][value="${this.state.maxTickets}"]`);
+            if (radio) radio.checked = true;
+        };
+        document.getElementById("closeSettings")?.addEventListener('click', (e) => { e.preventDefault(); UIManager.closeAllOverlays(); });
+
+        // Storage Widget Hover
+        const stContainer = els.announcementContainer;
+        if (stContainer) {
+            stContainer.onmouseenter = () => { if (this.state.announcements.length > 0) stContainer.classList.add('open'); };
+            stContainer.onmouseleave = () => stContainer.classList.remove('open');
+        }
+
+        // Copy Links
+        if (els.copyLink) els.copyLink.onclick = (e) => {
+            e.preventDefault();
+            navigator.clipboard.writeText(window.location.href)
+                .then(() => UIManager.showCopyFeedback(document.getElementById('copyText'), document.getElementById('copyText').textContent))
+                .catch(() => alert("Erreur copie"));
+        };
+        if (els.codebutton) els.codebutton.onclick = (e) => {
+            e.preventDefault();
+            navigator.clipboard.writeText(this.state.roomCode)
+                .then(() => UIManager.showCopyFeedback(els.codebutton.querySelector('.text'), els.codebutton.querySelector('.text').textContent, "Copié"));
+        };
+
+        // Ticket Actions (Delegation for Move)
+        document.getElementById("right")?.addEventListener("click", async (e) => {
+            const checkbox = e.target.closest(".checkbox");
+            if (!checkbox) return;
+            if (!this.state.isAdmin) return alert("Permission refusée.");
+            
+            const id = checkbox.dataset.id;
+            const el = document.getElementById(id);
+            el.classList.add("moving");
+            el.addEventListener("animationend", async () => {
+                await ApiService.call(`/api/tickets/${id}`, "PUT", { etat: "terminé", roomCode: this.state.roomCode });
+                this.renderTickets();
+            }, { once: true });
+        });
+
+        // Safe Close
+        document.querySelectorAll('.menu-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target !== overlay) return;
+                if (overlay.id === 'formOverlay' && (this.state.isSending || this.state.pendingFiles.length > 0)) {
+                    if (this.state.isSending) {
+                        if (confirm("Annuler l'envoi ?")) { this.state.currentXhr?.abort(); }
+                        else return;
+                    } else {
+                        if (confirm("Fermer et perdre les fichiers ?")) { this.state.pendingFiles = []; this.renderPendingFiles(); }
+                        else return;
+                    }
+                }
+                UIManager.closeAllOverlays();
+            });
+        });
+
+        // Logout
+        document.getElementById("logout")?.addEventListener('click', (e) => { e.preventDefault(); UIManager.toggleOverlay("logoutOverlay", true); });
+        document.getElementById("cancelLogout")?.addEventListener('click', (e) => { e.preventDefault(); UIManager.closeAllOverlays(); });
+        document.getElementById("confirmLogout")?.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('last_room');
+            window.location.href = '/';
+        });
+
+        // Max Tickets Slider
+        document.querySelectorAll('input[name="SliderCount"]').forEach(radio => {
+            radio.addEventListener('change', async (e) => {
+                const val = parseInt(e.target.value);
+                this.state.maxTickets = val;
+                if (this.state.isAdmin) await ApiService.call(`/api/rooms/${this.state.roomCode}`, "PUT", { maxTickets: val });
+            });
+        });
+
+        // Drag & Drop
+        this.setupDragAndDrop();
+    }
+
+    setupDragAndDrop() {
+        const { dropArea, fileInput } = UIManager.elements;
+        if (!dropArea || !fileInput) return;
+
+        dropArea.onclick = () => {
+            if (this.state.pendingFiles.length >= CONFIG.MAX_FILES) return alert("Limite atteinte.");
+            fileInput.click();
+        };
+
+        fileInput.onchange = () => {
+            const files = Array.from(fileInput.files);
+            if (!files.length) return;
+            this.addFiles(files);
+            fileInput.value = '';
+        };
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+            dropArea.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+        });
+
+        dropArea.addEventListener('dragenter', () => dropArea.classList.add('drag-over'));
+        dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+        dropArea.addEventListener('drop', (e) => {
+            dropArea.classList.remove('drag-over');
+            this.addFiles(Array.from(e.dataTransfer.files));
+        });
+    }
+
+    addFiles(files) {
+        if (this.state.pendingFiles.length + files.length > CONFIG.MAX_FILES) {
+            return alert(`Trop de fichiers (max ${CONFIG.MAX_FILES}).`);
+        }
+        this.state.pendingFiles = [...this.state.pendingFiles, ...files];
+        this.renderPendingFiles();
+    }
+}
+
+// Start App
+window.addEventListener('DOMContentLoaded', () => new RoomApp());
