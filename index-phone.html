@@ -6,6 +6,7 @@
     <title>Ticket - Mobile</title>
     
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="icon" type="image/png" href="./assets/icon/favicon.png">
     
     <style>
         body, html {
@@ -29,7 +30,7 @@
         .mobile-logo {
             width: 60%;
             max-width: 250px;
-            margin-top: 160px;
+            margin-top: 100px;
             margin-bottom: auto;
             transition: filter 0.3s ease;
         }
@@ -85,6 +86,8 @@
     </style>
 </head>
 <body>
+    
+    <script>window.isMobile = true;</script>
 
     <canvas id="bgCanvas"></canvas>
 
@@ -101,8 +104,8 @@
         
         <img src="./assets/icon/logo.png" alt="Ticket Logo" class="mobile-logo">
 
-        <div class="mobile-actions">
-            <a href="#" class="button-text" id="joinBtn">
+        <div class="mobile-actions action-buttons">
+            <a href="#" class="button-text">
                 <img class="icon" src="./assets/icon/search.png" alt="Search">
                 <span class="text">Rejoindre</span>
             </a>
@@ -118,13 +121,17 @@
     </div>
 
     <div class="menu-overlay" id="joinOverlay" style="display: none;">
-        <div class="menu-box" style="width: 90%; max-width: 400px;">
+        <div class="menu-box" style="margin: 0px 20px;">
             <div class="input" style="padding-bottom: 0;">
                 
                 <h1 style="margin-top: 0;">Code d'accès</h1>
                 
+                <p style="margin: 20px 0; opacity: 0.7; text-align: center; font-size: 0.9rem;">
+                    Entrez le code pour rejoindre la salle.
+                </p>
+
                 <div style="margin: 30px 0;">
-                    <input type="text" id="joinCodeInput" placeholder="ex: 4A2B" style="text-transform: uppercase; text-align: center; font-size: 1.2rem; letter-spacing: 5px;" autocomplete="off" />
+                    <input type="text" id="joinCodeInput" placeholder="ex: 45A2F" style="text-transform: uppercase; text-align: center; font-size: 0.9rem; letter-spacing: 5px;" autocomplete="off" />
                 </div>
                 
                 <div class="overlay-footer" style="display: flex; flex-direction: column; gap: 15px; padding-bottom: 20px; margin: 0;">
@@ -182,6 +189,7 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="./assets/js/darkmode.js"></script>
     
     <script>
@@ -243,50 +251,30 @@
         }
         animate();
 
-        // Gestion des overlays
         const settingsBtn = document.getElementById('settingsBtn');
         const settingsOverlay = document.getElementById('settingsOverlay');
         const closeSettings = document.getElementById('closeSettings');
-        const joinBtn = document.getElementById('joinBtn');
-        const joinOverlay = document.getElementById('joinOverlay');
-        const cancelJoin = document.getElementById('cancelJoin');
 
-        // Ouverture paramètres
-        settingsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            settingsOverlay.style.display = 'flex';
-        });
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                settingsOverlay.style.display = 'flex';
+            });
+        }
 
-        // Fermeture paramètres
-        closeSettings.addEventListener('click', (e) => {
-            e.preventDefault();
-            settingsOverlay.style.display = 'none';
-        });
-
-        // Ouverture rejoindre
-        joinBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            joinOverlay.style.display = 'flex';
-        });
-
-        // Fermeture rejoindre
-        cancelJoin.addEventListener('click', (e) => {
-            e.preventDefault();
-            joinOverlay.style.display = 'none';
-        });
-
-        // Fermeture en cliquant sur l'overlay
-        settingsOverlay.addEventListener('click', (e) => {
-            if (e.target === settingsOverlay) {
+        if (closeSettings) {
+            closeSettings.addEventListener('click', (e) => {
+                e.preventDefault();
                 settingsOverlay.style.display = 'none';
-            }
-        });
+            });
+        }
 
-        joinOverlay.addEventListener('click', (e) => {
-            if (e.target === joinOverlay) {
-                joinOverlay.style.display = 'none';
-            }
-        });
+        if (settingsOverlay) {
+            settingsOverlay.addEventListener('click', (e) => { 
+                if (e.target === settingsOverlay) settingsOverlay.style.display = 'none'; 
+            });
+        }
+
     </script>
 
     <script src="./assets/js/index.js"></script>
