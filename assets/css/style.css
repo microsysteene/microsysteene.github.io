@@ -475,7 +475,7 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
 .during #desc {
     color: #000000a6;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-word;

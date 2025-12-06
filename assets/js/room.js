@@ -1,14 +1,15 @@
 'use strict';
 
-// --- configuration ---
+// config
 const api_url = "https://ticketapi.juhdd.me";
 const ws_url = "wss://ticketapi.juhdd.me";
 const max_files = 10;
-const max_storage_bytes = 1.5 * 1024 * 1024 * 1024; // 1.5 gb
+const max_storage_bytes = 1.5 * 1024 * 1024 * 1024; // 1.5gb
 const animation_delay = 600;
+const max_ws_retries = 5;
 const retry_delay = 3000;
 
-// --- app state ---
+// state
 let room_code = new URLSearchParams(window.location.search).get('room');
 let user_id = localStorage.getItem('userId') || crypto.randomUUID();
 let is_admin = false;
@@ -21,38 +22,40 @@ let announcements_list = [];
 let pending_files = [];
 let banned_terms = [];
 let current_xhr = null;
+let ws_retry_count = 0;
+let erroroverlay;
 
-// --- crypto state ---
+// crypto
 let crypto_key = null;
 
-// --- ui state ---
+// ui state
 let ui_elements = {};
 let dot_interval = null;
 
-// check if room exists
+// validation
 if (!room_code) {
     window.location.href = "/";
 } else {
-    // save user session
+    // session
     localStorage.setItem('userId', user_id);
     localStorage.setItem('last_room', room_code);
 }
 
 
-// --- utility functions ---
+// utils
 
 function format_bytes(bytes) {
     if (bytes === 0) {
         return '0.00 Go';
     }
-    
+
     const sizes = ['o', 'Ko', 'Mo', 'Go', 'To'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    
+
     if (i < 3) {
         return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' Go';
     }
-    
+
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 }
 
@@ -68,17 +71,17 @@ function format_time_elapsed(date_string) {
 
     if (days > 0) return `(${days}j)`;
     if (hours > 0) return `(${hours}h)`;
-    
+
     return `(${mins}mins)`;
 }
 
 function rgb_to_hex(rgb_str) {
     const match = rgb_str.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/);
-    
+
     if (!match) {
         return '#d40000';
     }
-    
+
     return "#" + ((1 << 24) + (+match[1] << 16) + (+match[2] << 8) + (+match[3])).toString(16).slice(1);
 }
 
@@ -91,58 +94,58 @@ function get_color_from_element(el) {
 
 function create_tag(tag, class_name, content = '', style = {}) {
     const el = document.createElement(tag);
-    
+
     if (class_name) {
         el.className = class_name;
     }
-    
+
     if (content) {
         el.innerHTML = content;
     }
-    
+
     Object.assign(el.style, style);
     return el;
 }
 
 
-// --- encryption functions ---
+// encryption
 
 async function init_crypto(room_code_str) {
     const enc = new TextEncoder();
     const key_material = await window.crypto.subtle.importKey(
-        "raw", 
-        enc.encode(room_code_str), 
-        "PBKDF2", 
-        false, 
+        "raw",
+        enc.encode(room_code_str),
+        "PBKDF2",
+        false,
         ["deriveKey"]
     );
-    
+
     crypto_key = await window.crypto.subtle.deriveKey(
-        { 
-            name: "PBKDF2", 
-            salt: enc.encode("ticket-static-salt"), 
-            iterations: 100000, 
-            hash: "SHA-256" 
+        {
+            name: "PBKDF2",
+            salt: enc.encode("ticket-static-salt"),
+            iterations: 100000,
+            hash: "SHA-256"
         },
-        key_material, 
-        { name: "AES-GCM", length: 256 }, 
-        false, 
+        key_material,
+        { name: "AES-GCM", length: 256 },
+        false,
         ["encrypt", "decrypt"]
     );
-    
+
     console.log('🔒 Crypto key ready');
 }
 
 async function encrypt_file(file) {
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
     const buffer = await file.arrayBuffer();
-    
+
     const encrypted_content = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv }, 
-        crypto_key, 
+        { name: "AES-GCM", iv },
+        crypto_key,
         buffer
     );
-    
+
     return new Blob([iv, encrypted_content], { type: 'application/octet-stream' });
 }
 
@@ -150,18 +153,18 @@ async function decrypt_blob(blob) {
     const buffer = await blob.arrayBuffer();
     const iv = buffer.slice(0, 12);
     const data = buffer.slice(12);
-    
+
     const decrypted_content = await window.crypto.subtle.decrypt(
-        { name: "AES-GCM", iv }, 
-        crypto_key, 
+        { name: "AES-GCM", iv },
+        crypto_key,
         data
     );
-    
+
     return new Blob([decrypted_content]);
 }
 
 
-// --- api functions ---
+// api
 
 async function api_call(endpoint, method = "GET", body = null) {
     try {
@@ -169,17 +172,17 @@ async function api_call(endpoint, method = "GET", body = null) {
             method,
             headers: { "Content-Type": "application/json" }
         };
-        
+
         if (body) {
             options.body = JSON.stringify(body);
         }
-        
+
         const res = await fetch(`${api_url}${endpoint}`, options);
-        
+
         if (method === "DELETE") {
             return res.ok;
         }
-        
+
         return await res.json();
     } catch (e) {
         console.error(`API Error ${method} ${endpoint}:`, e);
@@ -189,16 +192,16 @@ async function api_call(endpoint, method = "GET", body = null) {
 
 async function api_download(file_id) {
     const res = await fetch(`${api_url}/api/files/download/${file_id}`);
-    
+
     if (!res.ok) {
         throw new Error('Download failed');
     }
-    
+
     return await res.blob();
 }
 
 
-// --- ui management ---
+// ui init
 
 function init_ui() {
     const ids = [
@@ -208,7 +211,7 @@ function init_ui() {
         'formOverlay', 'settingsOverlay', 'logoutOverlay', 'name', 'infos',
         'fileUploadContainer', 'adminSettingsSection', 'dropArea', 'fileInput'
     ];
-    
+
     ids.forEach(id => {
         ui_elements[id] = document.getElementById(id);
     });
@@ -218,16 +221,16 @@ function start_dots(idx) {
     if (dot_interval) {
         clearInterval(dot_interval);
     }
-    
+
     const txt = document.getElementById(`prog-txt-${idx}`);
     if (!txt) return;
-    
+
     const states = ['traitement.', 'traitement..', 'traitement...'];
     let i = 0;
-    
+
     txt.textContent = states[0];
     txt.style.fontSize = '0.8em';
-    
+
     dot_interval = setInterval(() => {
         i = (i + 1) % states.length;
         txt.textContent = states[i];
@@ -261,18 +264,61 @@ function close_all_overlays() {
     });
 }
 
+function show_connection_error() {
+    // overlay
+    const overlay = create_tag('div', 'menu-overlay', '', {
+        display: 'flex',
+        zIndex: '9999'
+    });
 
-// --- main logic ---
+    const box = create_tag('div', 'menu-box');
+
+    // title
+    const title = create_tag('h1', '', 'Impossible de se connecter');
+    title.style.color = '#d40000';
+
+    // message
+    const msg = create_tag('p', '', 'La connexion au serveur a échoué après plusieurs tentatives. \n Vous pouvez attendre que le serveur redevienne disponible ou quitter la salle.');
+    msg.style.marginBottom = '20px';
+    msg.style.textAlign = 'center';
+
+    // button
+    const btn = create_tag('a', 'button-text', `<img class="icon" src="./assets/icon/logout.png" alt="">
+        <span class="text">Partir</span>`, {
+        width: 'auto',
+        padding: '0 30px',
+        margin: '0',
+        minWidth: '140px'
+    });
+    btn.href = '/';
+
+    btn.onclick = (e) => {
+        e.preventDefault();
+        localStorage.removeItem('last_room');
+        window.location.href = '/';
+    };
+
+    // dom
+    box.appendChild(title);
+    box.appendChild(msg);
+    box.appendChild(btn);
+    overlay.appendChild(box);
+
+    document.body.appendChild(overlay);
+}
+
+
+// main
 
 async function init_app() {
     init_ui();
     await load_resources();
     setup_event_listeners();
     setup_websocket();
-    
+
     document.body.classList.add('loaded');
-    
-    // show room code in ui
+
+    // display code
     const code_span = document.querySelector('#codebutton .text');
     if (code_span) {
         code_span.textContent = room_code;
@@ -282,8 +328,8 @@ async function init_app() {
 async function load_resources() {
     await init_crypto(room_code);
     await check_permissions();
-    
-    // load banned words
+
+    // filter
     try {
         const res = await fetch(`./assets/filter.json?cb=${Date.now()}`);
         const data = await res.json();
@@ -298,7 +344,7 @@ async function load_resources() {
 
 async function check_permissions() {
     const data = await api_call(`/api/rooms/${room_code}`);
-    
+
     if (!data || data.error) {
         alert("Salle introuvable.");
         window.location.href = "/";
@@ -321,7 +367,7 @@ function set_admin_mode(status) {
     if (adminSettingsSection) {
         adminSettingsSection.style.display = is_admin ? 'block' : 'none';
     }
-    
+
     if (fileUploadContainer) {
         fileUploadContainer.style.display = is_admin ? 'flex' : 'none';
     }
@@ -334,7 +380,7 @@ function set_admin_mode(status) {
         if (name) { name.placeholder = "Message"; name.value = ""; }
         if (infos) infos.style.display = 'none';
         if (title) title.textContent = "Nouveau message";
-        
+
         pending_files = [];
         render_pending_files();
     } else {
@@ -343,22 +389,22 @@ function set_admin_mode(status) {
         if (infos) infos.style.display = 'block';
         if (title) title.textContent = "Nouveau ticket";
     }
-    
-    sync_announcements(); 
-    render_tickets(); 
+
+    sync_announcements();
+    render_tickets();
 }
 
 
-// --- tickets logic ---
+// tickets
 
 async function render_tickets(external_update = false) {
     const data = await api_call(`/api/tickets/${room_code}`);
     tickets_list = Array.isArray(data) ? data : [];
-    
+
     const current_ids = new Set(tickets_list.map(t => t.id));
     let new_id = null;
 
-    // check for new tickets for animation
+    // updates check
     if (external_update) {
         for (const id of current_ids) {
             if (!last_ticket_ids.has(id)) {
@@ -380,7 +426,7 @@ function update_ticket_container(container_id, list, new_id, is_active) {
     const container = ui_elements[container_id];
     if (!container) return;
 
-    // clean old items
+    // cleanup
     container.querySelectorAll(is_active ? '.during' : '.history').forEach(el => el.remove());
     container.querySelector('.empty-message')?.remove();
 
@@ -394,15 +440,15 @@ function update_ticket_container(container_id, list, new_id, is_active) {
     list.forEach(t => {
         const div = create_tag('div', is_active ? "during" : "history");
         div.id = t.id;
-        
-        // set color
+
+        // color
         if (t.couleur?.includes('gradient')) {
             div.style.backgroundImage = t.couleur;
         } else {
             div.style.backgroundColor = t.couleur || "#cdcdcd";
         }
 
-        // animate new items
+        // animation
         if (t.id === new_id) {
             div.classList.add('add');
             setTimeout(() => div.classList.remove('add'), animation_delay);
@@ -415,7 +461,7 @@ function update_ticket_container(container_id, list, new_id, is_active) {
         if (is_active) {
             let info = `<p id="name">${t.nom}</p>`;
             if (t.description?.trim()) info += `<p id="desc">${t.description}</p>`;
-            
+
             div.innerHTML = `
                 <div class="checkbox" data-id="${t.id}"></div>
                 <div class="info">${info}</div>
@@ -429,8 +475,8 @@ function update_ticket_container(container_id, list, new_id, is_active) {
                 ${delete_btn}
             `;
         }
-        
-        // delete action
+
+        // delete
         const btn = div.querySelector('.delete');
         if (btn) {
             btn.onclick = (e) => handle_ticket_delete(e, t.id);
@@ -444,9 +490,9 @@ async function handle_ticket_delete(e, id) {
     e.stopPropagation();
     const el = e.target.closest('.during, .history');
     if (!el) return;
-    
+
     el.classList.add('bounce-reverse');
-    
+
     el.addEventListener('animationend', async () => {
         await fetch(`${api_url}/api/tickets/${id}?userId=${user_id}&admin=${is_admin}&roomCode=${room_code}`, { method: "DELETE" });
         el.remove();
@@ -455,7 +501,7 @@ async function handle_ticket_delete(e, id) {
 }
 
 
-// --- announcements logic ---
+// announcements
 
 async function sync_announcements() {
     const data = await api_call(`/api/announcements/${room_code}`);
@@ -469,7 +515,7 @@ async function sync_announcements() {
 function update_storage_ui() {
     let total_bytes = 0;
     let total_files = 0;
-    
+
     announcements_list.forEach(a => {
         if (a.files) {
             total_files += a.files.length;
@@ -478,19 +524,19 @@ function update_storage_ui() {
     });
 
     const { storageText, fileCountText, storageProgressBar, announcementContainer } = ui_elements;
-    
+
     if (storageText) {
         storageText.textContent = format_bytes(total_bytes) + ' / 1.5 Go';
     }
-    
+
     if (fileCountText) {
         fileCountText.textContent = `${total_files} fichier${total_files > 1 ? 's' : ''} partagé${total_files > 1 ? 's' : ''}`;
     }
-    
+
     let pct = (total_bytes / max_storage_bytes) * 100;
     if (pct < 5 && total_bytes > 0) pct = 5;
     if (pct > 100) pct = 100;
-    
+
     if (storageProgressBar) {
         storageProgressBar.style.width = `${pct}%`;
     }
@@ -522,7 +568,7 @@ function render_announcements() {
 
         const bg = annonce.color || '#cdcdcd';
         const style = { display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' };
-        
+
         if (bg.includes('gradient')) {
             style.backgroundImage = bg;
         } else {
@@ -530,12 +576,12 @@ function render_announcements() {
         }
 
         const msg_div = create_tag('div', 'announcement-item', '', style);
-        
-        // render text
+
+        // text
         if (annonce.content?.trim()) {
-            const delete_btn = is_admin ? 
+            const delete_btn = is_admin ?
                 `<button class="announcement-delete" title="Supprimer"><img src="./assets/icon/delete.png" alt="X"></button>` : '';
-            
+
             const text_row = create_tag('div', '', `
                 <div class="announcement-content" style="width:100%;"><span class="announcement-text">${annonce.content}</span></div>
                 <div class="announcement-actions">${delete_btn}</div>
@@ -547,14 +593,14 @@ function render_announcements() {
             msg_div.appendChild(text_row);
         }
 
-        // render files
+        // files
         if (annonce.files?.length > 0) {
             const file_container = create_tag('div', '', '', { display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' });
-            
+
             annonce.files.forEach(file => {
                 render_file_item(file, annonce.id, file_container);
             });
-            
+
             msg_div.appendChild(file_container);
         }
 
@@ -578,16 +624,16 @@ function render_file_item(file, announcement_id, container) {
     `, { display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' });
 
     const actions = create_tag('div', '', '', { display: 'flex', alignItems: 'center', gap: '8px' });
-    
-    // download button
+
+    // download
     const dl_btn = create_tag('button', 'announcement-action-btn', `<img src="./assets/icon/download.png" style="width:18px; height:18px;">`);
-    dl_btn.onclick = (e) => { 
-        e.preventDefault(); 
-        handle_file_download(file.id, f_name); 
+    dl_btn.onclick = (e) => {
+        e.preventDefault();
+        handle_file_download(file.id, f_name);
     };
     actions.appendChild(dl_btn);
 
-    // admin delete button
+    // delete
     if (is_admin) {
         const del_btn = create_tag('button', 'announcement-action-btn', `<img src="./assets/icon/delete.png" style="width:18px; height:18px;">`);
         del_btn.style.borderColor = '#000000';
@@ -602,14 +648,14 @@ function render_file_item(file, announcement_id, container) {
 
 async function delete_item(e, endpoint, dom_element) {
     e.preventDefault();
-    
+
     if (!confirm("Supprimer ?")) return;
-    
+
     dom_element.style.opacity = '0.5';
-    
+
     try {
         const success = await api_call(`${endpoint}?userId=${user_id}`, "DELETE");
-        
+
         if (success) {
             dom_element.remove();
             await sync_announcements();
@@ -628,14 +674,14 @@ async function handle_file_download(file_id, file_name) {
         const blob_enc = await api_download(file_id);
         const blob_clear = await decrypt_blob(blob_enc);
         const url = URL.createObjectURL(blob_clear);
-        
+
         const a = document.createElement('a');
-        a.href = url; 
+        a.href = url;
         a.download = file_name;
-        document.body.appendChild(a); 
-        a.click(); 
+        document.body.appendChild(a);
+        a.click();
         document.body.removeChild(a);
-        
+
         URL.revokeObjectURL(url);
     } catch (e) {
         console.error("Download error", e);
@@ -644,12 +690,12 @@ async function handle_file_download(file_id, file_name) {
 }
 
 
-// --- pending files logic ---
+// uploads
 
 function render_pending_files() {
     const list_div = ui_elements.adminFilesList;
     if (!list_div) return;
-    
+
     list_div.innerHTML = '';
 
     pending_files.forEach((file, index) => {
@@ -663,15 +709,15 @@ function render_pending_files() {
             </div>
             <button class="admin-file-delete" data-idx="${index}" title="Retirer">×</button>
         `);
-        
+
         item.querySelector('.admin-file-delete').addEventListener('click', (e) => {
             e.preventDefault();
             if (is_sending) return alert("Upload en cours...");
-            
+
             pending_files.splice(index, 1);
             render_pending_files();
         });
-        
+
         list_div.appendChild(item);
     });
 }
@@ -684,8 +730,8 @@ async function handle_form_submit() {
     const name = name_input.value.trim();
     const description = infos_input.value.trim();
 
-    // check banned words
-    const is_banned = banned_terms.some(term => 
+    // validation
+    const is_banned = banned_terms.some(term =>
         (name + " " + description).toLowerCase().includes(term.toLowerCase())
     );
 
@@ -696,7 +742,7 @@ async function handle_form_submit() {
     const selected_color_el = document.querySelector('.color.selected');
     const color = selected_color_el ? get_color_from_element(selected_color_el) : '#cdcdcd';
 
-    // handle admin upload
+    // admin upload
     if (is_admin) {
         if (!name && pending_files.length === 0) {
             return alert("Message ou fichier requis.");
@@ -705,23 +751,23 @@ async function handle_form_submit() {
         return;
     }
 
-    // handle user ticket
+    // user ticket
     const active_tickets = tickets_list.filter(t => t.etat === "en cours" && t.userId === user_id);
-    
+
     if (active_tickets.length >= max_tickets) {
         return alert("Limite atteinte.");
     }
-    
+
     if (!name) {
         return alert("Nom requis.");
     }
 
     await api_call('/api/tickets', "POST", {
-        nom: name, 
-        description, 
-        couleur: color, 
-        etat: "en cours", 
-        userId: user_id, 
+        nom: name,
+        description,
+        couleur: color,
+        etat: "en cours",
+        userId: user_id,
         roomCode: room_code
     });
 
@@ -733,7 +779,7 @@ async function handle_form_submit() {
 async function process_admin_upload(content, color) {
     is_sending = true;
     const create_btn = ui_elements.create;
-    
+
     if (create_btn) {
         create_btn.classList.add('button-disabled');
     }
@@ -743,15 +789,15 @@ async function process_admin_upload(content, color) {
         form_data.append('roomCode', room_code);
         form_data.append('userId', user_id);
         form_data.append('content', content);
-        
-        // fix gradient color if needed
+
+        // color fix
         const fixed_color = color.includes('gradient') ? rgb_to_hex(color) || color : color;
         form_data.append('color', fixed_color);
 
-        // encrypt files
+        // encryption
         const encrypted_list = [];
         if (pending_files.length > 0) {
-            // update ui text
+            // ui update
             pending_files.forEach((_, i) => {
                 const txt = document.getElementById(`prog-txt-${i}`);
                 if (txt) txt.textContent = "Crypto...";
@@ -764,7 +810,7 @@ async function process_admin_upload(content, color) {
             }
         }
 
-        // upload via xhr for progress
+        // upload
         await new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             current_xhr = xhr;
@@ -773,32 +819,32 @@ async function process_admin_upload(content, color) {
 
             xhr.upload.onprogress = (e) => {
                 if (!e.lengthComputable) return;
-                
+
                 let remaining = e.loaded;
-                
+
                 encrypted_list.forEach((blob, idx) => {
                     const bar = document.getElementById(`prog-bar-${idx}`);
                     const txt = document.getElementById(`prog-txt-${idx}`);
                     const size = blob.size;
                     let pct = 0;
 
-                    if (remaining >= size) { 
-                        pct = 100; 
-                        remaining -= size; 
-                    } else if (remaining > 0) { 
-                        pct = Math.round((remaining / size) * 100); 
-                        remaining = 0; 
+                    if (remaining >= size) {
+                        pct = 100;
+                        remaining -= size;
+                    } else if (remaining > 0) {
+                        pct = Math.round((remaining / size) * 100);
+                        remaining = 0;
                     }
 
                     if (bar) bar.style.width = `${pct}%`;
-                    
+
                     if (txt) {
                         if (pct === 100) {
                             if (idx === encrypted_list.length - 1) {
                                 start_dots(idx);
-                            } else { 
-                                txt.textContent = 'terminé'; 
-                                txt.style.fontSize = ''; 
+                            } else {
+                                txt.textContent = 'terminé';
+                                txt.style.fontSize = '';
                             }
                         } else {
                             txt.textContent = `${pct}%`;
@@ -813,7 +859,7 @@ async function process_admin_upload(content, color) {
             xhr.send(form_data);
         });
 
-        // ui cleanup
+        // reset
         await new Promise(r => setTimeout(r, 1200));
         stop_dots();
         close_all_overlays();
@@ -838,61 +884,77 @@ async function process_admin_upload(content, color) {
 }
 
 
-// --- websocket ---
+// websocket
 
 function setup_websocket() {
     const ws = new WebSocket(`${ws_url}?room=${room_code}`);
-    
-    ws.onopen = () => console.log('WS connected', room_code);
-    
+
+    ws.onopen = () => {
+        console.log('WS connected', room_code);
+        ws_retry_count = 0; // reset retry
+        if (erroroverlay==true) {
+            close_all_overlays();
+            erroroverlay=null;
+        }
+    };
+
     ws.onmessage = (event) => {
         if (event.data === 'ping') {
             return ws.send('pong');
         }
-        
+
         try {
             const msg = JSON.parse(event.data);
-            
+
             if (msg.type === 'update') {
                 render_tickets(true);
                 check_permissions();
             }
-            
+
             if (msg.type === 'updateAnnonce') {
                 sync_announcements();
             }
-        } catch (e) { 
-            console.error('WS parse error', e); 
+        } catch (e) {
+            console.error('WS parse error', e);
         }
     };
-    
+
     ws.onclose = () => {
+        ws_retry_count++;
+
+        if (ws_retry_count >= max_ws_retries) {
+            if (erroroverlay==null){ 
+            show_connection_error();
+            erroroverlay=true;
+        }
+    } 
+
         setTimeout(() => setup_websocket(), retry_delay);
     };
 }
 
 
-// --- events setup ---
+// events
 
 function setup_event_listeners() {
     const els = ui_elements;
 
-    // menu buttons
+    // menu
     if (els.createbutton) {
-        els.createbutton.onclick = (e) => { 
-            e.preventDefault(); 
-            toggle_overlay("formOverlay", true); 
+        els.createbutton.onclick = (e) => {
+            e.preventDefault();
+            toggle_overlay("formOverlay", true);
         };
     }
-    
+
     if (els.create) {
-        els.create.onclick = (e) => { 
-            e.preventDefault(); 
-            handle_form_submit(); 
+        els.create.onclick = (e) => {
+            e.preventDefault();
+            handle_form_submit();
         };
     }
-    
-    // settings button
+
+    // settings
     const setting_btn = document.getElementById("setting");
     if (setting_btn) {
         setting_btn.onclick = (e) => {
@@ -902,22 +964,22 @@ function setup_event_listeners() {
             if (radio) radio.checked = true;
         };
     }
-    
-    document.getElementById("closeSettings")?.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        close_all_overlays(); 
+
+    document.getElementById("closeSettings")?.addEventListener('click', (e) => {
+        e.preventDefault();
+        close_all_overlays();
     });
 
-    // hover effect on storage
+    // storage hover
     const st_container = els.announcementContainer;
     if (st_container) {
-        st_container.onmouseenter = () => { 
-            if (announcements_list.length > 0) st_container.classList.add('open'); 
+        st_container.onmouseenter = () => {
+            if (announcements_list.length > 0) st_container.classList.add('open');
         };
         st_container.onmouseleave = () => st_container.classList.remove('open');
     }
 
-    // copy buttons
+    // copy
     if (els.copyLink) {
         els.copyLink.onclick = (e) => {
             e.preventDefault();
@@ -926,7 +988,7 @@ function setup_event_listeners() {
                 .catch(() => alert("Erreur copie"));
         };
     }
-    
+
     if (els.codebutton) {
         els.codebutton.onclick = (e) => {
             e.preventDefault();
@@ -935,16 +997,16 @@ function setup_event_listeners() {
         };
     }
 
-    // complete ticket action
+    // complete ticket
     document.getElementById("right")?.addEventListener("click", async (e) => {
         const checkbox = e.target.closest(".checkbox");
         if (!checkbox) return;
-        
+
         if (!is_admin) return alert("Permission refusée.");
-        
+
         const id = checkbox.dataset.id;
         const el = document.getElementById(id);
-        
+
         el.classList.add("moving");
         el.addEventListener("animationend", async () => {
             await api_call(`/api/tickets/${id}`, "PUT", { etat: "terminé", roomCode: room_code });
@@ -952,23 +1014,23 @@ function setup_event_listeners() {
         }, { once: true });
     });
 
-    // close overlays safely
+    // close overlays
     document.querySelectorAll('.menu-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
             if (e.target !== overlay) return;
-            
-            // safety check if uploading
+
+            // upload safety
             if (overlay.id === 'formOverlay' && (is_sending || pending_files.length > 0)) {
                 if (is_sending) {
-                    if (confirm("Annuler l'envoi ?")) { 
-                        current_xhr?.abort(); 
+                    if (confirm("Annuler l'envoi ?")) {
+                        current_xhr?.abort();
                     } else {
                         return;
                     }
                 } else {
-                    if (confirm("Fermer et perdre les fichiers ?")) { 
-                        pending_files = []; 
-                        render_pending_files(); 
+                    if (confirm("Fermer et perdre les fichiers ?")) {
+                        pending_files = [];
+                        render_pending_files();
                     } else {
                         return;
                     }
@@ -978,24 +1040,24 @@ function setup_event_listeners() {
         });
     });
 
-    // logout buttons
-    document.getElementById("logout")?.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        toggle_overlay("logoutOverlay", true); 
+    // logout
+    document.getElementById("logout")?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggle_overlay("logoutOverlay", true);
     });
-    
-    document.getElementById("cancelLogout")?.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        close_all_overlays(); 
+
+    document.getElementById("cancelLogout")?.addEventListener('click', (e) => {
+        e.preventDefault();
+        close_all_overlays();
     });
-    
+
     document.getElementById("confirmLogout")?.addEventListener('click', (e) => {
         e.preventDefault();
         localStorage.removeItem('last_room');
         window.location.href = '/';
     });
 
-    // settings slider
+    // slider
     document.querySelectorAll('input[name="SliderCount"]').forEach(radio => {
         radio.addEventListener('change', async (e) => {
             const val = parseInt(e.target.value);
@@ -1028,15 +1090,15 @@ function setup_drag_and_drop() {
     };
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
-        dropArea.addEventListener(evt, (e) => { 
-            e.preventDefault(); 
-            e.stopPropagation(); 
+        dropArea.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
         }, false);
     });
 
     dropArea.addEventListener('dragenter', () => dropArea.classList.add('drag-over'));
     dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
-    
+
     dropArea.addEventListener('drop', (e) => {
         dropArea.classList.remove('drag-over');
         add_files(Array.from(e.dataTransfer.files));
@@ -1047,13 +1109,13 @@ function add_files(files) {
     if (pending_files.length + files.length > max_files) {
         return alert(`Trop de fichiers (max ${max_files}).`);
     }
-    
+
     pending_files = [...pending_files, ...files];
     render_pending_files();
 }
 
 
-// --- start ---
+// init
 
 window.addEventListener('DOMContentLoaded', () => {
     init_app();
