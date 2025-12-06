@@ -9,6 +9,11 @@
     <link rel="icon" type="image/png" href="./assets/icon/favicon.png">
     
     <style>
+
+        * {
+        -webkit-tap-highlight-color: transparent;
+        }
+        
         body, html {
             overflow: hidden;
             position: fixed; 
@@ -47,7 +52,7 @@
 
         .version-tag {
             position: absolute;
-            bottom: 20px;
+            top: 190px;
             font-size: 0.8rem;
             opacity: 0.4;
             font-family: 'Inconsolata', monospace;
@@ -55,7 +60,7 @@
 
         .info-tag {
             position: absolute;
-            bottom: 40px;
+            top: 210px;
             font-size: 0.8rem;
             font-family: 'Inconsolata', monospace;
             color: #ff7070;
@@ -198,9 +203,9 @@
         let width, height, increment = 0;
 
         const waves = [
-            { y: 0.60, length: 0.007, amplitude: 30, speed: -0.0007, offset: 0 }, 
-            { y: 0.70, length: 0.005, amplitude: 25, speed: 0.0009, offset: 2 },
-            { y: 0.80, length: 0.004, amplitude: 20, speed: -0.0011, offset: 4 }
+            { y: 0.60, length: 0.007, amplitude: 30, speed: -0.002, offset: 0 },
+            { y: 0.70, length: 0.005, amplitude: 25, speed: 0.006, offset: 2 },
+            { y: 0.80, length: 0.004, amplitude: 20, speed: -0.004, offset: 4 }
         ];
 
         function resize() {
