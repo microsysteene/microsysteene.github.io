@@ -23,7 +23,6 @@ app.use(express.static('public'));
 // global settings
 let globalSettings = {
     maxRooms: 50,
-    maxPeoplePerRoom: 30, 
     maxRoomSize: 1.25 * 1024 * 1024 * 1024
 };
 
@@ -172,10 +171,9 @@ app.get('/api/admin/dashboard', (req, res) => {
 });
 
 app.put('/api/admin/settings', (req, res) => {
-    const { maxRooms, maxPeoplePerRoom, maxStorageGB } = req.body;
+    const { maxRooms, maxStorageGB } = req.body;
     
     if (maxRooms) globalSettings.maxRooms = parseInt(maxRooms);
-    if (maxPeoplePerRoom) globalSettings.maxPeoplePerRoom = parseInt(maxPeoplePerRoom);
     if (maxStorageGB) globalSettings.maxRoomSize = parseFloat(maxStorageGB) * 1024 * 1024 * 1024;
 
     res.json(globalSettings);
@@ -194,11 +192,10 @@ app.post('/api/rooms', (req, res) => {
 
       const code = generateRoomCode();
       const now = new Date().toISOString();
-      const defaultTickets = globalSettings.maxPeoplePerRoom;
 
       db.run(`INSERT INTO rooms (code, adminId, announcementMessage, announcementColor, lastActivity, createdAt, maxTickets) 
               VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [code, userId, "", "#cdcdcd", now, now, defaultTickets],
+        [code, userId, "", "#cdcdcd", now, now, 1],
         (err) => {
           if (err) return res.status(500).json({ error: err.message });
           res.status(201).json({ code, adminId: userId });
@@ -214,7 +211,7 @@ app.get('/api/rooms/:code', (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!room) return res.status(404).json({ error: "Room not found" });
       
-      if (!room.maxTickets) room.maxTickets = globalSettings.maxPeoplePerRoom;
+      if (!room.maxTickets) room.maxTickets = 1;
       
       res.json(room);
     }
@@ -281,7 +278,7 @@ app.post('/api/tickets', (req, res) => {
   db.get("SELECT maxTickets FROM rooms WHERE code = ?", [roomCode], (err, room) => {
     if (!room) return res.status(404).json({ error: "Room not found" });
 
-    const limit = room.maxTickets || globalSettings.maxPeoplePerRoom;
+    const limit = room.maxTickets || 1;
 
     db.get("SELECT count(*) as count FROM tickets WHERE roomCode = ? AND userId = ? AND etat = 'en cours'", 
       [roomCode, userId], 
