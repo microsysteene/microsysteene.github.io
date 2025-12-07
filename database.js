@@ -22,14 +22,16 @@ db.serialize(() => {
     announcementColor TEXT,
     lastActivity TEXT,
     createdAt TEXT,
-    maxTickets INTEGER DEFAULT 1
+    maxTickets INTEGER DEFAULT 1,
+    aiEnabled INTEGER DEFAULT 0
   )`, (err) => {
     if (!err) {
       db.run("ALTER TABLE rooms ADD COLUMN maxTickets INTEGER DEFAULT 1", () => {});
+      db.run("ALTER TABLE rooms ADD COLUMN aiEnabled INTEGER DEFAULT 0", () => {}); // <--- NOUVEAU
     }
   });
 
-  // create announcements table (new)
+  // create announcements table
   db.run(`CREATE TABLE IF NOT EXISTS announcements (
     id TEXT PRIMARY KEY,
     roomCode TEXT,
