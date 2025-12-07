@@ -79,7 +79,7 @@ async function checkTicketSafety(inputString) {
     }
 
     const validResponses = [];
-    const targetCount = 3;
+    const targetCount = process.env.AI_VERIFICATION_COUNT ? parseInt(process.env.AI_VERIFICATION_COUNT) : 3;
     let attempts = 0;
     const maxAttempts = 6; 
 
@@ -87,7 +87,7 @@ async function checkTicketSafety(inputString) {
         attempts++;
         try {
             const response = await ollama.chat({
-                model: 'granite3-guardian:8b',
+                model: 'process.env.OLLAMA_MODEL' || 'granite3-guardian:2b',
                 messages: [{ role: 'user', content: inputString }],
             });
 
