@@ -515,22 +515,28 @@ function update_storage_ui() {
         }
     });
 
-    const { storageText, fileCountText, storageProgressBar, announcementContainer } = ui_elements;
+    const { storageText, storageProgressBar } = ui_elements;
 
-    // Mise à jour du texte
-    if (storageText) storageText.textContent = format_bytes(total_bytes) + ' / 1.5 Go';
+    if (storageText) storageText.textContent = format_bytes(total_bytes) + ' / ' + format_bytes(max_storage_bytes);
     if (fileCountText) fileCountText.textContent = `${total_files} fichier${total_files > 1 ? 's' : ''} partagé${total_files > 1 ? 's' : ''}`;
 
-    // Mise à jour de la barre de progression
+
+
+    // calcul du pourcentage
     let pct = (total_bytes / max_storage_bytes) * 100;
+
+    // mini largeur si y’a un peu de stockage
     if (pct < 5 && total_bytes > 0) pct = 5;
+
+    // cap à 100%
     if (pct > 100) pct = 100;
+
+    // maj de la barre
     if (storageProgressBar) storageProgressBar.style.width = `${pct}%`;
 
-    // Gestion de la classe is-empty pour le hover
+
     if (announcementContainer) {
         if (announcements_list.length === 0) {
-            // Si vous voulez que le hover marche MEME sans fichier, commentez la ligne ci-dessous :
             announcementContainer.classList.add('is-empty');
         } else {
             announcementContainer.classList.remove('is-empty');
@@ -791,8 +797,8 @@ function setup_websocket() {
 
     const ws_params = new URLSearchParams();
     ws_params.set('room', room_code);
-    
-    ws_params.set('userId', user_id); 
+
+    ws_params.set('userId', user_id);
 
     // send name
     if (student_name) ws_params.set('name', student_name);
@@ -842,9 +848,9 @@ function setup_csv_settings() {
         new_btn.style.backgroundColor = '#ff7070';
         text_span.innerHTML = '<img class="icon" src="assets/icon/delete.png" alt="delete">';
     } else {
-        new_btn.style.backgroundColor = ''; 
+        new_btn.style.backgroundColor = '';
         text_span.innerHTML = '<img class="icon" src="assets/icon/add.png" alt="delete">';
-        
+
     }
 
 
