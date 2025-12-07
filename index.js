@@ -9,6 +9,9 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config(); // load env
 
+// import ai filter
+const { checkTicketSafety, getAiStatus } = require('./ai_filter');
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -59,6 +62,22 @@ function generateRoomCode() {
 function updateRoomActivity(roomCode) {
   const now = new Date().toISOString();
   db.run("UPDATE rooms SET lastActivity = ? WHERE code = ?", [now, roomCode]);
+}
+
+// helper: validate content with ai
+async function validateContent(text) {
+    // check global dynamic status
+    if (!getAiStatus()) return true; // AI is off or broken -> allow content
+    
+    console.log(`analysing: ${text.substring(0, 20)}...`);
+    const analysis = await checkTicketSafety(text);
+    
+    // if analysis was skipped due to error during process
+    if (analysis.skipped) return true;
+
+    // return false if unsafe
+    if (analysis.is_unsafe) return false;
+    return true;
 }
 
 const clientRooms = new Map();
@@ -213,6 +232,9 @@ app.get('/api/rooms/:code', (req, res) => {
       
       if (!room.maxTickets) room.maxTickets = 1;
       
+      // Use dynamic status check
+      room.aiEnabled = getAiStatus();
+
       res.json(room);
     }
   );
@@ -240,9 +262,14 @@ app.get('/api/announcement/:roomCode', (req, res) => {
   );
 });
 
-app.put('/api/announcement/:roomCode', (req, res) => {
+// ai check on room announcement
+app.put('/api/announcement/:roomCode', async (req, res) => {
   const { texte, couleur, userId } = req.body;
   const roomCode = req.params.roomCode;
+
+  // check safety
+  const isSafe = await validateContent(texte);
+  if (!isSafe) return res.status(400).json({ error: "Contenu bloqué par le filtre AI (inapproprié)" });
 
   db.get("SELECT adminId FROM rooms WHERE code = ?", [roomCode], (err, room) => {
     if (!room) return res.status(404).json({ error: "Room not found" });
@@ -271,9 +298,15 @@ app.get('/api/tickets/:roomCode', (req, res) => {
   });
 });
 
-app.post('/api/tickets', (req, res) => {
+// ai check on tickets (name and desc)
+app.post('/api/tickets', async (req, res) => {
   const { nom, description, couleur, etat, userId, roomCode } = req.body;
   if (!nom || !userId || !roomCode) return res.status(400).json({ error: 'Missing fields' });
+
+  // check safety for name and description
+  const combinedText = `${nom} ${description || ''}`;
+  const isSafe = await validateContent(combinedText);
+  if (!isSafe) return res.status(400).json({ error: "Ticket bloqué par le filtre AI" });
 
   db.get("SELECT maxTickets FROM rooms WHERE code = ?", [roomCode], (err, room) => {
     if (!room) return res.status(404).json({ error: "Room not found" });
@@ -308,9 +341,17 @@ app.post('/api/tickets', (req, res) => {
   });
 });
 
-app.put('/api/tickets/:id', (req, res) => {
+// ai check on ticket update
+app.put('/api/tickets/:id', async (req, res) => {
   const { nom, description, couleur, etat, roomCode } = req.body;
   const id = req.params.id;
+
+  // check safety only if text fields are present
+  if (nom || description) {
+      const combinedText = `${nom || ''} ${description || ''}`;
+      const isSafe = await validateContent(combinedText);
+      if (!isSafe) return res.status(400).json({ error: "Modification bloquée par le filtre AI" });
+  }
 
   db.run(`
     UPDATE tickets SET
@@ -474,9 +515,20 @@ app.get('/api/announcements/:roomCode', (req, res) => {
     });
 });
 
-app.post('/api/announcements', upload.array('files'), (req, res) => {
+// ai check on new announcement
+app.post('/api/announcements', upload.array('files'), async (req, res) => {
     const { roomCode, userId, content, color } = req.body;
     const files = req.files || [];
+
+    // validate content text
+    if (content) {
+        const isSafe = await validateContent(content);
+        if (!isSafe) {
+            // cleanup files if rejected
+            files.forEach(f => fs.unlinkSync(f.path));
+            return res.status(400).json({ error: "Annonce bloquée par le filtre AI" });
+        }
+    }
 
     if ((!content || content.trim() === "") && files.length === 0) {
         files.forEach(f => fs.unlinkSync(f.path));
