@@ -36,12 +36,39 @@ if (!fs.existsSync(UPLOAD_DIR)){
     fs.mkdirSync(UPLOAD_DIR);
 }
 
-// db migration
-db.serialize(() => {
-    db.run("ALTER TABLE rooms ADD COLUMN aiEnabled BOOLEAN DEFAULT 0", (err) => {
-        if (!err) console.log("migration: ai enabled column added");
+// csv helper
+function parseAndSearchCsv(fileContent, query, usedNames = []) {
+    const lines = fileContent.split(/\r?\n/);
+    
+    // clean and filter
+    const validEntries = lines
+        .map(line => line.split(';')[0])
+        .map(text => text ? text.trim() : '')
+        .filter(text => {
+            if (!text) return false;
+            if (text.includes('Élèves')) return false;
+            if (text.includes('Encouragement')) return false;
+            return true;
+        });
+
+    // parse names
+    const parsedData = validEntries.map(fullName => {
+        const parts = fullName.split(/\s+/);
+        const firstname = parts.pop();
+        const surname = parts.join(' ');
+        const initial = surname.charAt(0);
+        return `${firstname} ${initial}.`;
     });
-});
+
+    // filter used
+    const availableData = parsedData.filter(name => !usedNames.includes(name));
+
+    if (!query) return []; 
+
+    return availableData.filter(name => 
+        name.toLowerCase().includes(query.toLowerCase())
+    );
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -83,12 +110,15 @@ async function validateContent(text) {
     return true;
 }
 
+// map stores { code, studentName, userId }
 const clientRooms = new Map();
 
-wss.on('connection', (ws, req) => {
+wss.on('connection', async (ws, req) => {
   const parameters = url.parse(req.url, true);
   const roomCode = parameters.query.room;
   const type = parameters.query.type;
+  const userId = parameters.query.userId;
+  const requestedName = parameters.query.name;
 
   // admin check
   if (!roomCode && type === 'admin') {
@@ -102,18 +132,68 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
-  ws.isAlive = true;
-  ws.roomCode = roomCode;
-  clientRooms.set(ws, roomCode);
+  // validation for csv mode
+  db.get("SELECT csvFilePath FROM rooms WHERE code = ?", [roomCode], (err, room) => {
+    if (err || !room) {
+        ws.close(); 
+        return;
+    }
 
-  ws.on('pong', () => ws.isAlive = true);
-  
-  ws.on('close', () => {
-    clientRooms.delete(ws);
-  });
-  
-  ws.on('error', () => {
-    clientRooms.delete(ws);
+    // if csv active, validate name
+    if (room.csvFilePath) {
+        if (!requestedName) {
+            ws.close(1008, "name required");
+            return;
+        }
+
+        // check if name taken
+        const isTaken = [...clientRooms.values()].some(c => 
+            c.code === roomCode && c.studentName === requestedName
+        );
+
+        if (isTaken) {
+            ws.close(1008, "name taken");
+            return;
+        }
+
+        // check if name exists in csv
+        try {
+            const content = fs.readFileSync(path.join(UPLOAD_DIR, room.csvFilePath), 'utf8');
+            const matches = parseAndSearchCsv(content, requestedName, []); // empty used names for raw check
+            // exact match check (simplified)
+            const exists = matches.some(n => n === requestedName);
+            
+            if (!exists) {
+                ws.close(1008, "invalid name");
+                return;
+            }
+        } catch (e) {
+            console.log("csv read error", e);
+            ws.close(1011, "server error");
+            return;
+        }
+    }
+
+    ws.isAlive = true;
+    ws.roomCode = roomCode;
+    ws.studentName = requestedName;
+    ws.userId = userId;
+
+    clientRooms.set(ws, { 
+        code: roomCode, 
+        studentName: requestedName,
+        userId: userId 
+    });
+
+    ws.on('pong', () => ws.isAlive = true);
+    
+    ws.on('close', () => {
+        clientRooms.delete(ws);
+    });
+    
+    ws.on('error', () => {
+        clientRooms.delete(ws);
+    });
   });
 });
 
@@ -143,6 +223,7 @@ function notifierClients(roomCode, type = 'update', payload = {}) {
   const message = JSON.stringify({ type, timestamp: Date.now(), ...payload });
   
   wss.clients.forEach(client => {
+    // client.roomCode is attached to ws object
     if (client.readyState === WebSocket.OPEN && client.roomCode === roomCode) {
       client.send(message);
     }
@@ -228,9 +309,9 @@ app.post('/api/rooms', (req, res) => {
       const now = new Date().toISOString();
       const defaultAiState = getAiStatus() ? 1 : 0;
 
-      db.run(`INSERT INTO rooms (code, adminId, announcementMessage, announcementColor, lastActivity, createdAt, maxTickets, aiEnabled) 
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [code, userId, "", "#cdcdcd", now, now, 1, defaultAiState],
+      db.run(`INSERT INTO rooms (code, adminId, announcementMessage, announcementColor, lastActivity, createdAt, maxTickets, aiEnabled, csvFilePath) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [code, userId, "", "#cdcdcd", now, now, 1, defaultAiState, null],
         (err) => {
           if (err) return res.status(500).json({ error: err.message });
           res.status(201).json({ code, adminId: userId });
@@ -240,7 +321,7 @@ app.post('/api/rooms', (req, res) => {
 });
 
 app.get('/api/rooms/:code', (req, res) => {
-  db.get("SELECT code, adminId, announcementMessage, announcementColor, maxTickets, aiEnabled FROM rooms WHERE code = ?", 
+  db.get("SELECT code, adminId, announcementMessage, announcementColor, maxTickets, aiEnabled, csvFilePath FROM rooms WHERE code = ?", 
     [req.params.code], 
     (err, room) => {
       if (err) return res.status(500).json({ error: err.message });
@@ -251,10 +332,77 @@ app.get('/api/rooms/:code', (req, res) => {
       // check ai status
       const isGlobalOnline = getAiStatus();
       room.aiEnabled = (room.aiEnabled === 1) && isGlobalOnline;
+      
+      // add flag for client
+      room.hasCsv = !!room.csvFilePath;
+      delete room.csvFilePath; // hide path
 
       res.json(room);
     }
   );
+});
+
+// upload csv
+app.post('/api/rooms/:code/csv', upload.single('file'), (req, res) => {
+    const roomCode = req.params.code;
+    const file = req.file;
+
+    if (!file) return res.status(400).json({ error: "missing file" });
+
+    db.run("UPDATE rooms SET csvFilePath = ? WHERE code = ?", [file.filename, roomCode], (err) => {
+        if (err) {
+            fs.unlinkSync(file.path);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: "csv enabled" });
+    });
+});
+
+// delete csv
+app.delete('/api/rooms/:code/csv', (req, res) => {
+    const roomCode = req.params.code;
+    
+    db.get("SELECT csvFilePath FROM rooms WHERE code = ?", [roomCode], (err, room) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (room && room.csvFilePath) {
+            const p = path.join(UPLOAD_DIR, room.csvFilePath);
+            if (fs.existsSync(p)) fs.unlinkSync(p);
+        }
+
+        db.run("UPDATE rooms SET csvFilePath = NULL WHERE code = ?", [roomCode], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: "csv disabled" });
+        });
+    });
+});
+
+// check name in csv
+app.post('/api/rooms/:code/check-name', (req, res) => {
+    const roomCode = req.params.code;
+    const { nameQuery } = req.body;
+
+    db.get("SELECT csvFilePath FROM rooms WHERE code = ?", [roomCode], (err, room) => {
+        if (err || !room || !room.csvFilePath) return res.status(400).json({ error: "csv not active" });
+
+        const p = path.join(UPLOAD_DIR, room.csvFilePath);
+        if (!fs.existsSync(p)) return res.status(404).json({ error: "file missing" });
+
+        const content = fs.readFileSync(p, 'utf8');
+        
+        // get active names in room
+        const activeNames = [];
+        for (let [ws, data] of clientRooms) {
+            if (data.code === roomCode && data.studentName) {
+                activeNames.push(data.studentName);
+            }
+        }
+
+        const results = parseAndSearchCsv(content, nameQuery, activeNames);
+
+        if (results.length === 0) return res.json({ status: 'none' });
+        if (results.length === 1) return res.json({ status: 'found', name: results[0] });
+        return res.json({ status: 'multiple', options: results });
+    });
 });
 
 app.put('/api/rooms/:code', (req, res) => {
@@ -344,13 +492,26 @@ app.get('/api/tickets/:roomCode', (req, res) => {
 
 // create ticket
 app.post('/api/tickets', (req, res) => {
-  const { nom, description, couleur, etat, userId, roomCode } = req.body;
+  let { nom, description, couleur, etat, userId, roomCode } = req.body;
   if (!nom || !userId || !roomCode) return res.status(400).json({ error: 'missing fields' });
 
   // get room config
-  db.get("SELECT maxTickets, aiEnabled FROM rooms WHERE code = ?", [roomCode], async (err, room) => {
+  db.get("SELECT maxTickets, aiEnabled, csvFilePath FROM rooms WHERE code = ?", [roomCode], async (err, room) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!room) return res.status(404).json({ error: "room not found" });
+
+    // force name if csv active
+    if (room.csvFilePath) {
+        // find session for this userId
+        const session = [...clientRooms.values()].find(c => 
+            c.code === roomCode && c.userId === userId
+        );
+        
+        if (!session || !session.studentName) {
+            return res.status(403).json({ error: "session invalid or name not locked" });
+        }
+        nom = session.studentName;
+    }
 
     // ai check
     if (room.aiEnabled === 1) {
@@ -727,6 +888,11 @@ function supprimerRoomsInactives() {
                   if (fs.existsSync(p)) fs.unlinkSync(p);
                 });
                 db.run("DELETE FROM files WHERE roomCode = ?", [room.code]);
+              }
+              
+              if (room.csvFilePath) {
+                 const p = path.join(UPLOAD_DIR, room.csvFilePath);
+                 if (fs.existsSync(p)) fs.unlinkSync(p);
               }
 
               db.run("DELETE FROM announcements WHERE roomCode = ?", [room.code]);

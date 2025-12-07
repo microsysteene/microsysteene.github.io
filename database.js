@@ -2,7 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./tickets.db');
 
 db.serialize(() => {
-  // create tickets table with room link
+  // create tickets table
   db.run(`CREATE TABLE IF NOT EXISTS tickets (
     id TEXT PRIMARY KEY,
     nom TEXT,
@@ -23,11 +23,13 @@ db.serialize(() => {
     lastActivity TEXT,
     createdAt TEXT,
     maxTickets INTEGER DEFAULT 1,
-    aiEnabled INTEGER DEFAULT 0
+    aiEnabled INTEGER DEFAULT 0,
+    csvFilePath TEXT
   )`, (err) => {
     if (!err) {
       db.run("ALTER TABLE rooms ADD COLUMN maxTickets INTEGER DEFAULT 1", () => {});
-      db.run("ALTER TABLE rooms ADD COLUMN aiEnabled INTEGER DEFAULT 0", () => {}); // <--- NOUVEAU
+      db.run("ALTER TABLE rooms ADD COLUMN aiEnabled INTEGER DEFAULT 0", () => {}); 
+      db.run("ALTER TABLE rooms ADD COLUMN csvFilePath TEXT", () => {}); // <--- new column
     }
   });
 
