@@ -275,6 +275,10 @@
         animation-delay: 400ms;
     }
 
+  .dark-mode img {
+      filter: invert(1);
+  }
+
     @keyframes slide-in {
       from {
         opacity: 0;
@@ -712,7 +716,20 @@
             <span class="text" style="font-size: 14px;">lien Github</span>
           </a>
         </div>
+
+        <div
+              style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
+              <span>Veuillez nous rapporter les problèmes ou bugs constatés.</span>
+              <a class="button-text" target="_blank"
+                style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0; opacity: 30%; pointer-events: none;">
+                <img class="icon" src="./assets/icon/search.png">
+                <span class="text" style="font-size: 14px;">Signaler un problème</span>
+              </a>
+            </div>
+
         <p style="font-size: 0.85rem; opacity: 0.7; text-align: center; margin-top: 20px;">
+          <br>
+          <br>
           ( RGPD ) Toutes les données échangées sont chiffrées et définitivement supprimées à la fin de la session.
         </p>
 

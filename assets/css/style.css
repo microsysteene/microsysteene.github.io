@@ -397,7 +397,6 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
     align-items: center;
     transition: all 0.3s ease;
     z-index: 999;
-    overscroll-behavior: contain;
 }
 
 .menu-box {
@@ -417,6 +416,7 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
     transform-origin: center;
     transition: all 0.3s ease;
     scrollbar-gutter: stable;
+    scrollbar-width: none;
 }
 
 .overlay-footer {
@@ -551,6 +551,7 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
     display: flex;
     align-items: center;
     box-shadow: 0px 4px 0px rgba(0, 0, 0, 0.2);
+    color: var(--text-color);
     transition: all 0.3s ease;
     z-index: 100;
     opacity: 0;

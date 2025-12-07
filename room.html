@@ -153,7 +153,7 @@
                 <span>Nombre maximum d'utilisateur dans le groupe</span>
                 <div class="quantity-selector" style="opacity: 30%; pointer-events: none;">
                   <button class="qty-btn">－</button>
-                  <div class="qty-val">30</div>
+                  <div class="qty-val">~~</div>
                   <button class="qty-btn">＋</button>
                 </div>
               </div>
@@ -162,16 +162,24 @@
                 <span>
                     Verification du nom via un 
                     <span title="Un fichier CSV (Comma-Separated Values) est un fichier texte simple utilisé pour stocker des données sous forme de tableau (comme Excel)." 
-                          style="border-bottom: 2px solid #9ecaff;">
+                          style="text-decoration: underline wavy #9ecaff;">
                         fichier CSV
                     </span>
-                    (Pronote)
+                    (Pronote uniquement)
                 </span>
 
                 <a class="button-text" href="#"
                   style="min-height: 41px; width: auto; padding: 0 20px; flex: unset; min-width: 80px;">
                     <span class="text" style="font-size: 14px;">+</span>
                 </a>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+              <span>Verification des tickets via IA</span>
+              <label>
+                <input type="checkbox" class="toggle-checkbox" id="aiToggle">
+                <span class="toggle-slider"></span>
+              </label>
             </div>
 
             </div>
@@ -217,7 +225,20 @@
                 <span class="text" style="font-size: 14px;">lien Github</span>
               </a>
             </div>
+
+            <div
+              style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
+              <span>Veuillez nous rapporter les problèmes ou bugs constatés.</span>
+              <a class="button-text" target="_blank"
+                style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0; opacity: 30%; pointer-events: none;">
+                <img class="icon" src="./assets/icon/search.png">
+                <span class="text" style="font-size: 14px;">Signaler un problème</span>
+              </a>
+            </div>
+        
             <p>
+              <br>
+              <br>
               ( RGPD ) Toutes les données échangées sont chiffrées et définitivement supprimées à la fin de la session,
               sans aucune autre utilisation commerciale.
             </p>

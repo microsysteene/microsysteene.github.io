@@ -9,7 +9,6 @@
     <link rel="icon" type="image/png" href="./assets/icon/favicon.png">
 
     <style>
-        /* essential setup for animated background */
         body, html {
             margin: 0;
             padding: 0;
@@ -52,7 +51,6 @@
                 transition: filter 0.3s ease;
             }
 
-            /* invert logo in dark mode */
             &.dark-mode .logo {
                 filter: invert(1);
             }
@@ -85,17 +83,17 @@
             color: #ff7070;
             }
             
-            /* dark mode text color fix */
             &.dark-mode .version-text {
                 color: #ffffff40;
             }
 
-            /* position for the theme toggle */
-            .theme-toggle-container {
+            .toggles-container {
                 position: absolute;
                 bottom: 30px;
                 right: 30px;
                 z-index: 10;
+                display: flex;
+                gap: 10px;
             }
         }
     </style>
@@ -127,10 +125,15 @@
         <p class="version-text">version Pre-release 0.9.0</p>
         <p class="info-text">[!] Version Developper. Signaler en cas de soucis </p>
         
-        <div class="theme-toggle-container">
+        <div class="toggles-container"> 
             <a href="#" class="button-simple" id="indexThemeToggle">
                 <img class="icon" id="themeIcon" src="./assets/icon/darkmod.png" alt="Theme">
             </a>
+
+            <a href="#" class="button-simple" id="settingsBtn">
+                <img class="icon" id="settingsIcon" src="./assets/icon/Settings.png" alt="Settings">
+            </a>
+        </div>
         </div>
 
     </div>
@@ -161,6 +164,69 @@
         </div>
     </div>
     
+    <div class="menu-overlay" id="settingsOverlay" style="display: none;">
+        <div class="menu-box">
+          <div class="input" style="padding-bottom: 0;">
+            <h1>Paramètres</h1>
+            
+            <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Apparence</h2>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+              <span>Mode Sombre (Betâ)</span>
+              <label>
+                <input type="checkbox" class="toggle-checkbox" id="darkModeToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+              <span> Langue (Français uniquement pour l'instant)</span>
+              <a class="button-text" href="#"
+                style="min-height: 41px; width: auto; padding: 0 20px; flex: unset; min-width: 80px; opacity: 30%; pointer-events: none;">
+                <span class="text" style="font-size: 14px;">FR</span>
+              </a>
+            </div>
+
+            <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Github</h2>
+
+            <div
+              style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
+              <span>Projet open-source Github</span>
+              <a class="button-text" href="https://github.com/microsysteene/microsysteene.github.io" target="_blank"
+                style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0;">
+                <img class="icon" src="./assets/icon/icon thin.png">
+                <span class="text" style="font-size: 14px;">lien Github</span>
+              </a>
+            </div>
+
+            <div
+              style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
+              <span>Veuillez nous rapporter les problèmes ou bugs constatés.</span>
+              <a class="button-text" target="_blank"
+                style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0; opacity: 30%; pointer-events: none;">
+                <img class="icon" src="./assets/icon/search.png">
+                <span class="text" style="font-size: 14px;">Signaler un problème</span>
+              </a>
+            </div>
+
+            <p>
+              <br>
+              <br>
+              ( RGPD ) Toutes les données échangées sont chiffrées et définitivement supprimées à la fin de la session,
+              sans aucune autre utilisation commerciale.
+            </p>
+
+            <div class="overlay-footer">
+              <a class="button-text" id="closeSettings" href="#" style="width: auto; padding: 0 40px; margin: 0;">
+                <img class="icon" src="./assets/icon/check.png" alt="">
+                <span class="text">Sauvegarder</span>
+              </a>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
     <script src="./assets/js/darkmode.js"></script>
 
     <script>
@@ -235,6 +301,30 @@
             increment += 1;
         }
         animate();
+
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const closeSettings = document.getElementById('closeSettings');
+
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                settingsOverlay.style.display = 'flex';
+            });
+        }
+
+        if (closeSettings) {
+            closeSettings.addEventListener('click', (e) => {
+                e.preventDefault();
+                settingsOverlay.style.display = 'none';
+            });
+        }
+
+        if (settingsOverlay) {
+            settingsOverlay.addEventListener('click', (e) => { 
+                if (e.target === settingsOverlay) settingsOverlay.style.display = 'none'; 
+            });
+        }
     </script>
 
     <script src="./assets/js/index.js"></script>
