@@ -148,7 +148,7 @@ wss.on('connection', async (ws, req) => {
 
       // check if name taken
       const isTaken = [...clientRooms.values()].some(c =>
-        c.code === roomCode && c.studentName === requestedName
+        c.code === roomCode && c.studentName === requestedName && c.userId !== userId
       );
 
       if (isTaken) {
