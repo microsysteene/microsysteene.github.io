@@ -6,6 +6,7 @@ const OLLAMA_URL = process.env.OLLAMA_API_URL || 'http://127.0.0.1:11434';
 const CHECK_INTERVAL_MS = 30000; 
 const COOLDOWN_MS = 60000; 
 const MAX_BAD_RESPONSES = 5;
+const MODEL_NAME = process.env.OLLAMA_MODEL || 'granite3-guardian:2b';
 
 const ollama = new Ollama({ host: OLLAMA_URL });
 
@@ -27,13 +28,27 @@ function handleStatusChange(newStatus) {
 async function startHealthCheck() {
     if (process.env.USE_LOCAL_AI !== 'true') return;
 
-    // startup check
+    // startup load
     try {
         await ollama.list();
+        
+        console.log('loading model...');
+        const startTime = Date.now();
+
+        // force load model
+        await ollama.chat({
+            model: MODEL_NAME,
+            messages: [{ role: 'user', content: '' }],
+            keep_alive: -1
+        });
+
+        const duration = (Date.now() - startTime) / 1000;
+        console.log(`model loaded in ${duration}s`);
+
         handleStatusChange(true);
         console.log('ai service connected');
     } catch (e) {
-        console.error('ai service unreachable at startup');
+        console.error('ai service unreachable or load failed');
         handleStatusChange(false);
     }
 
@@ -87,7 +102,7 @@ async function checkTicketSafety(inputString) {
         attempts++;
         try {
             const response = await ollama.chat({
-                model: process.env.OLLAMA_MODEL || 'granite3-guardian:2b',
+                model: MODEL_NAME,
                 messages: [{ role: 'user', content: inputString }],
                 keep_alive: -1
             });
