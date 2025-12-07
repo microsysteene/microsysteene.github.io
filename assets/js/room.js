@@ -763,14 +763,19 @@ async function handle_form_submit() {
 
     const name_input = ui_elements.name;
     const infos_input = ui_elements.infos;
+    const create_btn = ui_elements.create; // get button ref
     const name = name_input.value.trim();
     const description = infos_input.value.trim();
 
     // fallback validation if ai disabled
     if (!ai_enabled) {
-        const is_banned = banned_terms.some(term =>
-            (name + " " + description).toLowerCase().includes(term.toLowerCase())
-        );
+        const full_text = (name + " " + description).toLowerCase();
+
+        // check for whole words only (regex word boundary)
+        const is_banned = banned_terms.some(term => {
+            const regex = new RegExp(`\\b${term.toLowerCase()}\\b`, 'i');
+            return regex.test(full_text);
+        });
 
         if (is_banned) {
             return alert("Mot interdit détecté (filtre local).");
@@ -785,6 +790,7 @@ async function handle_form_submit() {
         if (!name && pending_files.length === 0) {
             return alert("Message ou fichier requis.");
         }
+        // process_admin_upload handles its own button locking
         await process_admin_upload(name, color);
         return;
     }
@@ -799,6 +805,10 @@ async function handle_form_submit() {
     if (!name) {
         return alert("Nom requis.");
     }
+
+    // disable button for user
+    is_sending = true;
+    if (create_btn) create_btn.classList.add('button-disabled');
 
     try {
         await api_call('/api/tickets', "POST", {
@@ -821,6 +831,9 @@ async function handle_form_submit() {
         } else {
             alert(e.message || "Erreur de création");
         }
+    } finally {
+        is_sending = false;
+        if (create_btn) create_btn.classList.remove('button-disabled');
     }
 }
 
