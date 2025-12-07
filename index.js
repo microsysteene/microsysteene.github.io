@@ -503,9 +503,12 @@ app.post('/api/tickets', (req, res) => {
     // force name if csv active
     if (room.csvFilePath) {
         // find session for this userId
-        const session = [...clientRooms.values()].find(c => 
+        const sessions = [...clientRooms.values()].filter(c => 
             c.code === roomCode && c.userId === userId
         );
+        
+        // prioritize session with name
+        const session = sessions.find(s => s.studentName) || sessions[0];
         
         if (!session || !session.studentName) {
             return res.status(403).json({ error: "session invalid or name not locked" });
