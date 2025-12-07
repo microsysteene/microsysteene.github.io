@@ -271,7 +271,7 @@ async function load_resources() {
 async function check_permissions() {
     const data = await api_call(`/api/rooms/${room_code}`);
 
-    if (!data || data.error) {
+    if (!data || data.error || Array.isArray(data)) {
         alert("Salle introuvable.");
         window.location.href = "/";
         return false;

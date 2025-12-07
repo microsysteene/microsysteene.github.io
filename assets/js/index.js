@@ -60,7 +60,6 @@ const confirmJoinBtn = document.getElementById('confirmJoin');
 const cancelJoinBtn = document.getElementById('cancelJoin');
 
 
-/* --- LOGIQUE DU MENU REJOINDRE --- */
 
 // 1. Ouvrir le menu
 if (joinBtn) {
@@ -96,9 +95,8 @@ if (joinOverlay) {
 
 // 4. Valider et rejoindre
 function submitJoin() {
-  const code = joinCodeInput.value;
+  const code = joinCodeInput.value.toUpperCase();
   if (code && code.trim() !== "") {
-    // Redirection vers le bon fichier room (mobile ou desktop)
     window.location.href = `${targetRoomFile}?room=${code.trim()}`;
   }
 }
