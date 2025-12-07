@@ -522,16 +522,14 @@ function update_storage_ui() {
 
 
 
-    // calcul du pourcentage
+
     let pct = (total_bytes / max_storage_bytes) * 100;
 
-    // mini largeur si y’a un peu de stockage
     if (pct < 5 && total_bytes > 0) pct = 5;
 
-    // cap à 100%
     if (pct > 100) pct = 100;
 
-    // maj de la barre
+
     if (storageProgressBar) storageProgressBar.style.width = `${pct}%`;
 
 

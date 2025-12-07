@@ -1,6 +1,4 @@
-/* ==========================================================================
-   FONTS & VARIABLES
-   ========================================================================== */
+/* fonts & variables */
 
 @font-face {
     font-family: 'Inconsolata';
@@ -28,9 +26,7 @@ body.dark-mode {
     --card-bg: #2d2d2d;
 }
 
-/* ==========================================================================
-   BASE STYLES & RESET
-   ========================================================================== */
+/* base styles & reset */
 
 body {
     margin: 0;
@@ -47,9 +43,7 @@ h1 {
     font-size: clamp(1.2rem, 1.5vw, 2rem);
 }
 
-/* ==========================================================================
-   ANIMATIONS (KEYFRAMES)
-   ========================================================================== */
+/* animations */
 
 @keyframes div {
     0% {
@@ -177,9 +171,7 @@ h1 {
     }
 }
 
-/* ==========================================================================
-   MAIN LAYOUT (ROOM)
-   ========================================================================== */
+/* main layout */
 
 .main {
     display: flex;
@@ -264,9 +256,7 @@ h1 {
     display: none;
 }
 
-/* ==========================================================================
-   BUTTONS
-   ========================================================================== */
+/* buttons */
 
 .button {
     display: flex;
@@ -274,7 +264,7 @@ h1 {
     gap: 10px;
 }
 
-/* Button Simple (Icon only) */
+/* simple button */
 .button-simple {
     align-items: center;
     background-color: var(--card-bg);
@@ -312,7 +302,7 @@ h1 {
     user-select: none;
 }
 
-/* Button Text (Icon + Text) */
+/* text button */
 .button-text {
     align-items: center;
     background-color: var(--card-bg);
@@ -372,9 +362,7 @@ body.dark-mode .icon {
     filter: grayscale(1);
 }
 
-/* ==========================================================================
-   Components : FORMS & INPUTS
-   ========================================================================== */
+/* forms & inputs */
 
 .input {
     width: 80%;
@@ -414,7 +402,7 @@ input[type="text"]:focus {
     animation: bounce-color 0.4s ease-out forwards;
 }
 
-/* Toggle Switch */
+/* toggle switch */
 .toggle-checkbox {
     display: none;
 }
@@ -456,7 +444,7 @@ input[type="text"]:focus {
     box-shadow: 0px 5px 0px #000000;
 }
 
-/* Sliders (Radio Buttons) */
+/* slider selector */
 .slider-selector {
     display: flex;
     align-items: center;
@@ -515,7 +503,7 @@ input[type="text"]:focus {
     color: black;
 }
 
-/* Color Picker */
+/* color picker */
 .colorbox {
     display: flex;
     flex-wrap: wrap;
@@ -593,9 +581,7 @@ input[type="text"]:focus {
     transition: all 0.2s ease;
 }
 
-/* ==========================================================================
-   OVERLAYS & MODALS
-   ========================================================================== */
+/* overlays & modals */
 
 .menu-overlay {
     display: flex;
@@ -647,9 +633,7 @@ input[type="text"]:focus {
     transition: box-shadow 0.3s ease;
 }
 
-/* ==========================================================================
-   TICKETS (main list)
-   ========================================================================== */
+/* ticket list */
 
 .during,
 .history {
@@ -728,7 +712,7 @@ input[type="text"]:focus {
     color: var(--text-color);
 }
 
-/* Ticket Actions (Delete) */
+/* delete actions */
 .during .delete,
 .history .delete {
     display: flex;
@@ -755,7 +739,7 @@ input[type="text"]:focus {
     opacity: 1;
 }
 
-/* Ticket Animations */
+/* ticket animations */
 .during.add {
     animation: bounce-in 0.5s ease-out !important;
     transition: none !important;
@@ -778,9 +762,7 @@ input[type="text"]:focus {
     animation: bounce-reverse 0.6s ease-in forwards;
 }
 
-/* ==========================================================================
-   ANNOUNCEMENT & STORAGE WIDGET
-   ========================================================================== */
+/* announcements & storage */
 
 .announcement-container {
     position: relative;
@@ -807,7 +789,7 @@ input[type="text"]:focus {
     margin-bottom: 20px;
 }
 
-/* Storage Widget (Barre de stockage) */
+/* storage widget */
 .storage-widget {
     position: relative;
     width: 100%;
@@ -866,7 +848,7 @@ input[type="text"]:focus {
     font-size: 0.95rem;
 }
 
-/* Hover effects on widget */
+/* widget hover */
 .announcement-container.open .storage-widget {
     cursor: default;
 }
@@ -876,7 +858,7 @@ input[type="text"]:focus {
     box-shadow: 0px 3px 0px rgba(0, 0, 0, 0.2);
 }
 
-/* Liste des annonces */
+/* announcement list */
 .announcement-list {
     width: 100%;
     display: flex;
@@ -893,7 +875,7 @@ input[type="text"]:focus {
     pointer-events: none;
 }
 
-/* announcements scroll settings */
+/* scroll settings */
 .announcement-container.open .announcement-list {
     position: relative;
     top: auto;
@@ -903,7 +885,7 @@ input[type="text"]:focus {
     animation: bounce-in 0.4s ease forwards;
     
     /* new scroll properties */
-    max-height: 300px; /* adjust height limit as needed */
+    max-height: 300px;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 5px;
@@ -914,7 +896,7 @@ input[type="text"]:focus {
     mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
 }
 
-/* webkit scrollbar styles */
+/* scrollbar */
 .announcement-container.open .announcement-list::-webkit-scrollbar {
     width: 6px;
 }
@@ -928,7 +910,7 @@ input[type="text"]:focus {
     border-radius: 4px;
 }
 
-/* Items d'annonce (Cartes empilées) */
+/* announcement wrapper */
 .announcement-wrapper {
     width: 100%;
     position: absolute;
@@ -960,11 +942,10 @@ input[type="text"]:focus {
     opacity: 0;
 }
 
-/* Contenu des annonces */
+/* announcement item */
 .announcement-item {
     display: flex;
     flex-direction: column;
-    /* Adapté pour supporter le contenu + fichiers */
     justify-content: center;
     padding: 12px 20px;
     border: 2px solid #000000;
@@ -1009,7 +990,7 @@ input[type="text"]:focus {
     gap: 10px;
 }
 
-/* Boutons d'action annonce (Download/Delete) */
+/* action buttons */
 .announcement-action-btn,
 .announcement-delete {
     width: 50px;
@@ -1047,9 +1028,7 @@ input[type="text"]:focus {
     filter: invert(1);
 }
 
-/* ==========================================================================
-   FILE UPLOAD & ADMIN
-   ========================================================================== */
+/* file upload & admin */
 
 .file-upload-container {
     display: none;
@@ -1111,7 +1090,7 @@ input[type="text"]:focus {
     display: none;
 }
 
-/* Liste des fichiers en attente (Admin) */
+/* pending files list */
 .admin-files-list {
     width: 100%;
     display: flex;
@@ -1178,7 +1157,7 @@ input[type="text"]:focus {
     opacity: 1;
 }
 
-/* Progress bar inside file item */
+/* file progress bar */
 .file-progress-bar {
     position: absolute;
     top: 0;
@@ -1208,9 +1187,7 @@ input[type="text"]:focus {
     animation: bounce-in 0.3s ease;
 }
 
-/* ==========================================================================
-   HOME PAGE (INDEX.HTML)
-   ========================================================================== */
+/* home page */
 
 body .landing-container {
     display: flex;
@@ -1280,9 +1257,7 @@ body .theme-toggle-container {
     z-index: -1;
 }
 
-/* ==========================================================================
-   MISKS
-   ========================================================================== */
+/* misc */
 
 .hidden {
     display: none !important;
