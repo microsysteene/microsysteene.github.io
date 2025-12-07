@@ -133,7 +133,7 @@ async function checkTicketSafety(inputString) {
 
     // log
     const duration = Date.now() - startTime;
-    console.log(`ai decision: ${isUnsafe ? 'UNSAFE' : 'SAFE'} | time: ${duration}ms`);
+    console.log(`ai decision: ${isUnsafe ? 'UNSAFE' : 'SAFE'} | time: ${(duration/1000).toFixed(2)}s`);
 
     if (badResponseCount > 0) badResponseCount--; 
 
