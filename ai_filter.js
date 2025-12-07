@@ -87,7 +87,7 @@ async function checkTicketSafety(inputString) {
         attempts++;
         try {
             const response = await ollama.chat({
-                model: 'process.env.OLLAMA_MODEL' || 'granite3-guardian:2b',
+                model: process.env.OLLAMA_MODEL || 'granite3-guardian:2b',
                 messages: [{ role: 'user', content: inputString }],
             });
 
