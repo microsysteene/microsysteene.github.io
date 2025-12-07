@@ -4,7 +4,6 @@ const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/
 const targetRoomFile = isMobile ? "room-phone.html" : "room.html";
 const targetIndexFile = "index-phone.html";
 
-// Logique de redirection immédiate (seulement si on est sur l'index)
 if (isMobile) {
     if (!window.location.href.includes("phone")) {
         const currentParams = window.location.search;

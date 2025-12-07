@@ -15,6 +15,7 @@ let user_id = localStorage.getItem('userId') || crypto.randomUUID();
 let is_admin = false;
 let is_sending = false;
 let max_tickets = 1;
+let ai_enabled = false; // ai state
 
 let tickets_list = [];
 let last_ticket_ids = new Set();
@@ -179,6 +180,14 @@ async function api_call(endpoint, method = "GET", body = null) {
 
         const res = await fetch(`${api_url}${endpoint}`, options);
 
+        // handle ai errors
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            if (data.error) {
+                throw new Error(data.error);
+            }
+        }
+
         if (method === "DELETE") {
             return res.ok;
         }
@@ -186,6 +195,11 @@ async function api_call(endpoint, method = "GET", body = null) {
         return await res.json();
     } catch (e) {
         console.error(`API Error ${method} ${endpoint}:`, e);
+
+        // rethrow if blocked (check english and french)
+        if (e.message && (e.message.includes("bloqué") || e.message.includes("blocked"))) {
+            throw e;
+        }
         return method === "GET" ? [] : null;
     }
 }
@@ -209,7 +223,8 @@ function init_ui() {
         'storageProgressBar', 'announcementContainer', 'announcementArea',
         'adminFilesList', 'right', 'subdiv', 'create', 'createbutton',
         'formOverlay', 'settingsOverlay', 'logoutOverlay', 'name', 'infos',
-        'fileUploadContainer', 'adminSettingsSection', 'dropArea', 'fileInput'
+        'fileUploadContainer', 'adminSettingsSection', 'dropArea', 'fileInput',
+        'aiToggle', 'aiStatus'
     ];
 
     ids.forEach(id => {
@@ -351,13 +366,34 @@ async function check_permissions() {
         return;
     }
 
+    // tickets
     if (data.maxTickets) {
         max_tickets = data.maxTickets;
         const radio = document.querySelector(`input[name="SliderCount"][value="${data.maxTickets}"]`);
         if (radio) radio.checked = true;
     }
 
+    // ai status
+    ai_enabled = data.aiEnabled || false;
+    if (ui_elements.aiToggle) {
+        ui_elements.aiToggle.checked = ai_enabled;
+    }
+    update_ai_status(ai_enabled);
+
     set_admin_mode(data.adminId === user_id);
+}
+
+function update_ai_status(enabled) {
+    const el = ui_elements.aiStatus;
+    if (!el) return;
+
+    if (enabled) {
+        el.textContent = "IA active et opérationnelle";
+        el.style.color = "#4CAF50";
+    } else {
+        el.textContent = "IA désactivée ou indisponible (filtre local actif)";
+        el.style.color = "#ff9800";
+    }
 }
 
 function set_admin_mode(status) {
@@ -730,13 +766,15 @@ async function handle_form_submit() {
     const name = name_input.value.trim();
     const description = infos_input.value.trim();
 
-    // validation
-    const is_banned = banned_terms.some(term =>
-        (name + " " + description).toLowerCase().includes(term.toLowerCase())
-    );
+    // fallback validation if ai disabled
+    if (!ai_enabled) {
+        const is_banned = banned_terms.some(term =>
+            (name + " " + description).toLowerCase().includes(term.toLowerCase())
+        );
 
-    if (is_banned) {
-        return alert("Mot interdit détecté.");
+        if (is_banned) {
+            return alert("Mot interdit détecté (filtre local).");
+        }
     }
 
     const selected_color_el = document.querySelector('.color.selected');
@@ -762,18 +800,28 @@ async function handle_form_submit() {
         return alert("Nom requis.");
     }
 
-    await api_call('/api/tickets', "POST", {
-        nom: name,
-        description,
-        couleur: color,
-        etat: "en cours",
-        userId: user_id,
-        roomCode: room_code
-    });
+    try {
+        await api_call('/api/tickets', "POST", {
+            nom: name,
+            description,
+            couleur: color,
+            etat: "en cours",
+            userId: user_id,
+            roomCode: room_code
+        });
 
-    name_input.value = "";
-    infos_input.value = "";
-    close_all_overlays();
+        name_input.value = "";
+        infos_input.value = "";
+        close_all_overlays();
+
+    } catch (e) {
+        // handle ai error
+        if (e.message && e.message.includes("blocked")) {
+            alert("Contenu bloqué par l'IA (inapproprié).");
+        } else {
+            alert(e.message || "Erreur de création");
+        }
+    }
 }
 
 async function process_admin_upload(content, color) {
@@ -853,7 +901,19 @@ async function process_admin_upload(content, color) {
                 });
             };
 
-            xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error("Upload failed"));
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve();
+                } else {
+                    // try parsing ai error
+                    try {
+                        const json = JSON.parse(xhr.responseText);
+                        reject(new Error(json.error || "Upload failed"));
+                    } catch {
+                        reject(new Error("Upload failed"));
+                    }
+                }
+            };
             xhr.onerror = () => reject(new Error("Network error"));
             xhr.onabort = () => reject(new Error("Aborted"));
             xhr.send(form_data);
@@ -892,9 +952,9 @@ function setup_websocket() {
     ws.onopen = () => {
         console.log('WS connected', room_code);
         ws_retry_count = 0; // reset retry
-        if (erroroverlay==true) {
+        if (erroroverlay == true) {
             close_all_overlays();
-            erroroverlay=null;
+            erroroverlay = null;
         }
     };
 
@@ -923,11 +983,11 @@ function setup_websocket() {
         ws_retry_count++;
 
         if (ws_retry_count >= max_ws_retries) {
-            if (erroroverlay==null){ 
-            show_connection_error();
-            erroroverlay=true;
+            if (erroroverlay == null) {
+                show_connection_error();
+                erroroverlay = true;
+            }
         }
-    } 
 
         setTimeout(() => setup_websocket(), retry_delay);
     };
@@ -1067,6 +1127,32 @@ function setup_event_listeners() {
             }
         });
     });
+
+
+    // ai toggle
+    if (els.aiToggle) {
+        els.aiToggle.addEventListener('change', async (e) => {
+            if (!is_admin) {
+                e.preventDefault();
+                e.target.checked = ai_enabled;
+                return alert("Vous n'avez pas la permission.");
+            }
+
+            const new_state = e.target.checked;
+
+            try {
+                await api_call(`/api/rooms/${room_code}`, "PUT", { aiEnabled: new_state });
+
+                ai_enabled = new_state;
+                update_ai_status(ai_enabled);
+
+            } catch (err) {
+                console.error("Erreur update IA", err);
+                e.target.checked = !new_state;
+                alert("Impossible de modifier le paramètre IA.");
+            }
+        });
+    }
 
     setup_drag_and_drop();
 }

@@ -160,30 +160,33 @@
 
               <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
                 <span>
-                    Verification du nom via un 
-                    <span title="Un fichier CSV (Comma-Separated Values) est un fichier texte simple utilisé pour stocker des données sous forme de tableau (comme Excel)." 
-                          style="text-decoration: underline wavy #9ecaff;">
-                        fichier CSV
-                    </span>
-                    (Pronote uniquement)
+                  Verification du nom via un
+                  <span
+                    title="Un fichier CSV (Comma-Separated Values) est un fichier texte simple utilisé pour stocker des données sous forme de tableau (comme Excel)."
+                    style="text-decoration: underline wavy #9ecaff;">
+                    fichier CSV
+                  </span>
+                  (Pronote uniquement)
                 </span>
 
                 <a class="button-text" href="#"
                   style="min-height: 41px; width: auto; padding: 0 20px; flex: unset; min-width: 80px;">
-                    <span class="text" style="font-size: 14px;">+</span>
+                  <span class="text" style="font-size: 14px;">+</span>
                 </a>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+                <span>Filtrage des tickets par IA</span>
+                <label>
+                  <input type="checkbox" class="toggle-checkbox" id="aiToggle">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <p id="aiStatus"
+                style="font-size: 0.8em; margin-top: -10px; margin-bottom: 15px; opacity: 0.7; text-align: right;"></p>
+
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
-              <span>Verification des tickets via IA</span>
-              <label>
-                <input type="checkbox" class="toggle-checkbox" id="aiToggle">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-
-            </div>
-            
             <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Apparence</h2>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
@@ -235,7 +238,7 @@
                 <span class="text" style="font-size: 14px;">Signaler un problème</span>
               </a>
             </div>
-        
+
             <p>
               <br>
               <br>
