@@ -224,7 +224,7 @@ function init_ui() {
         'adminFilesList', 'right', 'subdiv', 'create', 'createbutton',
         'formOverlay', 'settingsOverlay', 'logoutOverlay', 'name', 'infos',
         'fileUploadContainer', 'adminSettingsSection', 'dropArea', 'fileInput',
-        'aiToggle', 'aiStatus'
+        'aiToggle', 'aiStatus', 'reportTicketOverlay',
     ];
 
     ids.forEach(id => {
@@ -492,7 +492,7 @@ function update_ticket_container(container_id, list, new_id, is_active) {
 
         const time_str = t.dateCreation ? new Date(t.dateCreation).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         const can_delete = is_admin || (is_active && t.userId === user_id);
-        const delete_btn = can_delete ? `<a class="delete" data-id="${t.id}">—</a>` : "";
+        const delete_btn = can_delete ? `<a class="delete" data-id="${t.id}"><img src="assets/icon/delete.png" alt="Supprimer" style="width:22px; height:22px;"></a>` : "";
 
         if (is_active) {
             let info = `<p id="name">${t.nom}</p>`;
@@ -827,7 +827,7 @@ async function handle_form_submit() {
     } catch (e) {
         // handle ai error
         if (e.message && e.message.includes("blocked")) {
-            alert("Contenu bloqué par l'IA (inapproprié).");
+            toggle_overlay('reportTicketOverlay', true); 
         } else {
             alert(e.message || "Erreur de création");
         }

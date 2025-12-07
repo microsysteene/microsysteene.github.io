@@ -456,7 +456,6 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
     flex-shrink: 0;
     background-color: var(--card-bg);
     border: 2px solid black;
-    filter: drop-shadow(0px 2px 0px rgb(0, 0, 0));
     border-radius: 50%;
     cursor: pointer;
 }
@@ -483,7 +482,7 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
 .during p { margin: 5px; }
 
 .during .time #remaining, .history .time .etat { color: rgba(0, 0, 0, 0.459); }
-.history .name { margin-left: clamp(10px, 1.5vw, 20px); }
+.history .name { margin-left: clamp(10px, 1.5vw, 20px); text-decoration: line-through; }
 .empty-message { width: 100%; margin-top: 40px; text-align: center; font-size: 1.1rem; font-style: italic; opacity: 0.6; color: var(--text-color); }
 
 /* Ticket Actions (Delete) */
@@ -500,7 +499,6 @@ input[type="text"]:focus { outline: 3px solid black; outline-offset: -2px; anima
     border-radius: 50%;
     opacity: 0;
     cursor: pointer;
-    filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 1));
     transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.65);
     font-size: 25px;
 }

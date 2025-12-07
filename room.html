@@ -295,22 +295,22 @@
             
             <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Pourquoi votre ticket à été bloqué?</h2>
             <p style="margin: 30px 0; opacity: 0.7; text-align: left;">
-               - Votre contenue est jugé inapproprié.<br>
+               - Votre contenue est jugé inapproprié.<br><br>
                Si votre ticket contient aucun contenue inapproprié alors veuillez le signaler
             </p>
 
             <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
 
-              <a class="button-text" id="confirmLogout" href="#"
-                style="width: auto; padding: 0 30px; margin: 0; background-color: #ff7070; min-width: 140px;">
+              <a class="button-text" id="confirmLogout"
+                style="width: auto; padding: 0 30px; margin: 0; background-color: #ff7070; min-width: 140px; opacity: 30%; pointer-events: none;">
                 <img class="icon" src="./assets/icon/report.png" alt="">
                 <span class="text">Signaler</span>
               </a>
 
-              <a class="button-text" id="cancelLogout" href="#"
-                style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
-                <img class="icon" src="./assets/icon/check.png" alt="">
-                <span class="text">Ok</span>
+              <a class="button-text" id="cancelLogout" href="#" onclick="closeReportTicketOverlay()"
+                  style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
+                  <img class="icon" src="./assets/icon/check.png" alt="">
+                  <span class="text">Ok</span>
               </a>
 
             </div>
@@ -359,6 +359,13 @@
         a.classList.add('selected');
       });
     });
+
+    function closeReportTicketOverlay() {
+        const overlay = document.getElementById('reportTicketOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    }
   </script>
 
   <script src="./assets/js/room.js"></script>
