@@ -791,11 +791,14 @@ function setup_websocket() {
 
     const ws_params = new URLSearchParams();
     ws_params.set('room', room_code);
-    //send name
+    
+    ws_params.set('userId', user_id); 
+
+    // send name
     if (student_name) ws_params.set('name', student_name);
 
     const ws = new WebSocket(`${ws_url}?${ws_params.toString()}`);
-    global_ws = ws; // store reference
+    global_ws = ws;
 
     ws.onopen = () => {
         console.log('WS connected', room_code);
