@@ -1267,3 +1267,58 @@ body .theme-toggle-container {
     display: flex !important;
     visibility: visible;
 }
+
+/*Media Querry*/
+
+@media screen and (max-width: 1100px), screen and (max-aspect-ratio: 4/3) {
+    
+    /* 1. On autorise le scroll sur toute la page au lieu de bloquer */
+    body {
+        height: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* 2. On change la direction principale en colonne */
+    .main {
+        flex-direction: column;
+        height: auto;
+        padding: 20px;
+        gap: 20px;
+    }
+
+    .left-container {
+        display: contents;
+    }
+
+    .announcement-container {
+        order: 2;
+        width: 100%;
+    }
+    
+    #right {
+        order: 3;
+        width: 100%;
+        min-height: 500px;
+        max-height: none;
+        overflow: visible;
+    }
+
+    #subdiv {
+        order: 4;
+        width: 100%;
+        min-height: 500px;
+        max-height: none;
+        overflow: visible;
+        margin-bottom: 40px;
+    }
+
+    .menu-overlay {
+        order: 0;
+    }
+    
+    #subdiv::-webkit-scrollbar,
+    #right::-webkit-scrollbar {
+        display: none;
+    }
+}
