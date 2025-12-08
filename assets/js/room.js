@@ -269,38 +269,46 @@ async function load_resources() {
 }
 
 async function check_permissions() {
+    // get room data
     const data = await api_call(`/api/rooms/${room_code}`);
 
+    // error handling
     if (!data || data.error || Array.isArray(data)) {
         alert("Salle introuvable.");
         window.location.href = "/";
         return false;
     }
 
+    // load max tickets setting
     if (data.maxTickets) {
         max_tickets = data.maxTickets;
         const radio = document.querySelector(`input[name="SliderCount"][value="${data.maxTickets}"]`);
         if (radio) radio.checked = true;
     }
 
+    // load ai status
     ai_enabled = data.aiEnabled || false;
     if (ui_elements.aiToggle) ui_elements.aiToggle.checked = ai_enabled;
     update_ai_status(ai_enabled);
 
-    // new csv check
+    // load csv status
     csv_mode = data.hasCsv || false;
-    set_admin_mode(data.adminId === user_id);
+    
+    set_admin_mode(data.isAdmin === true); 
 
     // login flow check
     if (!is_admin && csv_mode) {
         if (!student_name) {
             start_login_flow();
-            return false; // pause init
+            // pause init
+            return false; 
         }
     }
 
-    return true; // continue init
+    // continue init
+    return true; 
 }
+
 
 function update_ai_status(enabled) {
     const el = ui_elements.aiStatus;
@@ -315,14 +323,17 @@ function update_ai_status(enabled) {
 }
 
 function set_admin_mode(status) {
+    // update state
     is_admin = status;
     const { createbutton, name, infos, formOverlay, fileUploadContainer, adminSettingsSection } = ui_elements;
 
+    // hide or show admin sections
     if (adminSettingsSection) adminSettingsSection.style.display = is_admin ? 'block' : 'none';
     if (fileUploadContainer) fileUploadContainer.style.display = is_admin ? 'flex' : 'none';
 
     setup_csv_settings(); // update button state
 
+    // ui elements update
     const title = formOverlay.querySelector('h1');
     const btn_text = createbutton.querySelector('.text');
 
@@ -349,6 +360,7 @@ function set_admin_mode(status) {
         render_tickets();
     }
 }
+
 
 
 // login flow
