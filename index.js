@@ -321,6 +321,9 @@ app.post('/api/rooms', (req, res) => {
 });
 
 app.get('/api/rooms/:code', (req, res) => {
+  // get user id from query
+  const userId = req.query.userId;
+  
   db.get("SELECT code, adminId, announcementMessage, announcementColor, maxTickets, aiEnabled, csvFilePath FROM rooms WHERE code = ?",
     [req.params.code],
     (err, room) => {
@@ -336,11 +339,17 @@ app.get('/api/rooms/:code', (req, res) => {
       // add flag for client
       room.hasCsv = !!room.csvFilePath;
       delete room.csvFilePath; // hide path
+      const isAdmin = userId && (room.adminId === userId);
+      room.isAdmin = isAdmin;
+
+  
+      delete room.adminId;
 
       res.json(room);
     }
   );
 });
+
 
 // upload csv
 app.post('/api/rooms/:code/csv', upload.single('file'), (req, res) => {
