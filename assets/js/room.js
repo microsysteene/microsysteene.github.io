@@ -834,66 +834,62 @@ function setup_websocket() {
 
 // settings admin
 
-// new: csv settings
+// 1. Au chargement : on essaie de récupérer le nom sauvegardé, sinon défaut
+var current_csv_name = localStorage.getItem('my_csv_name') || "Fichier CSV";
+
 function setup_csv_settings() {
     const btn = ui_elements.csvButton;
     const input = ui_elements.csvInput;
     if (!btn || !input) return;
 
-    // clear old listeners
     const new_btn = btn.cloneNode(true);
     btn.parentNode.replaceChild(new_btn, btn);
     ui_elements.csvButton = new_btn;
-
-    // update visuals
     const text_span = new_btn.querySelector('.text');
+
+    // AFFICHAGE
     if (csv_mode) {
-        new_btn.style.backgroundColor = '#ff7070';
-        text_span.innerHTML = '<img class="icon" src="assets/icon/delete.png" alt="delete">';
+        text_span.style.cssText = "display:flex; justify-content:space-between; align-items:center; width:100%; font-size: 14px;";
+        text_span.innerHTML = `<span>${current_csv_name}</span><img class="icon" src="assets/icon/delete.png" style="width:24px;">`;
     } else {
         new_btn.style.backgroundColor = '';
-        text_span.innerHTML = '<img class="icon" src="assets/icon/add.png" alt="delete">';
-
+        text_span.style.cssText = "display:flex; justify-content:space-between; align-items:center; width:100%; font-size: 14px;";
+        text_span.innerHTML = '<img class="icon" src="assets/icon/add.png" style="width:24px;"><span> Ajouter</span>';
     }
 
-
-    new_btn.addEventListener('click', async (e) => {
+    // CLICK (SUPPRESSION)
+    new_btn.onclick = async (e) => {
         e.preventDefault();
-
         if (csv_mode) {
-            // delete csv
-            if (!confirm("Supprimer la liste CSV ?")) return;
+            if (!confirm("Supprimer ?")) return;
             try {
                 await api_call(`/api/rooms/${room_code}/csv`, 'DELETE');
+                localStorage.removeItem('my_csv_name'); 
+                current_csv_name = "Fichier CSV";
+                
                 csv_mode = false;
                 setup_csv_settings();
-                alert("Liste supprimée.");
-            } catch (err) { alert("Erreur: " + err.message); }
-        } else {
-            // trigger upload
-            input.click();
-        }
-    });
+            } catch (e) { alert(e); }
+        } else input.click();
+    };
 
+    // UPLOAD (AJOUT)
     input.onchange = async () => {
-        const file = input.files[0];
-        if (!file) return;
-
+        if (!input.files[0]) return;
         text_span.textContent = "...";
+        
         const form = new FormData();
-        form.append('file', file);
+        form.append('file', input.files[0]);
 
         try {
-            const res = await fetch(`${api_url}/api/rooms/${room_code}/csv`, { method: 'POST', body: form });
-            if (res.ok) {
+            if ((await fetch(`${api_url}/api/rooms/${room_code}/csv`, { method: 'POST', body: form })).ok) {
+                current_csv_name = input.files[0].name;
+                localStorage.setItem('my_csv_name', current_csv_name);
+                
                 csv_mode = true;
                 setup_csv_settings();
-                alert("Liste importée.");
-            } else { throw new Error("Import failed"); }
-        } catch (err) {
-            alert("Erreur upload CSV");
-            setup_csv_settings(); // reset
-        }
+            } else throw new Error();
+        } catch (e) { alert("Erreur upload"); setup_csv_settings(); }
         input.value = '';
     };
 }
