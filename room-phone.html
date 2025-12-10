@@ -449,8 +449,8 @@
 
     /* OVERLAYS - Mobile optimized */
     .menu-box {
-      max-width: calc(100vw - 40px);
-      max-height: calc(100vh - 40px);
+      max-width: calc(100vw - 80px);
+      max-height: calc(80vh - 80px);
       padding: 25px 20px 20px 20px;
       border-radius: 2rem;
     }
@@ -509,18 +509,9 @@
       flex-wrap: wrap;
     }
 
-    .slider-selector,
-    .quantity-selector {
-      margin-top: 10px;
-    }
-
     /* Responsive text */
     h1 {
       font-size: 1.5rem;
-    }
-
-    h2 {
-      font-size: 1.1rem !important;
     }
 
     input[type="text"] {
@@ -532,6 +523,102 @@
     .menu-box p {
       font-size: 0.9rem;
       line-height: 1.5;
+    }
+
+    /* ==========================================================================
+       SETTINGS COMPACT STYLE & SLIM BUTTONS
+       ========================================================================== */
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0; /* Espacement vertical réduit */
+      gap: 15px;
+      width: 100%;
+      min-height: 32px;
+    }
+
+    /* Texte du label à gauche */
+    .setting-row > span {
+      text-align: left;
+      font-size: 0.95rem; /* Texte légèrement plus fin */
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Styles spécifiques pour les boutons "Slim" des paramètres */
+    .setting-row .button-text {
+        height: 32px !important;       /* Hauteur très compacte */
+        min-height: 32px !important;   /* Force l'écrasement du style global */
+        padding: 0 12px !important;    /* Marges internes réduites */
+        border-radius: 16px;           /* Arrondi adapté à la hauteur */
+        width: auto !important;        /* Largeur automatique */
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        box-shadow: 0px 2px 0px rgba(0,0,0,0.15); /* Ombre plus discrète */
+    }
+
+    .setting-row .button-text .text {
+        font-size: 13px !important; /* Texte plus petit */
+        font-weight: 600;
+        line-height: 1;
+        padding-top: 1px;
+    }
+
+    .setting-row .button-text .icon {
+        width: 14px !important;  /* Icône plus petite */
+        height: 14px !important;
+        margin-right: 6px;
+        object-fit: contain;
+    }
+
+    /* Style spécifique pour le bouton Langue (Badge) */
+    .lang-badge {
+        height: 28px !important; /* Encore plus petit pour le badge */
+        min-height: 28px !important;
+        opacity: 0.6;
+        background: transparent !important;
+        border: 1px solid currentColor;
+        box-shadow: none !important;
+        padding: 0 10px !important;
+    }
+    
+    body.dark-mode .lang-badge {
+        border-color: #fff;
+    }
+
+    /* Ajustement des sliders pour qu'ils s'alignent bien avec les petits boutons */
+    .slider-selector,
+    .quantity-selector {
+      transform: scale(0.9); /* Légère réduction globale */
+      transform-origin: right center;
+      margin: 0;
+      flex: 0 0 auto;
+    }
+
+    /* Correction pour le slider radio sur mobile */
+    .slider-selector {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .slider-option {
+      margin: 0 2px;
+    }
+    
+    /* Titres de section plus discrets */
+    #settingsOverlay h2 {
+        margin-top: 25px !important;
+        margin-bottom: 5px !important;
+        font-size: 1rem !important;
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
   </style>
 </head>
@@ -559,11 +646,11 @@
       </div>
 
       <div id="right">
-          </div>
+      </div>
 
       <div id="subdiv">
-          </div>
       </div>
+    </div>
 
     <div id="announcementContainer" class="announcement-container is-empty">
       <div id="storageWidget" class="storage-widget">
@@ -582,7 +669,6 @@
 
   </div>
 
-  <!-- BOTTOM NAVIGATION -->
   <div class="bottom-nav">
     <div class="nav-tabs">
       <a href="#" class="nav-tab active" id="tabEnCours">
@@ -595,11 +681,10 @@
       </a>
     </div>
     <a href="#" class="create-fab" id="createbutton">
-        <img src="./assets/icon/add.png" alt="Créer">
+      <img src="./assets/icon/add.png" alt="Créer">
     </a>
   </div>
 
-  <!-- OVERLAYS (Same as desktop) -->
   <div class="menu-overlay" id="formOverlay" style="display: none;">
     <div class="menu-box" style="margin: 0px 20px;">
       <div class="input" style="padding-bottom: 0;">
@@ -643,7 +728,8 @@
             <span class="text">Créer</span>
           </a>
 
-          <a class="button-text" id='deleteAnnonce' href='#' style="width: 100%; padding: 0 20px; margin: 0; background-color: #ff7070; display: none;">
+          <a class="button-text" id='deleteAnnonce' href='#'
+            style="width: 100%; padding: 0 20px; margin: 0; background-color: #ff7070; display: none;">
             <img class="icon" src="./assets/icon/delete.png">
             <span class="text">Supprimer</span>
           </a>
@@ -655,41 +741,51 @@
   <div class="menu-overlay" id="settingsOverlay" style="display: none;">
     <div class="menu-box" style="margin: 0px 20px;">
       <div class="input" style="padding-bottom: 0;">
-        <h1>Paramètres</h1>
+        <h1 style="margin-bottom: 10px;">Paramètres</h1>
 
         <div id="adminSettingsSection" style="display: none;">
-          <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Admin</h2>
+          <h2 style="text-align: left;">Admin</h2>
 
-          <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; gap: 10px;">
-            <span style="text-align: left;">Nombre de Ticket par utilisateur</span>
+          <div class="setting-row">
+            <span>Tickets max / pers.</span>
             <div class="slider-selector">
-              <label class="slider-option">
-                <input type="radio" name="SliderCount" value="1" checked>
-                <span class="dot" data-val="1"></span>
-              </label>
-              <label class="slider-option">
-                <input type="radio" name="SliderCount" value="2">
-                <span class="dot" data-val="2"></span>
-              </label>
-              <label class="slider-option">
-                <input type="radio" name="SliderCount" value="3">
-                <span class="dot" data-val="3"></span>
-              </label>
-              <label class="slider-option">
-                <input type="radio" name="SliderCount" value="4">
-                <span class="dot" data-val="4"></span>
-              </label>
-              <label class="slider-option">
-                <input type="radio" name="SliderCount" value="5">
-                <span class="dot" data-val="5"></span>
-              </label>
+              <label class="slider-option"><input type="radio" name="SliderCount" value="1" checked><span class="dot" data-val="1"></span></label>
+              <label class="slider-option"><input type="radio" name="SliderCount" value="2"><span class="dot" data-val="2"></span></label>
+              <label class="slider-option"><input type="radio" name="SliderCount" value="3"><span class="dot" data-val="3"></span></label>
+              <label class="slider-option"><input type="radio" name="SliderCount" value="4"><span class="dot" data-val="4"></span></label>
+              <label class="slider-option"><input type="radio" name="SliderCount" value="5"><span class="dot" data-val="5"></span></label>
             </div>
           </div>
-        </div>
-        
-        <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Apparence</h2>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+          <div class="setting-row">
+            <span>Max utilisateurs</span>
+            <div class="quantity-selector" style="opacity: 30%; pointer-events: none;">
+              <button class="qty-btn">－</button>
+              <div class="qty-val">~~</div>
+              <button class="qty-btn">＋</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <span>Vérification CSV</span>
+            <a class="button-text" id="csvButton" href="#">
+              <span class="text">Ajouter</span>
+            </a>
+            <input type="file" id="csvInput" accept=".csv" style="display: none;">
+          </div>
+
+          <div class="setting-row">
+            <span>Filtrage IA</span>
+            <label>
+              <input type="checkbox" class="toggle-checkbox" id="aiToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <h2 style="text-align: left;">Apparence</h2>
+
+        <div class="setting-row">
           <span>Mode Sombre (Bêta)</span>
           <label>
             <input type="checkbox" class="toggle-checkbox" id="darkModeToggle">
@@ -697,40 +793,43 @@
           </label>
         </div>
 
-        <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Room</h2>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
-          <span>Partager le lien du groupe</span>
-          <a class="button-text" id="copyLink" href="#" style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; margin: 0;">
-            <img class="icon" src="./assets/icon/icon thin.png">
-            <span class="text" id="copyText" style="font-size: 14px;">Copier le lien</span>
+        <div class="setting-row">
+          <span>Langue</span>
+          <a class="button-text lang-badge" href="#" style="pointer-events: none;">
+            <span class="text">FR</span>
           </a>
         </div>
 
-        <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Github</h2>
+        <h2 style="text-align: left;">Partage</h2>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
-          <span>Projet open-source Github</span>
-          <a class="button-text" href="https://github.com/microsysteene/microsysteene.github.io" target="_blank" style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; margin: 0;">
+        <div class="setting-row">
+          <span>Inviter dans la room</span>
+          <a class="button-text" id="copyLink" href="#">
             <img class="icon" src="./assets/icon/icon thin.png">
-            <span class="text" style="font-size: 14px;">lien Github</span>
+            <span class="text" id="copyText">Copier</span>
           </a>
         </div>
 
-        <div
-              style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
-              <span>Veuillez nous rapporter les problèmes ou bugs constatés.</span>
-              <a class="button-text" target="_blank"
-                style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0; opacity: 30%; pointer-events: none;">
-                <img class="icon" src="./assets/icon/search.png">
-                <span class="text" style="font-size: 14px;">Signaler un problème</span>
-              </a>
-            </div>
+        <h2 style="text-align: left;">Infos</h2>
 
-        <p style="font-size: 0.85rem; opacity: 0.7; text-align: center; margin-top: 20px;">
-          <br>
-          <br>
-          ( RGPD ) Toutes les données échangées sont chiffrées et définitivement supprimées à la fin de la session.
+        <div class="setting-row">
+          <span>Code source</span>
+          <a class="button-text" href="https://github.com/microsysteene/microsysteene.github.io" target="_blank">
+            <img class="icon" src="./assets/icon/icon thin.png">
+            <span class="text">GitHub</span>
+          </a>
+        </div>
+
+        <div class="setting-row">
+          <span>Signaler un bug</span>
+          <a class="button-text" target="_blank" style="opacity: 0.5; pointer-events: none;">
+            <img class="icon" src="./assets/icon/report.png">
+            <span class="text">Signaler</span>
+          </a>
+        </div>
+
+        <p style="font-size: 0.7rem; opacity: 0.5; text-align: center; margin-top: 30px; line-height: 1.4;">
+          ( RGPD ) Données chiffrées et supprimées<br>définitivement à la fin de la session.
         </p>
 
         <div class="overlay-footer">
@@ -755,7 +854,8 @@
             <img class="icon" src="./assets/icon/logout.png" alt="">
             <span class="text">Oui, partir</span>
           </a>
-          <a class="button-text" id="cancelLogout" href="#" style="width: 100%; padding: 0 30px; margin: 0; background-color: #ff7070;">
+          <a class="button-text" id="cancelLogout" href="#"
+            style="width: 100%; padding: 0 30px; margin: 0; background-color: #ff7070;">
             <img class="icon" src="./assets/icon/cross.png" alt="">
             <span class="text">Non, rester</span>
           </a>
@@ -765,35 +865,76 @@
   </div>
 
   <div class="menu-overlay" id="reportTicketOverlay" style="display: none;">
-        <div class="menu-box">
-          <div class="input" style="padding-bottom: 0;">
+    <div class="menu-box" style="margin: 0px 20px;">
+      <div class="input" style="padding-bottom: 0;">
 
-            <h1>Ticket bloqué</h1>
-            
-            <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Pourquoi votre ticket à été bloqué?</h2>
-            <p style="margin: 30px 0; opacity: 0.7; text-align: left;">
-               - Votre contenue est jugé inapproprié.<br>
-               Si votre ticket contient aucun contenue inapproprié alors veuillez le signaler
-            </p>
+        <h1>Ticket bloqué</h1>
 
-            <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
+        <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Pourquoi votre ticket à été bloqué?</h2>
+        <p style="margin: 30px 0; opacity: 0.7; text-align: left;">
+          - Votre contenue est jugé inapproprié.<br><br>
+          Si votre ticket contient aucun contenue inapproprié alors veuillez le signaler
+        </p>
 
-              <a class="button-text" id="confirmLogout" href="#"
-                style="width: auto; padding: 0 30px; margin: 0; background-color: #ff7070; min-width: 140px;">
-                <img class="icon" src="./assets/icon/report.png" alt="">
-                <span class="text">Signaler</span>
-              </a>
+        <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
 
-              <a class="button-text" id="cancelLogout" href="#"
-                style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
-                <img class="icon" src="./assets/icon/check.png" alt="">
-                <span class="text">Ok</span>
-              </a>
+          <a class="button-text" id="confirmLogout" href="#"
+            style="width: 100%; padding: 0 30px; margin: 0; background-color: #ff7070; min-width: 140px; opacity: 30%; pointer-events: none;">
+            <img class="icon" src="./assets/icon/report.png" alt="">
+            <span class="text">Signaler</span>
+          </a>
 
-            </div>
-          </div>
+          <a class="button-text" id="cancelLogout" href="#" onclick="closeReportTicketOverlay()"
+            style="width: 100%; padding: 0 30px; margin: 0; min-width: 140px;">
+            <img class="icon" src="./assets/icon/check.png" alt="">
+            <span class="text">Ok</span>
+          </a>
+
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="menu-overlay" id="issueNameOverlay" style="display: none;">
+    <div class="menu-box" style="margin: 0px 20px;">
+      <div class="input" style="padding-bottom: 0;">
+
+        <h1>Profils multiples</h1>
+
+        <p style="margin: 30px 0; opacity: 0.7; text-align: left;">
+          Plusieurs profils ont le même prénom. Veuillez choisir.
+        </p>
+
+        <div id="nameChoicesContainer" style="display: flex; flex-direction: column; gap: 10px; margin: 20px 0;">
+        </div>
+
+        <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-overlay" id="loginOverlay" style="display: none;">
+    <div class="menu-box" style="margin: 0px 20px;">
+      <div class="input" style="padding-bottom: 0;">
+        <h1>Identification</h1>
+
+        <p style="margin: 20px 0; opacity: 0.7;">Cette salle nécessite une identification.</p>
+
+        <div style="margin: 15px 0;">
+          <input type="text" id="loginName" placeholder="Votre Prénom" style="width: 100%; text-align: center;" />
+        </div>
+
+        <div class="overlay-footer" style="display: flex; justify-content: center; margin-top: 30px;">
+          <a class="button-text" id="loginEnter" href="#"
+            style="width: 100%; padding: 0 30px; margin: 0; min-width: 140px;">
+            <span class="text">Entrer</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="./assets/js/darkmode.js"></script>
   <script>
     // Color selection
@@ -852,6 +993,13 @@
       e.preventDefault();
       document.getElementById('logoutOverlay').style.display = 'none';
     });
+
+    function closeReportTicketOverlay() {
+      const overlay = document.getElementById('reportTicketOverlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+      }
+    }
 
     // Close overlays on background click
     document.querySelectorAll('.menu-overlay').forEach(overlay => {
