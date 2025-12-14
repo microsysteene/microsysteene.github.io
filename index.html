@@ -9,7 +9,8 @@
     <link rel="icon" type="image/png" href="./assets/icon/favicon.png">
 
     <style>
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -62,7 +63,7 @@
                 width: 100%;
                 max-width: 380px;
                 position: relative;
-                z-index: 2; 
+                z-index: 2;
                 animation: div 0.5s cubic-bezier(0.25, 0.46, 0.45, 1.94) forwards;
                 animation-delay: 50ms;
             }
@@ -76,13 +77,13 @@
             }
 
             .info-text {
-            position: absolute;
-            bottom: 60px;
-            font-size: 0.8rem;
-            font-family: 'Inconsolata', monospace;
-            color: #ff7070;
+                position: absolute;
+                bottom: 60px;
+                font-size: 0.8rem;
+                font-family: 'Inconsolata', monospace;
+                color: #ff7070;
             }
-            
+
             &.dark-mode .version-text {
                 color: #ffffff40;
             }
@@ -109,8 +110,12 @@
 
         <div class="action-buttons">
 
-            <h1> Fin de service de cette version</h1>
-            <p>Nous hébergeons a présent notre site sur nos propre serveur. Nous vous invitons a utilisé le nouveau site : <a href="https://ticket-edu.com">ticket-edu.com</a></p>
+            <h1>Fin de service de cette version</h1>
+            <p>
+                Nous hébergeons à présent notre site sur nos propres serveurs.
+                Nous vous invitons à utiliser le nouveau site :
+                <a href="https://ticket-edu.com">ticket-edu.com</a>
+            </p>
 
             <a href="https://ticket-edu.com" class="button-text">
                 <img class="icon" src="./assets/icon/icon thin.png" alt="Search"
@@ -121,35 +126,38 @@
         </div>
 
         <p class="version-text">
-            version 
+            version
             <span id="openChangelogBtn" style="text-decoration: underline wavy #9ecaff; cursor: pointer;">
                 Pre-release v0.9.1
             </span>
         </p>
         <p class="info-text">[!] Version Developpeur. Signaler en cas de soucis </p>
-        
 
-        </div>
+
+    </div>
 
     </div>
 
     <div class="menu-overlay" id="joinOverlay" style="display: none;">
         <div class="menu-box" style="max-width: 550px;">
             <div class="input" style="padding-bottom: 0;">
-                
+
                 <h1>Rejoindre un groupe</h1>
-                
+
                 <p style="margin: 20px 0; opacity: 0.7; text-align: center;">
                     Entrez le code d'accès pour rejoindre la salle.
                 </p>
 
                 <div style="margin: 30px 0;">
-                    <input type="text" id="joinCodeInput" placeholder="Code (ex: 45A2F)" style="text-transform: uppercase;" autocomplete="off" />
+                    <input type="text" id="joinCodeInput" placeholder="Code (ex: 45A2F)"
+                        style="text-transform: uppercase;" autocomplete="off" />
                 </div>
-                
-                <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
-                    
-                    <a class="button-text" id="confirmJoin" href="#" style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
+
+                <div class="overlay-footer"
+                    style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
+
+                    <a class="button-text" id="confirmJoin" href="#"
+                        style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
                         <img class="icon" src="./assets/icon/check.png" alt="">
                         <span class="text">Rejoindre</span>
                     </a>
@@ -161,13 +169,15 @@
 
     <div class="menu-overlay" id="changelogOverlay" style="display: none;">
         <div class="menu-box" style="max-width: 550px; display: flex; flex-direction: column; max-height: 80vh;">
-            
-            <div class="input" style="padding-bottom: 5px; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                
+
+            <div class="input"
+                style="padding-bottom: 5px; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+
                 <h1>Changelogs</h1>
 
-                <div class="scrollable-content" style="overflow-y: auto; padding-right: 10px; margin-bottom: 20px; text-align: left;">
-                    
+                <div class="scrollable-content"
+                    style="overflow-y: auto; padding-right: 10px; margin-bottom: 20px; text-align: left;">
+
                     <div class="changelog-entry" style="margin-bottom: 20px;">
                         <h2 style="margin-bottom: 10px; color: var(-text);">Pre-release v0.9.1</h2>
                         <ul style="margin: 0; padding-left: 20px; color: #808080;">
@@ -192,10 +202,12 @@
                     </div>
 
                 </div>
-                
-                <div class="overlay-footer" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
-                    
-                    <a class="button-text" id="confirmLogs" href="#" style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
+
+                <div class="overlay-footer"
+                    style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
+
+                    <a class="button-text" id="confirmLogs" href="#"
+                        style="width: auto; padding: 0 30px; margin: 0; min-width: 140px;">
                         <img class="icon" src="./assets/icon/check.png" alt="">
                         <span class="text">Ok</span>
                     </a>
@@ -205,69 +217,71 @@
             </div>
         </div>
     </div>
-    
+
     <div class="menu-overlay" id="settingsOverlay" style="display: none;">
         <div class="menu-box">
-          <div class="input" style="padding-bottom: 0;">
-            <h1>Paramètres</h1>
-            
-            <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Apparence</h2>
+            <div class="input" style="padding-bottom: 0;">
+                <h1>Paramètres</h1>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
-              <span>Mode Sombre (Betâ)</span>
-              <label>
-                <input type="checkbox" class="toggle-checkbox" id="darkModeToggle">
-                <span class="toggle-slider"></span>
-              </label>
+                <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Apparence</h2>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+                    <span>Mode Sombre (Betâ)</span>
+                    <label>
+                        <input type="checkbox" class="toggle-checkbox" id="darkModeToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
+                    <span> Langue (Français uniquement pour l'instant)</span>
+                    <a class="button-text" href="#"
+                        style="min-height: 41px; width: auto; padding: 0 20px; flex: unset; min-width: 80px; opacity: 30%; pointer-events: none;">
+                        <span class="text" style="font-size: 14px;">FR</span>
+                    </a>
+                </div>
+
+                <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Github</h2>
+
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
+                    <span>Projet open-source Github</span>
+                    <a class="button-text" href="https://github.com/microsysteene/microsysteene.github.io"
+                        target="_blank"
+                        style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0;">
+                        <img class="icon" src="./assets/icon/icon thin.png">
+                        <span class="text" style="font-size: 14px;">lien Github</span>
+                    </a>
+                </div>
+
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
+                    <span>Veuillez nous rapporter les problèmes ou bugs constatés.</span>
+                    <a class="button-text" target="_blank"
+                        style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0; opacity: 30%; pointer-events: none;">
+                        <img class="icon" src="./assets/icon/report.png">
+                        <span class="text" style="font-size: 14px;">Signaler un problème</span>
+                    </a>
+                </div>
+
+                <p>
+                    <br>
+                    <br>
+                    ( RGPD ) Toutes les données échangées sont chiffrées et définitivement supprimées à la fin de la
+                    session,
+                    sans aucune autre utilisation commerciale.
+                </p>
+
+                <div class="overlay-footer">
+                    <a class="button-text" id="closeSettings" href="#" style="width: auto; padding: 0 40px; margin: 0;">
+                        <img class="icon" src="./assets/icon/check.png" alt="">
+                        <span class="text">Sauvegarder</span>
+                    </a>
+                </div>
+
             </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0;">
-              <span> Langue (Français uniquement pour l'instant)</span>
-              <a class="button-text" href="#"
-                style="min-height: 41px; width: auto; padding: 0 20px; flex: unset; min-width: 80px; opacity: 30%; pointer-events: none;">
-                <span class="text" style="font-size: 14px;">FR</span>
-              </a>
-            </div>
-
-            <h2 style="text-align: left; margin-top: 30px; font-size: 1.2rem;">Github</h2>
-
-            <div
-              style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
-              <span>Projet open-source Github</span>
-              <a class="button-text" href="https://github.com/microsysteene/microsysteene.github.io" target="_blank"
-                style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0;">
-                <img class="icon" src="./assets/icon/icon thin.png">
-                <span class="text" style="font-size: 14px;">lien Github</span>
-              </a>
-            </div>
-
-            <div
-              style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0; flex-wrap: wrap; gap: 10px;">
-              <span>Veuillez nous rapporter les problèmes ou bugs constatés.</span>
-              <a class="button-text" target="_blank"
-                style="min-height: 41px; padding: 0 20px; flex: unset; width: 100%; max-width: 200px; margin: 0; opacity: 30%; pointer-events: none;">
-                <img class="icon" src="./assets/icon/report.png">
-                <span class="text" style="font-size: 14px;">Signaler un problème</span>
-              </a>
-            </div>
-
-            <p>
-              <br>
-              <br>
-              ( RGPD ) Toutes les données échangées sont chiffrées et définitivement supprimées à la fin de la session,
-              sans aucune autre utilisation commerciale.
-            </p>
-
-            <div class="overlay-footer">
-              <a class="button-text" id="closeSettings" href="#" style="width: auto; padding: 0 40px; margin: 0;">
-                <img class="icon" src="./assets/icon/check.png" alt="">
-                <span class="text">Sauvegarder</span>
-              </a>
-            </div>
-
-          </div>
         </div>
-      </div>
+    </div>
 
 
     <script>
@@ -278,7 +292,7 @@
         let increment = 0;
 
         const waves = [
-            { y: 0.65, length: 0.007, amplitude: 40, speed: -0.0007, offset: 0 }, 
+            { y: 0.65, length: 0.007, amplitude: 40, speed: -0.0007, offset: 0 },
             { y: 0.75, length: 0.005, amplitude: 35, speed: 0.0009, offset: 2 },
             { y: 0.85, length: 0.004, amplitude: 30, speed: -0.0011, offset: 4 }
         ];
@@ -294,7 +308,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            
+
             // check for dark mode class on body
             const isDark = document.body.classList.contains('dark-mode');
 
@@ -302,19 +316,19 @@
 
             if (isDark) {
                 // dark mode colors
-                gradient.addColorStop(0, '#1a1a1a'); 
+                gradient.addColorStop(0, '#1a1a1a');
                 gradient.addColorStop(1, '#2d2d2d');
                 ctx.fillStyle = gradient;
-                
+
                 ctx.fillRect(0, 0, width, height);
-                
+
                 // wave style dark
                 ctx.fillStyle = 'rgba(45, 45, 45, 1)';
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             } else {
                 // light mode colors
-                gradient.addColorStop(0, '#FFF8E7'); 
-                gradient.addColorStop(1, '#FFFFFF'); 
+                gradient.addColorStop(0, '#FFF8E7');
+                gradient.addColorStop(1, '#FFFFFF');
                 ctx.fillStyle = gradient;
 
                 ctx.fillRect(0, 0, width, height);
@@ -362,8 +376,8 @@
         }
 
         if (settingsOverlay) {
-            settingsOverlay.addEventListener('click', (e) => { 
-                if (e.target === settingsOverlay) settingsOverlay.style.display = 'none'; 
+            settingsOverlay.addEventListener('click', (e) => {
+                if (e.target === settingsOverlay) settingsOverlay.style.display = 'none';
             });
         }
 
@@ -397,4 +411,5 @@
     </script>
 
 </body>
+
 </html>
